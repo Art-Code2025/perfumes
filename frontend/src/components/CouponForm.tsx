@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { couponsAPI } from '../utils/api';
+import { apiCall, API_ENDPOINTS } from '../config/api.js';
 
 interface Coupon {
-  id?: number;
+  id?: string | number;
   code: string;
   name: string;
   description: string;
@@ -18,10 +18,14 @@ interface Coupon {
   isActive: boolean;
 }
 
-const CouponForm = () => {
+interface CouponFormProps {
+  isEdit?: boolean;
+}
+
+const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEdit = Boolean(id);
+  const isEdit = propIsEdit || Boolean(id);
 
   const [coupon, setCoupon] = useState<Coupon>({
     code: '',
@@ -40,25 +44,42 @@ const CouponForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('🚀 [CouponForm] Component mounted, isEdit:', isEdit, 'id:', id);
+    
     if (isEdit && id) {
-      fetchCoupon(parseInt(id));
+      fetchCoupon(id);
     }
   }, [isEdit, id]);
 
-  const fetchCoupon = async (couponId: number) => {
+  const fetchCoupon = async (couponId: string) => {
     try {
       setLoading(true);
-      const response = await couponsAPI.getById(couponId);
-      if (response.success) {
-        setCoupon(response.data);
-      } else {
+      console.log('🔄 [CouponForm] Fetching coupon:', couponId);
+      
+      // Fetch all coupons and find the one we need
+      const coupons = await apiCall(API_ENDPOINTS.COUPONS);
+      
+      console.log('🎫 [CouponForm] All coupons loaded:', coupons.length);
+      console.log('🔍 [CouponForm] Looking for coupon ID:', couponId);
+      console.log('📋 [CouponForm] Available coupon IDs:', coupons.map((c: Coupon) => c.id));
+      
+      // Find coupon by ID (handle both string and number IDs)
+      const coupon = coupons.find((c: Coupon) => c.id && c.id.toString() === couponId.toString());
+      
+      if (!coupon) {
+        console.error('❌ [CouponForm] Coupon not found with ID:', couponId);
         toast.error('الكوبون غير موجود');
-        navigate('/admin/coupons');
+        navigate('/admin');
+        return;
       }
+      
+      console.log('✅ [CouponForm] Coupon found:', coupon.name);
+      setCoupon(coupon);
+      
     } catch (error) {
-      console.error('Error fetching coupon:', error);
+      console.error('❌ [CouponForm] Error fetching coupon:', error);
       toast.error('فشل في جلب بيانات الكوبون');
-      navigate('/admin/coupons');
+      navigate('/admin');
     } finally {
       setLoading(false);
     }
@@ -72,112 +93,159 @@ const CouponForm = () => {
       return;
     }
 
-    setLoading(true);
-
     try {
+      setLoading(true);
+      
+      // Prepare the data
       const couponData = {
         ...coupon,
-        value: Number(coupon.value),
-        maxDiscount: Number(coupon.maxDiscount) || null,
-        minOrderValue: Number(coupon.minOrderValue) || null,
-        usageLimit: Number(coupon.usageLimit) || null
+        value: parseFloat(coupon.value.toString()) || 0,
+        maxDiscount: parseFloat(coupon.maxDiscount?.toString() || '0') || 0,
+        minOrderValue: parseFloat(coupon.minOrderValue?.toString() || '0') || 0,
+        usageLimit: parseInt(coupon.usageLimit?.toString() || '0') || 0,
+        code: coupon.code.toUpperCase()
       };
+      
+      console.log('💾 [CouponForm] Saving coupon data:', couponData);
 
-      let response;
       if (isEdit && id) {
-        response = await couponsAPI.update(parseInt(id), couponData);
+        // Update existing coupon using PUT to /coupons/{id}
+        await apiCall(API_ENDPOINTS.COUPON_BY_ID(id), {
+          method: 'PUT',
+          body: JSON.stringify(couponData)
+        });
+        toast.success('تم تحديث الكوبون بنجاح');
       } else {
-        response = await couponsAPI.create(couponData);
+        // Create new coupon using POST method
+        await apiCall(API_ENDPOINTS.COUPONS, {
+          method: 'POST',
+          body: JSON.stringify(couponData)
+        });
+        toast.success('تم إضافة الكوبون بنجاح');
       }
-
-      if (response.success) {
-        toast.success(isEdit ? 'تم تحديث الكوبون بنجاح' : 'تم إضافة الكوبون بنجاح');
-        navigate('/admin/coupons');
-      } else {
-        toast.error(response.message || 'فشل في حفظ الكوبون');
-      }
-    } catch (error: any) {
-      console.error('Error saving coupon:', error);
-      toast.error(error.message || 'خطأ في حفظ الكوبون');
+      
+      // Trigger refresh in main app
+      window.dispatchEvent(new Event('couponsUpdated'));
+      navigate('/admin');
+      
+    } catch (error) {
+      console.error('❌ [CouponForm] Error saving coupon:', error);
+      toast.error(isEdit ? 'فشل في تحديث الكوبون' : 'فشل في إضافة الكوبون');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && isEdit) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+      <div className="flex justify-center items-center min-h-screen bg-black">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات الكوبون...</p>
+          <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-xl text-white">جاري التحميل...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8" dir="rtl">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {isEdit ? 'تعديل الكوبون' : 'إضافة كوبون جديد'}
-          </h1>
+    <div className="min-h-screen bg-black text-white">
+      {/* Mobile Header */}
+      <div className="bg-gray-900 border-b border-gray-800 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                {isEdit ? 'تعديل الكوبون' : 'إضافة كوبون جديد'}
+              </h1>
+              <p className="text-gray-400 mt-1 text-sm sm:text-base">
+                {isEdit ? 'تحديث بيانات الكوبون' : 'إنشاء كوبون خصم جديد'}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/admin')}
+              className="text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
+            >
+              ← العودة للداشبورد
+            </button>
+          </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">معلومات الكوبون</h2>
+      {/* Form Container */}
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+          {/* Basic Information Card */}
+          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">🎫</span>
+              معلومات الكوبون الأساسية
+            </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Coupon Code */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   كود الكوبون *
                 </label>
                 <input
                   type="text"
                   value={coupon.code}
                   onChange={(e) => setCoupon({ ...coupon, code: e.target.value.toUpperCase() })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
                   placeholder="SAVE20"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">سيتم تحويل الأحرف إلى كبيرة تلقائياً</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Coupon Name */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   اسم الكوبون *
                 </label>
                 <input
                   type="text"
                   value={coupon.name}
                   onChange={(e) => setCoupon({ ...coupon, name: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="خصم 20%"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  placeholder="خصم 20% على جميع المنتجات"
                   required
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Description */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   وصف الكوبون
                 </label>
                 <textarea
                   value={coupon.description}
                   onChange={(e) => setCoupon({ ...coupon, description: e.target.value })}
                   rows={3}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="وصف مختصر للكوبون"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 resize-none text-sm sm:text-base"
+                  placeholder="وصف مختصر للكوبون وشروط الاستخدام"
                 />
               </div>
+            </div>
+          </div>
 
+          {/* Discount Settings Card */}
+          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">💰</span>
+              إعدادات الخصم
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Discount Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   نوع الخصم *
                 </label>
                 <select
                   value={coupon.type}
                   onChange={(e) => setCoupon({ ...coupon, type: e.target.value as 'percentage' | 'fixed' })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white text-sm sm:text-base"
                   required
                 >
                   <option value="percentage">نسبة مئوية (%)</option>
@@ -185,113 +253,141 @@ const CouponForm = () => {
                 </select>
               </div>
 
+              {/* Discount Value */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   قيمة الخصم *
                 </label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={coupon.value}
-                  onChange={(e) => setCoupon({ ...coupon, value: parseFloat(e.target.value) })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => setCoupon({ ...coupon, value: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
                   placeholder={coupon.type === 'percentage' ? '20' : '50.00'}
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {coupon.type === 'percentage' ? 'النسبة المئوية للخصم' : 'المبلغ بالريال السعودي'}
+                </p>
               </div>
 
+              {/* Max Discount (for percentage only) */}
               {coupon.type === 'percentage' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     الحد الأقصى للخصم (ر.س)
                   </label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     value={coupon.maxDiscount || ''}
                     onChange={(e) => setCoupon({ ...coupon, maxDiscount: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
                     placeholder="100.00"
                   />
+                  <p className="text-xs text-gray-500 mt-1">اتركه فارغاً لعدم وضع حد أقصى</p>
                 </div>
               )}
 
+              {/* Min Order Value */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   الحد الأدنى لقيمة الطلب (ر.س)
                 </label>
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={coupon.minOrderValue || ''}
                   onChange={(e) => setCoupon({ ...coupon, minOrderValue: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
                   placeholder="200.00"
                 />
+                <p className="text-xs text-gray-500 mt-1">الحد الأدنى لقيمة الطلب لتطبيق الكوبون</p>
               </div>
+            </div>
+          </div>
 
+          {/* Usage & Expiry Settings Card */}
+          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">⏰</span>
+              إعدادات الاستخدام والانتهاء
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Usage Limit */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   حد الاستخدام
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={coupon.usageLimit || ''}
                   onChange={(e) => setCoupon({ ...coupon, usageLimit: parseInt(e.target.value) || 0 })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
                   placeholder="100"
                 />
+                <p className="text-xs text-gray-500 mt-1">عدد المرات المسموح باستخدام الكوبون</p>
               </div>
 
+              {/* Expiry Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   تاريخ الانتهاء
                 </label>
                 <input
                   type="date"
                   value={coupon.expiryDate || ''}
                   onChange={(e) => setCoupon({ ...coupon, expiryDate: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white text-sm sm:text-base"
                 />
+                <p className="text-xs text-gray-500 mt-1">اتركه فارغاً للكوبون دائم</p>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="flex items-center">
+              {/* Active Status */}
+              <div className="sm:col-span-2">
+                <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     checked={coupon.isActive}
                     onChange={(e) => setCoupon({ ...coupon, isActive: e.target.checked })}
-                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    className="w-4 h-4 text-white bg-black border-gray-700 rounded focus:ring-white focus:ring-2"
                   />
-                  <span className="mr-2 text-sm font-medium text-gray-700">
-                    الكوبون نشط
+                  <span className="mr-3 text-sm font-medium text-gray-300">
+                    الكوبون نشط ومتاح للاستخدام
                   </span>
                 </label>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4 space-x-reverse">
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
             <button
               type="button"
-              onClick={() => navigate('/admin/coupons')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => navigate('/admin')}
+              className="w-full sm:w-auto px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 hover:text-white transition-colors text-sm sm:text-base font-medium"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="w-full sm:w-auto px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base font-medium"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
                   جاري الحفظ...
                 </>
               ) : (
                 <>
-                  {isEdit ? 'حفظ التغييرات' : 'إضافة الكوبون'}
+                  {isEdit ? 'تحديث الكوبون' : 'إضافة الكوبون'}
                 </>
               )}
             </button>

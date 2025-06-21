@@ -150,10 +150,12 @@ const LayoutWrapper: React.FC = () => {
           <Route path="/admin/product/add" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
           <Route path="/admin/product/edit/:id" element={<ProtectedRoute><ProductForm isEdit={true} /></ProtectedRoute>} />
           
+          {/* Coupon Management Routes */}
+          <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
+          <Route path="/admin/coupon/edit/:id" element={<ProtectedRoute><CouponForm isEdit={true} /></ProtectedRoute>} />
+          
           <Route path="/admin/category/add" element={<ProtectedRoute><CategoryAdd /></ProtectedRoute>} />
           <Route path="/admin/category/edit/:id" element={<ProtectedRoute><CategoryEdit /></ProtectedRoute>} />
-          <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
-          <Route path="/admin/coupon/edit/:id" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
           
           {/* Other Routes */}
           <Route path="/about" element={<About />} />

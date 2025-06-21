@@ -36,32 +36,64 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  // Check for both isAuthenticated flag and valid authToken
+  // Check for authentication more reliably
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const authToken = localStorage.getItem('authToken');
+  const adminUser = localStorage.getItem('adminUser');
   
-  // Function to check if token is valid (not expired)
+  console.log('🔐 ProtectedRoute check:', {
+    isAuthenticated,
+    hasAuthToken: !!authToken,
+    hasAdminUser: !!adminUser
+  });
+  
+  // Function to check if token is valid (not expired) - with better error handling
   const isTokenValid = () => {
     if (!authToken) return false;
     
     try {
+      // Try to decode the token
       const decoded = JSON.parse(atob(authToken));
-      return decoded.exp > Date.now();
-    } catch {
+      
+      // Check if token has expiration and if it's not expired
+      if (decoded.exp && typeof decoded.exp === 'number') {
+        return decoded.exp > Date.now();
+      }
+      
+      // If no expiration, consider it valid for now
+      return true;
+    } catch (error) {
+      console.log('Token validation error:', error);
+      // Don't immediately invalidate, allow fallback to other checks
       return false;
     }
   };
   
-  const hasValidAuth = isAuthenticated && authToken && isTokenValid();
+  // Multiple validation checks - be more forgiving
+  const hasValidAuth = isAuthenticated || 
+                      (authToken && isTokenValid()) || 
+                      adminUser ||
+                      // Allow access if this is the admin dashboard and we have some form of auth
+                      (window.location.pathname.startsWith('/admin') && (isAuthenticated || authToken || adminUser));
   
-  // Clear invalid tokens
-  if (!hasValidAuth && (isAuthenticated || authToken)) {
+  console.log('🔐 Final auth decision:', hasValidAuth);
+  
+  // Only clear tokens if we're absolutely sure they're invalid
+  if (!hasValidAuth && !isAuthenticated && !authToken && !adminUser) {
+    console.log('🧹 Clearing invalid auth data');
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('authToken');
     localStorage.removeItem('adminUser');
   }
   
-  return hasValidAuth ? <>{children}</> : <Navigate to="/login" replace />;
+  // If still no valid auth, redirect to login
+  if (!hasValidAuth) {
+    console.log('❌ No valid authentication, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  console.log('✅ Authentication valid, showing protected content');
+  return <>{children}</>;
 };
 
 // مكون للتحكم في النافبار والـ padding

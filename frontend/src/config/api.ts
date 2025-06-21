@@ -1,12 +1,12 @@
 // API Configuration for Serverless environment
 export const API_CONFIG = {
-  // للتطوير المحلي
+  // للتطوير المحلي مع Netlify Dev
   development: {
     baseURL: 'http://localhost:8888/.netlify/functions',
   },
   // للإنتاج - Netlify Functions
   production: {
-    baseURL: '/api', // Netlify Functions will be available at /api
+    baseURL: '/.netlify/functions', // الصيغة الصحيحة لـ Netlify Functions
   }
 };
 
@@ -18,8 +18,11 @@ export const getApiBaseUrl = (): string => {
   }
   
   // ثانياً: تحقق من البيئة
-  const isDevelopment = import.meta.env.DEV;
-  return isDevelopment ? API_CONFIG.development.baseURL : API_CONFIG.production.baseURL;
+  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+  const baseUrl = isDevelopment ? API_CONFIG.development.baseURL : API_CONFIG.production.baseURL;
+  
+  console.log('🔗 API Base URL:', baseUrl, '(isDev:', isDevelopment, ')');
+  return baseUrl;
 };
 
 // دالة مساعدة لبناء URL كامل للـ Serverless APIs
@@ -27,7 +30,9 @@ export const buildApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
   // إزالة الـ slash الأول من endpoint إذا كان موجود
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
+  const fullUrl = `${baseUrl}/${cleanEndpoint}`;
+  console.log('🌐 API Call URL:', fullUrl);
+  return fullUrl;
 };
 
 // دالة مساعدة لبناء URL الصور - محدثة للـ Cloudinary
@@ -63,6 +68,12 @@ export const buildImageUrl = (imagePath: string): string => {
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = buildApiUrl(endpoint);
   
+  console.log('🚀 Starting API call:', {
+    endpoint,
+    url,
+    method: options.method || 'GET'
+  });
+  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
@@ -84,8 +95,9 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   try {
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
+    console.log('📡 Making fetch request...');
     const response = await fetch(url, {
       ...config,
       signal: controller.signal
@@ -93,19 +105,66 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     
     clearTimeout(timeoutId);
     
+    console.log('📩 Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      const contentType = response.headers.get('content-type');
+      let errorData = {};
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.warn('Failed to parse error JSON:', e);
+        }
+      } else {
+        const textError = await response.text();
+        console.error('Non-JSON error response:', textError);
+        errorData = { message: textError };
+      }
+      
+      const errorMessage = (errorData as any).error || (errorData as any).message || `HTTP ${response.status}: ${response.statusText}`;
+      console.error('❌ API Error:', {
+        url,
+        status: response.status,
+        error: errorMessage,
+        errorData
+      });
+      throw new Error(errorMessage);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log('✅ API Success:', {
+      endpoint,
+      dataReceived: !!data
+    });
+    
+    return data;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('API Request Timeout:', url);
-      throw new Error('Request timeout - please try again');
+      console.error('⏰ API Request Timeout:', url);
+      throw new Error('انتهت مهلة الطلب - يرجى المحاولة مرة أخرى');
     }
-    console.error('API Error:', error);
-    throw error;
+    
+    console.error('💥 API Call Failed:', {
+      url,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Improved error message for the user
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('خطأ في الاتصال - تأكد من اتصالك بالإنترنت');
+      }
+      throw error;
+    }
+    
+    throw new Error('خطأ غير متوقع - يرجى المحاولة مرة أخرى');
   }
 };
 

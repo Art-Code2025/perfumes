@@ -14,6 +14,12 @@ import {
 } from 'firebase/firestore';
 
 export const handler = async (event, context) => {
+  console.log('🛍️ Products API Called:', {
+    method: event.httpMethod,
+    path: event.path,
+    timestamp: new Date().toISOString()
+  });
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -39,7 +45,13 @@ export const handler = async (event, context) => {
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
     
-    console.log('🛍️ Products API - Method:', method, 'Path:', path);
+    console.log('🛍️ Products API - Method:', method, 'Path:', path, 'Segments:', pathSegments);
+
+    // Validate Firebase connection first
+    if (!db) {
+      console.error('❌ Firebase DB not initialized!');
+      throw new Error('Database connection failed');
+    }
 
     // GET /products - Get all products
     if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'products') {

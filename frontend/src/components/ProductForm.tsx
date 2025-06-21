@@ -112,14 +112,27 @@ const ProductForm: React.FC = () => {
       setLoading(true);
       console.log('🔄 Fetching product:', productId);
       
-      const product = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(productId));
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+      const product = products.find((p: any) => p.id.toString() === productId.toString());
+      
+      if (!product) {
+        throw new Error('المنتج غير موجود');
+      }
+      
       console.log('✅ Product loaded:', product.name);
       
-      setProduct(product);
+      setProduct({
+        ...product,
+        categoryId: product.categoryId || '0', // Ensure categoryId is string for form
+        originalPrice: product.originalPrice || 0,
+        specifications: product.specifications || [],
+        dynamicOptions: product.dynamicOptions || [],
+        detailedImages: product.detailedImages || []
+      });
     } catch (error) {
       console.error('❌ Error fetching product:', error);
       toast.error('فشل في جلب بيانات المنتج');
-      navigate('/admin/products');
+      navigate('/admin');
     } finally {
       setLoading(false);
     }
@@ -209,9 +222,10 @@ const ProductForm: React.FC = () => {
 
       let result;
       if (isEdit && id) {
-        result = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(id), {
+        // For edit mode, we need to use PUT request
+        result = await apiCall(API_ENDPOINTS.PRODUCTS, {
           method: 'PUT',
-          body: JSON.stringify(productData)
+          body: JSON.stringify({ ...productData, id: parseInt(id) })
         });
       } else {
         result = await apiCall(API_ENDPOINTS.PRODUCTS, {
@@ -225,7 +239,7 @@ const ProductForm: React.FC = () => {
       
       // Trigger refresh in main app
       window.dispatchEvent(new Event('productsUpdated'));
-      navigate('/admin/products');
+      navigate('/admin');
     } catch (error: any) {
       console.error('Error saving product:', error);
       toast.error(error.message || 'خطأ في حفظ المنتج');

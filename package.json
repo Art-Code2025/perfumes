@@ -1,0 +1,39 @@
+{
+  "name": "mawasiem-store-serverless",
+  "version": "2.0.0",
+  "description": "متجر مواسم الإلكتروني - نسخة Serverless",
+  "type": "module",
+  "scripts": {
+    "start": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "install-frontend": "cd frontend && npm install",
+    "install-all": "npm install && cd frontend && npm install",
+    "dev": "concurrently \"netlify dev\" \"cd frontend && npm run dev\"",
+    "deploy": "netlify deploy --prod",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "firebase": "^10.14.1",
+    "firebase-admin": "^13.4.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^2.4.1",
+    "netlify-cli": "^17.10.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Art-code",
+  "license": "MIT",
+  "keywords": [
+    "ecommerce",
+    "serverless",
+    "firebase",
+    "cloudinary",
+    "netlify",
+    "arabic",
+    "react"
+  ]
+}

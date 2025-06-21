@@ -40,7 +40,7 @@ const Login: React.FC = () => {
         localStorage.setItem('adminUser', JSON.stringify(response.user));
         
         toast.success('تم تسجيل الدخول بنجاح');
-        navigate('/dashboard');
+        navigate('/admin');
       } else {
         console.log('❌ Login failed:', response);
         toast.error(response?.message || 'فشل تسجيل الدخول');

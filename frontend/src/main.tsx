@@ -36,8 +36,32 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  // Check for both isAuthenticated flag and valid authToken
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const authToken = localStorage.getItem('authToken');
+  
+  // Function to check if token is valid (not expired)
+  const isTokenValid = () => {
+    if (!authToken) return false;
+    
+    try {
+      const decoded = JSON.parse(atob(authToken));
+      return decoded.exp > Date.now();
+    } catch {
+      return false;
+    }
+  };
+  
+  const hasValidAuth = isAuthenticated && authToken && isTokenValid();
+  
+  // Clear invalid tokens
+  if (!hasValidAuth && (isAuthenticated || authToken)) {
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('adminUser');
+  }
+  
+  return hasValidAuth ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 // مكون للتحكم في النافبار والـ padding

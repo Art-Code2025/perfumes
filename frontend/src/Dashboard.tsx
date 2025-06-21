@@ -669,8 +669,15 @@ const Dashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Clear all authentication data
     localStorage.removeItem('isAuthenticated');
-    navigate('/login');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('adminUser');
+    
+    toast.success('تم تسجيل الخروج بنجاح');
+    
+    // Navigate to login with replace to prevent back navigation
+    navigate('/login', { replace: true });
   };
 
   const switchTab = (tab: string) => {

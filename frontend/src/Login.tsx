@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
-import { authAPI } from './utils/api';
+import { authAPI, isAuthenticated } from './utils/api';
 
 const Login: React.FC = () => {
   const [credentials, setCredentials] = useState({
@@ -12,6 +12,14 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated()) {
+      console.log('🔒 User already authenticated, redirecting to admin...');
+      navigate('/admin', { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +46,14 @@ const Login: React.FC = () => {
         console.log('✅ Login successful, storing token...');
         localStorage.setItem('authToken', response.token);
         localStorage.setItem('adminUser', JSON.stringify(response.user));
+        localStorage.setItem('isAuthenticated', 'true'); // Add this line for ProtectedRoute
         
         toast.success('تم تسجيل الدخول بنجاح');
-        navigate('/admin');
+        
+        // Force navigation after a short delay to ensure state is updated
+        setTimeout(() => {
+          navigate('/admin', { replace: true });
+        }, 100);
       } else {
         console.log('❌ Login failed:', response);
         toast.error(response?.message || 'فشل تسجيل الدخول');

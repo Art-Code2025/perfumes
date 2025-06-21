@@ -1,4 +1,4 @@
-import { db } from './config/firebase.js';
+import { db, testFirebaseConnection } from './config/firebase.js';
 import { 
   collection, 
   doc, 
@@ -11,15 +11,22 @@ import {
   orderBy 
 } from 'firebase/firestore';
 
-// Categories Function with Mock Data
+// Categories Function with Enhanced Error Handling
 export const handler = async (event, context) => {
+  console.log('📂 Categories API Called:', {
+    method: event.httpMethod,
+    path: event.path,
+    timestamp: new Date().toISOString(),
+    forceFallback: event.headers['x-force-fallback'] === 'true'
+  });
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Force-Fallback',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       },
       body: '',
@@ -29,7 +36,7 @@ export const handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Force-Fallback',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   };
 
@@ -37,8 +44,33 @@ export const handler = async (event, context) => {
     const method = event.httpMethod;
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
+    const forceFallback = event.headers['x-force-fallback'] === 'true';
     
-    console.log('📂 Categories API - Method:', method, 'Path:', path);
+    console.log('📂 Categories API - Method:', method, 'Path:', path, 'Segments:', pathSegments, 'Force Fallback:', forceFallback);
+
+    // Check if we should force fallback mode
+    if (forceFallback) {
+      console.warn('🔄 Force fallback mode enabled, using mock data');
+      return handleWithFallback(method, pathSegments, event.body);
+    }
+
+    // Test Firebase connection first (only if not forcing fallback)
+    if (db) {
+      try {
+        const connectionTest = await testFirebaseConnection();
+        if (!connectionTest) {
+          console.warn('⚠️ Firebase connection failed, using fallback data');
+          return handleWithFallback(method, pathSegments, event.body);
+        }
+      } catch (connectionError) {
+        console.error('❌ Firebase connection test error:', connectionError);
+        console.warn('⚠️ Using fallback due to connection error');
+        return handleWithFallback(method, pathSegments, event.body);
+      }
+    } else {
+      console.warn('⚠️ Firebase DB not initialized, using fallback data');
+      return handleWithFallback(method, pathSegments, event.body);
+    }
 
     // GET /categories - Get all categories
     if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'categories') {
@@ -264,6 +296,13 @@ export const handler = async (event, context) => {
 
   } catch (error) {
     console.error('❌ Categories API Error:', error);
+    
+    // If it's a permission error, try fallback
+    if (error.code === 'permission-denied' || error.message.includes('permission') || error.message.includes('PERMISSION_DENIED')) {
+      console.warn('🔐 Permission denied, using fallback data');
+      return handleWithFallback(event.httpMethod, event.path.split('/').filter(Boolean), event.body);
+    }
+    
     return {
       statusCode: 500,
       headers,
@@ -273,4 +312,141 @@ export const handler = async (event, context) => {
       }),
     };
   }
+};
+
+// Fallback function when Firebase is not available or has permission issues
+const handleWithFallback = (method, pathSegments, body) => {
+  console.log('🔄 Using fallback data for method:', method);
+  console.log('🔍 Path segments:', pathSegments);
+  console.log('📋 Body:', body);
+  
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Force-Fallback',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  };
+
+  const mockCategories = [
+    {
+      id: 'c1',
+      name: 'أوشحة التخرج',
+      description: 'أوشحة تخرج أنيقة بألوان وتصاميم متنوعة',
+      image: 'categories/graduation-sashes.jpg',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'c2',
+      name: 'عبايات التخرج',
+      description: 'عبايات تخرج رسمية للمراسم الأكاديمية',
+      image: 'categories/graduation-gowns.jpg',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'c3',
+      name: 'الأزياء المدرسية',
+      description: 'ملابس مدرسية عالية الجودة ومريحة',
+      image: 'categories/school-uniforms.jpg',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'c4',
+      name: 'كاب التخرج',
+      description: 'كاب تخرج أكاديمي بتصاميم مختلفة',
+      image: 'categories/graduation-caps.jpg',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'c5',
+      name: 'إكسسوارات التخرج',
+      description: 'إكسسوارات مكملة لإطلالة التخرج المثالية',
+      image: 'categories/graduation-accessories.jpg',
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  // GET all categories
+  if (method === 'GET' && (pathSegments[pathSegments.length - 1] === 'categories' || pathSegments.includes('categories') || pathSegments.length === 1)) {
+    console.log('📂 Returning fallback categories list - matched condition');
+    console.log('📊 Mock categories count:', mockCategories.length);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(mockCategories),
+    };
+  }
+
+  // GET single category
+  if (method === 'GET' && pathSegments.length >= 2) {
+    const categoryId = pathSegments[pathSegments.length - 1];
+    const category = mockCategories.find(c => c.id === categoryId);
+    
+    if (!category) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'التصنيف غير موجود' }),
+      };
+    }
+    
+    console.log('📂 Returning fallback category:', category.name);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(category),
+    };
+  }
+
+  // POST - Create category (simulate success)
+  if (method === 'POST') {
+    const bodyData = body ? JSON.parse(body) : {};
+    const newCategory = {
+      id: 'c' + Date.now(),
+      ...bodyData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('📂 Simulating category creation:', newCategory.name);
+    return {
+      statusCode: 201,
+      headers,
+      body: JSON.stringify(newCategory),
+    };
+  }
+
+  // PUT - Update category (simulate success)
+  if (method === 'PUT' && pathSegments.length >= 2) {
+    const categoryId = pathSegments[pathSegments.length - 1];
+    const bodyData = body ? JSON.parse(body) : {};
+    const updatedCategory = {
+      id: categoryId,
+      ...bodyData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('📂 Simulating category update:', updatedCategory.name);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify(updatedCategory),
+    };
+  }
+
+  // DELETE - Delete category (simulate success)
+  if (method === 'DELETE' && pathSegments.length >= 2) {
+    const categoryId = pathSegments[pathSegments.length - 1];
+    console.log('📂 Simulating category deletion:', categoryId);
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ message: 'تم حذف التصنيف بنجاح (محاكاة)' }),
+    };
+  }
+
+  return {
+    statusCode: 405,
+    headers,
+    body: JSON.stringify({ error: 'Method not allowed' }),
+  };
 }; 

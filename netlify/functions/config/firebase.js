@@ -25,10 +25,40 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   
+  // Test Firebase connection
   console.log('✅ Firebase initialized successfully');
+  console.log('📊 Firebase App:', app.name);
+  console.log('🔐 Firebase Auth:', !!auth);
+  console.log('🗄️ Firebase Firestore:', !!db);
+  
 } catch (error) {
   console.error('❌ Firebase initialization failed:', error);
+  console.error('🔍 Error details:', {
+    message: error.message,
+    code: error.code,
+    stack: error.stack
+  });
   throw error;
 }
+
+// Helper function to check Firebase connection
+export const testFirebaseConnection = async () => {
+  try {
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
+    
+    // Try a simple operation to test connection
+    const { collection, getDocs } = await import('firebase/firestore');
+    const testCollection = collection(db, 'test');
+    await getDocs(testCollection);
+    
+    console.log('✅ Firebase connection test passed');
+    return true;
+  } catch (error) {
+    console.error('❌ Firebase connection test failed:', error);
+    return false;
+  }
+};
 
 export { auth, db }; 

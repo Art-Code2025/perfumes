@@ -24,7 +24,7 @@ interface Product {
   price: number;
   originalPrice?: number;
   stock: number;
-  categoryId: number;
+  categoryId: string | number; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: DynamicOption[];
   mainImage: string;
@@ -51,7 +51,7 @@ const ProductForm: React.FC = () => {
     price: 0,
     originalPrice: 0,
     stock: 0,
-    categoryId: 0,
+    categoryId: '0', // Use string '0' as default
     productType: '',
     dynamicOptions: [],
     mainImage: '',
@@ -162,7 +162,7 @@ const ProductForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!product.name || !product.description || product.price <= 0 || product.categoryId === 0) {
+    if (!product.name || !product.description || product.price <= 0 || product.categoryId === '0' || product.categoryId === 0) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
@@ -187,7 +187,7 @@ const ProductForm: React.FC = () => {
         price: Number(updatedProduct.price),
         originalPrice: Number(updatedProduct.originalPrice) || null,
         stock: Number(updatedProduct.stock),
-        categoryId: Number(updatedProduct.categoryId)
+        categoryId: Number(updatedProduct.categoryId) // Convert to number for API
       };
 
       let response;
@@ -318,11 +318,17 @@ const ProductForm: React.FC = () => {
                 ) : (
                   <select
                     value={product.categoryId}
-                    onChange={(e) => setProduct({ ...product, categoryId: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const selectedValue = e.target.value;
+                      console.log('🔄 Selected category value:', selectedValue);
+                      const newCategoryId = selectedValue === '0' ? '0' : selectedValue;
+                      console.log('🎯 Setting categoryId to:', newCategoryId);
+                      setProduct({ ...product, categoryId: newCategoryId });
+                    }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
-                    <option value={0}>
+                    <option value="0">
                       {categories.length === 0 ? 'لا توجد تصنيفات متاحة' : 'اختر التصنيف'}
                     </option>
                     {categories.map((category) => (
@@ -346,12 +352,6 @@ const ProductForm: React.FC = () => {
                       إعادة المحاولة
                     </button>
                   </div>
-                )}
-                
-                {!loadingCategories && categories.length > 0 && (
-                  <p className="mt-2 text-sm text-green-600">
-                    تم تحميل {categories.length} تصنيف
-                  </p>
                 )}
               </div>
 

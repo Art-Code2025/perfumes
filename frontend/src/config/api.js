@@ -14,7 +14,7 @@ console.log('🔧 API Configuration:', {
 });
 
 // Force fallback mode if Firebase is having permission issues
-const FORCE_FALLBACK_MODE = true; // Set to true to use mock data temporarily
+const FORCE_FALLBACK_MODE = false; // Set to true to use mock data temporarily
 
 // Image URL builder function
 export const buildImageUrl = (imagePath) => {

@@ -4,16 +4,16 @@ import { Package, Grid, ArrowRight, Sparkles, Filter, Search } from 'lucide-reac
 import ProductCard from './ProductCard';
 import { extractIdFromSlug, isValidSlug, createCategorySlug, createProductSlug } from '../utils/slugify';
 import { toast } from 'react-toastify';
-import { productsAPI, categoriesAPI } from '../utils/api';
+import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 
 
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   stock: number;
-  categoryId: number | null;
+  categoryId: string | number | null; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -23,7 +23,7 @@ interface Product {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
@@ -56,15 +56,23 @@ const CategoryPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 Fetching category:', categoryId);
       
-      const response = await categoriesAPI.getById(categoryId!);
-      if (response.success) {
-        setCategory(response.data);
+      if (!categoryId) {
+        throw new Error('معرف التصنيف غير صحيح');
+      }
+      
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
+      
+      if (category) {
+        setCategory(category);
+        console.log('✅ Category loaded:', category.name);
       } else {
-        throw new Error('فشل في تحميل التصنيف');
+        throw new Error('التصنيف غير موجود');
       }
     } catch (error) {
-      console.error('Error fetching category:', error);
+      console.error('❌ Error fetching category:', error);
       setError('فشل في تحميل التصنيف');
       toast.error('فشل في تحميل التصنيف');
     } finally {
@@ -74,15 +82,22 @@ const CategoryPage: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await productsAPI.getByCategory(categoryId!);
-      if (response.success) {
-        setProducts(response.data);
-      } else {
-        console.warn('No products found for this category');
+      console.log('🔄 Fetching products for category:', categoryId);
+      
+      if (!categoryId) {
         setProducts([]);
+        return;
       }
+      
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
+      const categoryProducts = allProducts.filter((product: Product) => 
+        product.categoryId && product.categoryId.toString() === categoryId.toString()
+      );
+      
+      setProducts(categoryProducts);
+      console.log('✅ Products loaded for category:', categoryProducts.length);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
       toast.error('فشل في تحميل المنتجات');
       setProducts([]);
     }
@@ -151,9 +166,12 @@ const CategoryPage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {category.image && (
               <img
-                src={category.image}
+                src={buildImageUrl(category.image)}
                 alt={category.name}
                 className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                onError={(e) => {
+                  e.currentTarget.src = '/images/placeholder.jpg';
+                }}
               />
             )}
             <div className="flex-1">

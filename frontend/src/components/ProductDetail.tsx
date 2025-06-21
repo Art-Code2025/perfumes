@@ -29,8 +29,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import WhatsAppButton from './WhatsAppButton';
-import { productsAPI, categoriesAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 import { addToCartUnified } from '../utils/cartUtils';
 // استيراد صور جدول المقاسات
 import size1Image from '../assets/size1.png';
@@ -38,13 +37,13 @@ import size2Image from '../assets/size2.png';
 import size3Image from '../assets/size3.png';
 
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   stock: number;
-  categoryId: number | null;
+  categoryId: string | number | null; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: ProductOption[];
   mainImage: string;
@@ -72,7 +71,7 @@ interface OptionValue {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
 }
@@ -130,21 +129,27 @@ const ProductDetail: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔄 Fetching product:', productId);
       
-      const response = await productsAPI.getById(productId!);
-      
-      if (!response.success) {
-        throw new Error('فشل في تحميل المنتج');
+      if (!productId) {
+        throw new Error('معرف المنتج غير صحيح');
       }
       
-      const data = response.data;
-      setProduct(data);
-      setSelectedImage(data.mainImage);
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+      const product = products.find((p: Product) => p.id.toString() === productId.toString());
+      
+      if (!product) {
+        throw new Error('المنتج غير موجود');
+      }
+      
+      setProduct(product);
+      setSelectedImage(product.mainImage);
+      console.log('✅ Product loaded:', product.name);
       
       // تهيئة الخيارات الافتراضية
-      if (data.dynamicOptions && data.dynamicOptions.length > 0) {
+      if (product.dynamicOptions && product.dynamicOptions.length > 0) {
         const initialOptions: { [key: string]: string } = {};
-        data.dynamicOptions.forEach((option: any) => {
+        product.dynamicOptions.forEach((option: any) => {
           if (option.options && option.options.length > 0) {
             initialOptions[option.optionName] = option.options[0].value;
           }
@@ -153,25 +158,30 @@ const ProductDetail: React.FC = () => {
       }
       
       // جلب معلومات التصنيف - Only if needed
-      if (data.categoryId) {
-        fetchCategory(data.categoryId);
+      if (product.categoryId) {
+        fetchCategory(product.categoryId);
       }
     } catch (error) {
-      console.error('Error fetching product:', error);
+      console.error('❌ Error fetching product:', error);
       setError('فشل في تحميل المنتج');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategory = async (categoryId: number) => {
+  const fetchCategory = async (categoryId: string | number) => {
     try {
-      const response = await categoriesAPI.getById(categoryId);
-      if (response.success) {
-        setCategory(response.data);
+      console.log('🔄 Fetching category:', categoryId);
+      
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
+      
+      if (category) {
+        setCategory(category);
+        console.log('✅ Category loaded:', category.name);
       }
     } catch (error) {
-      console.error('Error fetching category:', error);
+      console.error('❌ Error fetching category:', error);
     }
   };
 
@@ -549,50 +559,38 @@ const ProductDetail: React.FC = () => {
         <RelatedProducts currentProductId={product.id} categoryId={product.categoryId} />
       </div>
 
-      {showSizeGuide && product && (product.productType === 'جاكيت' || product.productType === 'عباية تخرج' || product.productType === 'مريول مدرسي') && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowSizeGuide(false)}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-6xl max-h-[95vh] overflow-auto relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-3xl font-bold text-gray-800">جدول المقاسات</h3>
-                <button
-                  onClick={() => setShowSizeGuide(false)}
-                  className="text-gray-500 hover:text-gray-700 text-3xl font-bold hover:bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="text-center">
-                <img
-                  src={getSizeGuideImage(product.productType || '')}
-                  alt="دليل المقاسات"
-                  className="max-w-full max-h-[70vh] mx-auto rounded-lg shadow-xl"
-                  onError={(e) => {
-                    // في حالة فشل تحميل الصورة، استخدام صورة بديلة
-                    e.currentTarget.src = size1Image;
-                  }}
-                />
-                <p className="text-gray-600 mt-6 text-lg font-medium">
-                  اضغط في أي مكان خارج الصورة للإغلاق
-                </p>
-              </div>
+      {/* Size Guide Modal */}
+      {showSizeGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-2xl font-bold text-gray-900">جدول المقاسات</h3>
+              <button
+                onClick={() => setShowSizeGuide(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <img
+                src={product.sizeGuideImage || getSizeGuideImage(product.productType || '')}
+                alt="جدول المقاسات"
+                className="w-full h-auto rounded-lg"
+              />
             </div>
           </div>
         </div>
       )}
 
+      {/* WhatsApp Button */}
       <WhatsAppButton />
     </div>
   );
 };
 
-const RelatedProducts: React.FC<{ currentProductId: number; categoryId: number | null }> = ({ 
+// مكون المنتجات ذات الصلة
+const RelatedProducts: React.FC<{ currentProductId: string | number; categoryId: string | number | null }> = ({ 
   currentProductId, 
   categoryId 
 }) => {
@@ -605,19 +603,19 @@ const RelatedProducts: React.FC<{ currentProductId: number; categoryId: number |
 
   const fetchRelatedProducts = async () => {
     try {
-      const response = await productsAPI.getAll();
+      console.log('🔄 Fetching related products...');
       
-      if (response.success) {
-        const filtered = response.data.filter((product: Product) => 
-          Number(product.id) !== Number(currentProductId)
-        );
-        
-        const shuffled = filtered.sort(() => Math.random() - 0.5);
-        
-        setRelatedProducts(shuffled.slice(0, 3));
-      }
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
+      const filtered = allProducts.filter((product: Product) => 
+        product.id.toString() !== currentProductId.toString()
+      );
+      
+      const shuffled = filtered.sort(() => Math.random() - 0.5);
+      
+      setRelatedProducts(shuffled.slice(0, 3));
+      console.log('✅ Related products loaded:', shuffled.slice(0, 3).length);
     } catch (error) {
-      console.error('Error fetching related products:', error);
+      console.error('❌ Error fetching related products:', error);
     }
   };
 

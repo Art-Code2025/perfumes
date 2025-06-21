@@ -1,307 +1,298 @@
-import { 
-  getAllDocuments, 
-  getDocumentById, 
-  addDocument, 
-  updateDocument, 
-  deleteDocument,
-  queryDocuments,
-  getNextId,
-  response, 
-  handleError 
-} from './utils/firestore.js';
-
-const COLLECTION_NAME = 'orders';
-
+// Orders Function with Mock Data
 export const handler = async (event, context) => {
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
-    return response(200, {});
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      },
+      body: '',
+    };
   }
 
   try {
     const method = event.httpMethod;
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
-    const body = event.body ? JSON.parse(event.body) : {};
     const queryParams = event.queryStringParameters || {};
 
+    // Mock orders data
+    const mockOrders = [
+      {
+        id: 1,
+        orderNumber: "ORD-001",
+        customerName: "أحمد محمد علي",
+        customerPhone: "0551234567",
+        customerEmail: "ahmed@example.com",
+        address: "الرياض، حي النرجس",
+        city: "الرياض",
+        status: "مُستلم",
+        paymentMethod: "كاش عند الاستلام",
+        paymentStatus: "مدفوع",
+        total: 198,
+        subtotal: 198,
+        deliveryFee: 0,
+        couponDiscount: 0,
+        createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        notes: "طلب عادي",
+        items: [
+          {
+            productId: 1,
+            productName: "وشاح تخرج أسود مطرز ذهبي مع كاب",
+            price: 99,
+            quantity: 2,
+            totalPrice: 198,
+            selectedOptions: {
+              nameOnSash: "أحمد محمد",
+              embroideryColor: "ذهبي"
+            },
+            productImage: "/images/sash-1.jpg"
+          }
+        ]
+      },
+      {
+        id: 2,
+        orderNumber: "ORD-002",
+        customerName: "فاطمة علي أحمد",
+        customerPhone: "0559876543",
+        customerEmail: "fatima@example.com",
+        address: "جدة، حي الحمراء",
+        city: "جدة",
+        status: "قيد التنفيذ",
+        paymentMethod: "كاش عند الاستلام",
+        paymentStatus: "معلق",
+        total: 149,
+        subtotal: 149,
+        deliveryFee: 0,
+        couponDiscount: 0,
+        createdAt: new Date().toISOString(), // Today
+        notes: "عاجل - التخرج غداً",
+        items: [
+          {
+            productId: 2,
+            productName: "عباية تخرج كحلي أنيقة",
+            price: 149,
+            quantity: 1,
+            totalPrice: 149,
+            selectedOptions: {
+              size: "50"
+            },
+            productImage: "/images/abaya-1.jpg"
+          }
+        ]
+      },
+      {
+        id: 3,
+        orderNumber: "ORD-003",
+        customerName: "محمد سعد",
+        customerPhone: "0556667777",
+        customerEmail: "mohammed@example.com",
+        address: "الدمام، حي الفيصلية",
+        city: "الدمام",
+        status: "معلق",
+        paymentMethod: "تحويل بنكي",
+        paymentStatus: "معلق",
+        total: 267,
+        subtotal: 267,
+        deliveryFee: 0,
+        couponDiscount: 0,
+        createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
+        notes: "",
+        items: [
+          {
+            productId: 1,
+            productName: "وشاح تخرج أسود مطرز ذهبي مع كاب",
+            price: 99,
+            quantity: 1,
+            totalPrice: 99,
+            selectedOptions: {
+              nameOnSash: "محمد سعد",
+              embroideryColor: "فضي"
+            }
+          },
+          {
+            productId: 3,
+            productName: "مريول مدرسي كحلي",
+            price: 89,
+            quantity: 2,
+            totalPrice: 178,
+            selectedOptions: {
+              size: "38"
+            }
+          }
+        ]
+      }
+    ];
+
     // Get all orders
-    if (method === 'GET' && pathSegments.length === 2) {
-      const { status, sortBy, sortOrder, limit: queryLimit, phone, email } = queryParams;
-      let conditions = [];
+    if (method === 'GET' && (pathSegments.length === 2 || pathSegments[pathSegments.length - 1] === 'orders')) {
+      // Apply filters if provided
+      let filteredOrders = [...mockOrders];
       
-      // Add status filter
-      if (status && status !== 'all') {
-        conditions.push({ field: 'status', operator: '==', value: status });
+      if (queryParams.status && queryParams.status !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.status === queryParams.status);
       }
       
-      // Add phone filter
-      if (phone) {
-        conditions.push({ field: 'customerInfo.phone', operator: '==', value: phone });
+      if (queryParams.search) {
+        const searchTerm = queryParams.search.toLowerCase();
+        filteredOrders = filteredOrders.filter(o => 
+          o.customerName.toLowerCase().includes(searchTerm) || 
+          o.customerPhone.includes(searchTerm) ||
+          o.orderNumber.toLowerCase().includes(searchTerm)
+        );
       }
-      
-      // Add email filter
-      if (email) {
-        conditions.push({ field: 'customerInfo.email', operator: '==', value: email });
-      }
-      
-      let orderBy = null;
-      if (sortBy) {
-        orderBy = { field: sortBy, direction: sortOrder || 'desc' };
-      } else {
-        // Default sorting by creation date (newest first)
-        orderBy = { field: 'createdAt', direction: 'desc' };
-      }
-      
-      const limitCount = queryLimit ? parseInt(queryLimit) : null;
-      
-      const result = await queryDocuments(COLLECTION_NAME, conditions, orderBy, limitCount);
-      
-      if (result.success) {
-        return response(200, {
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           success: true,
-          data: result.data,
-          total: result.data.length
-        });
-      } else {
-        throw new Error(result.message);
-      }
+          data: filteredOrders,
+          total: filteredOrders.length
+        }),
+      };
     }
 
     // Get single order by ID
     if (method === 'GET' && pathSegments.length === 3) {
-      const orderId = pathSegments[2];
-      const result = await getDocumentById(COLLECTION_NAME, orderId);
+      const orderId = parseInt(pathSegments[2]);
+      const order = mockOrders.find(o => o.id === orderId);
       
-      if (result.success) {
-        return response(200, result);
-      } else {
-        return response(404, result);
+      if (!order) {
+        return {
+          statusCode: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            success: false,
+            message: 'الطلب غير موجود'
+          }),
+        };
       }
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          success: true,
+          data: order
+        }),
+      };
     }
 
-    // Create new order
-    if (method === 'POST' && pathSegments.length === 2) {
-      const {
-        customerInfo,
-        items,
-        subtotal,
-        shippingCost,
-        discount,
-        total,
-        paymentMethod,
-        notes
-      } = body;
-
-      // Validation
-      if (!customerInfo || !customerInfo.name || !customerInfo.phone) {
-        return response(400, {
-          success: false,
-          message: 'معلومات العميل (الاسم والهاتف) مطلوبة'
-        });
-      }
-
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return response(400, {
-          success: false,
-          message: 'يجب أن يحتوي الطلب على منتج واحد على الأقل'
-        });
-      }
-
-      if (!total || total <= 0) {
-        return response(400, {
-          success: false,
-          message: 'إجمالي الطلب غير صحيح'
-        });
-      }
-
-      // Validate items
-      for (const item of items) {
-        if (!item.productId || !item.productName || !item.quantity || !item.price) {
-          return response(400, {
-            success: false,
-            message: 'بيانات المنتجات غير مكتملة'
-          });
+    // Get orders stats
+    if (method === 'GET' && pathSegments.includes('stats')) {
+      const totalOrders = mockOrders.length;
+      const completedOrders = mockOrders.filter(o => o.status === 'مُستلم');
+      const totalRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
+      
+      const stats = {
+        totalOrders,
+        completedOrders: completedOrders.length,
+        totalRevenue,
+        averageOrder: completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0,
+        statusBreakdown: {
+          pending: mockOrders.filter(o => o.status === 'معلق').length,
+          processing: mockOrders.filter(o => o.status === 'قيد التنفيذ').length,
+          shipped: mockOrders.filter(o => o.status === 'مُرسل').length,
+          delivered: mockOrders.filter(o => o.status === 'مُستلم').length,
+          cancelled: mockOrders.filter(o => o.status === 'ملغي').length
         }
-      }
-
-      // Get next numeric ID (starting from 1000)
-      const numericId = await getNextId(COLLECTION_NAME);
-      const orderNumber = numericId < 1000 ? 1000 : numericId;
-
-      const orderData = {
-        numericId: orderNumber,
-        orderNumber: `ORD-${orderNumber}`,
-        customerInfo: {
-          name: customerInfo.name.trim(),
-          phone: customerInfo.phone.trim(),
-          email: customerInfo.email || '',
-          address: customerInfo.address || {}
-        },
-        items: items.map(item => ({
-          productId: parseInt(item.productId),
-          productName: item.productName,
-          quantity: parseInt(item.quantity),
-          price: parseFloat(item.price),
-          selectedOptions: item.selectedOptions || [],
-          totalPrice: parseFloat(item.totalPrice || (item.quantity * item.price))
-        })),
-        subtotal: parseFloat(subtotal),
-        shippingCost: parseFloat(shippingCost) || 0,
-        discount: {
-          couponCode: discount?.couponCode || '',
-          discountAmount: parseFloat(discount?.discountAmount) || 0
-        },
-        total: parseFloat(total),
-        status: 'معلق',
-        paymentMethod: paymentMethod || 'دفع عند الاستلام',
-        notes: notes || ''
       };
 
-      const result = await addDocument(COLLECTION_NAME, orderData);
-      
-      if (result.success) {
-        // TODO: Send confirmation email/SMS to customer
-        // TODO: Update product stock if needed
-        
-        return response(201, {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           success: true,
-          message: 'تم إنشاء الطلب بنجاح',
-          data: { id: result.id, ...result.data },
-          orderNumber: orderData.orderNumber
-        });
-      } else {
-        throw new Error('فشل في إنشاء الطلب');
-      }
+          data: stats
+        }),
+      };
     }
 
-    // Update order (mainly for status updates)
-    if (method === 'PUT' && pathSegments.length === 3) {
-      const orderId = pathSegments[2];
-      const updateData = { ...body };
-      
-      // Validate status if being updated
-      const validStatuses = ['معلق', 'قيد التنفيذ', 'مُرسل', 'مُستلم', 'ملغي'];
-      if (updateData.status && !validStatuses.includes(updateData.status)) {
-        return response(400, {
-          success: false,
-          message: 'حالة الطلب غير صحيحة'
-        });
-      }
-
-      // Convert numeric fields if present
-      if (updateData.total) updateData.total = parseFloat(updateData.total);
-      if (updateData.subtotal) updateData.subtotal = parseFloat(updateData.subtotal);
-      if (updateData.shippingCost) updateData.shippingCost = parseFloat(updateData.shippingCost);
-
-      const result = await updateDocument(COLLECTION_NAME, orderId, updateData);
-      
-      if (result.success) {
-        // TODO: Send status update notification to customer
-        
-        return response(200, {
+    // For other operations (POST, PUT, DELETE), return success for demo
+    if (method === 'POST') {
+      return {
+        statusCode: 201,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           success: true,
-          message: 'تم تحديث الطلب بنجاح'
-        });
-      } else {
-        throw new Error('فشل في تحديث الطلب');
-      }
+          message: 'تم إنشاء الطلب بنجاح (Demo)',
+          data: { id: Date.now(), orderNumber: `ORD-${Date.now()}` }
+        }),
+      };
     }
 
-    // Delete order (soft delete)
-    if (method === 'DELETE' && pathSegments.length === 3) {
-      const orderId = pathSegments[2];
-      
-      // Update status to cancelled instead of actual deletion
-      const result = await updateDocument(COLLECTION_NAME, orderId, { 
-        status: 'ملغي',
-        cancelledAt: new Date()
-      });
-      
-      if (result.success) {
-        return response(200, {
+    if (method === 'PUT') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           success: true,
-          message: 'تم إلغاء الطلب بنجاح'
-        });
-      } else {
-        throw new Error('فشل في إلغاء الطلب');
-      }
+          message: 'تم تحديث الطلب بنجاح (Demo)'
+        }),
+      };
     }
 
-    // Get order statistics
-    if (method === 'GET' && pathSegments.includes('stats')) {
-      try {
-        const allOrders = await getAllDocuments(COLLECTION_NAME);
-        
-        if (allOrders.success) {
-          const orders = allOrders.data;
-          
-          const stats = {
-            total: orders.length,
-            pending: orders.filter(order => order.status === 'معلق').length,
-            processing: orders.filter(order => order.status === 'قيد التنفيذ').length,
-            shipped: orders.filter(order => order.status === 'مُرسل').length,
-            delivered: orders.filter(order => order.status === 'مُستلم').length,
-            cancelled: orders.filter(order => order.status === 'ملغي').length,
-            totalRevenue: orders
-              .filter(order => order.status !== 'ملغي')
-              .reduce((sum, order) => sum + (order.total || 0), 0),
-            averageOrderValue: 0
-          };
-          
-          const completedOrders = orders.filter(order => order.status !== 'ملغي');
-          if (completedOrders.length > 0) {
-            stats.averageOrderValue = stats.totalRevenue / completedOrders.length;
-          }
-          
-          return response(200, {
-            success: true,
-            data: stats
-          });
-        } else {
-          throw new Error(allOrders.message);
-        }
-      } catch (error) {
-        return handleError(error);
-      }
-    }
-
-    // Get orders by customer phone
-    if (method === 'GET' && pathSegments.includes('customer')) {
-      const customerPhone = pathSegments[pathSegments.length - 1];
-      
-      if (!customerPhone) {
-        return response(400, {
-          success: false,
-          message: 'رقم الهاتف مطلوب'
-        });
-      }
-      
-      const conditions = [
-        { field: 'customerInfo.phone', operator: '==', value: customerPhone }
-      ];
-      const orderBy = { field: 'createdAt', direction: 'desc' };
-      
-      const result = await queryDocuments(COLLECTION_NAME, conditions, orderBy);
-      
-      if (result.success) {
-        return response(200, {
+    if (method === 'DELETE') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           success: true,
-          data: result.data,
-          total: result.data.length
-        });
-      } else {
-        throw new Error(result.message);
-      }
+          message: 'تم حذف/إلغاء الطلب بنجاح (Demo)'
+        }),
+      };
     }
 
     // Method not allowed
-    return response(405, {
-      success: false,
-      message: 'الطريقة غير مدعومة'
-    });
+    return {
+      statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        success: false,
+        message: 'Method not allowed'
+      }),
+    };
 
   } catch (error) {
-    return handleError(error);
+    console.error('Orders function error:', error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        success: false,
+        message: 'خطأ في الخادم: ' + error.message
+      }),
+    };
   }
 }; 

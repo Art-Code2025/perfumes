@@ -25,21 +25,51 @@ const Login: React.FC = () => {
 
     try {
       // Try admin login first using Serverless APIs
-      const response = await authAPI.adminLogin(credentials.username, credentials.password);
+      console.log('🔐 Attempting admin login...');
+      console.log('📍 Current URL:', window.location.href);
+      console.log('🌐 Hostname:', window.location.hostname);
+      console.log('🏗️ Environment:', import.meta.env.PROD ? 'Production' : 'Development');
       
-      if (response.success) {
-        // Store admin token
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      const response = await authAPI.adminLogin(credentials.username, credentials.password);
+      console.log('📥 Login response:', response);
+      
+      if (response && response.success) {
+        // Store admin token - fix: access token directly, not response.data.token
+        console.log('✅ Login successful, storing token...');
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('adminUser', JSON.stringify(response.user));
         
         toast.success('تم تسجيل الدخول بنجاح');
         navigate('/dashboard');
       } else {
-        toast.error(response.message || 'فشل تسجيل الدخول');
+        console.log('❌ Login failed:', response);
+        toast.error(response?.message || 'فشل تسجيل الدخول');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'خطأ في تسجيل الدخول');
+      console.error('❌ Login error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      let errorMessage = 'خطأ في تسجيل الدخول';
+      
+      if (error.message) {
+        if (error.message.includes('404')) {
+          errorMessage = 'خطأ في الاتصال - تأكد من رفع الموقع بشكل صحيح';
+        } else if (error.message.includes('401')) {
+          errorMessage = 'بيانات الدخول غير صحيحة';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'خطأ في الخادم';
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'خطأ في الاتصال بالخادم';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

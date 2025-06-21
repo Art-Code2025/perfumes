@@ -1,5 +1,11 @@
-// API Base URL - will be automatically detected in production
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// API Base URL - hardcoded for production to fix routing issues
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.PROD ? '/.netlify/functions' : '/api');
+
+// Debug log for API base URL
+console.log('🔗 API Base URL:', API_BASE_URL);
+console.log('🏗️ Environment:', import.meta.env.PROD ? 'Production' : 'Development');
+console.log('🌐 Hostname:', window.location.hostname);
 
 // Generic API request function
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {

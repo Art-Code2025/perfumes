@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار Categories API</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>اختبار Categories API</h1>
+        
+        <div class="test-section">
+            <h3>1. جلب جميع التصنيفات</h3>
+            <button onclick="testGetCategories()">جلب التصنيفات</button>
+            <div id="getCategoriesResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. إضافة تصنيف جديد</h3>
+            <input type="text" id="categoryName" placeholder="اسم التصنيف" value="تصنيف تجريبي">
+            <textarea id="categoryDesc" placeholder="وصف التصنيف">وصف تجريبي للتصنيف</textarea>
+            <input type="text" id="categoryImage" placeholder="رابط الصورة" value="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzNzNkYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPtiq2LXZhtuK2YEg2KrYrNix2YrYqNmKPC90ZXh0Pjwvc3ZnPg==">
+            <button onclick="testAddCategory()">إضافة التصنيف</button>
+            <div id="addCategoryResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. تعديل تصنيف</h3>
+            <input type="text" id="editCategoryId" placeholder="معرف التصنيف للتعديل">
+            <input type="text" id="editCategoryName" placeholder="الاسم الجديد">
+            <textarea id="editCategoryDesc" placeholder="الوصف الجديد"></textarea>
+            <button onclick="testEditCategory()">تعديل التصنيف</button>
+            <div id="editCategoryResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. حذف تصنيف</h3>
+            <input type="text" id="deleteCategoryId" placeholder="معرف التصنيف للحذف">
+            <button onclick="testDeleteCategory()">حذف التصنيف</button>
+            <div id="deleteCategoryResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.hostname === 'localhost' ? 
+            'http://localhost:8888/.netlify/functions' : 
+            '/.netlify/functions';
+
+        async function apiCall(endpoint, options = {}) {
+            const url = `${API_BASE}/${endpoint}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            return await response.json();
+        }
+
+        async function testGetCategories() {
+            const resultDiv = document.getElementById('getCategoriesResult');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'جاري جلب التصنيفات...';
+
+            try {
+                const categories = await apiCall('categories');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `تم جلب ${categories.length} تصنيف:\n${JSON.stringify(categories, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `خطأ: ${error.message}`;
+            }
+        }
+
+        async function testAddCategory() {
+            const resultDiv = document.getElementById('addCategoryResult');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'جاري إضافة التصنيف...';
+
+            const categoryData = {
+                name: document.getElementById('categoryName').value,
+                description: document.getElementById('categoryDesc').value,
+                image: document.getElementById('categoryImage').value
+            };
+
+            try {
+                const result = await apiCall('categories', {
+                    method: 'POST',
+                    body: JSON.stringify(categoryData)
+                });
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `تم إضافة التصنيف بنجاح:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `خطأ: ${error.message}`;
+            }
+        }
+
+        async function testEditCategory() {
+            const resultDiv = document.getElementById('editCategoryResult');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'جاري تعديل التصنيف...';
+
+            const categoryId = document.getElementById('editCategoryId').value;
+            const categoryData = {
+                name: document.getElementById('editCategoryName').value,
+                description: document.getElementById('editCategoryDesc').value
+            };
+
+            if (!categoryId) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'يرجى إدخال معرف التصنيف';
+                return;
+            }
+
+            try {
+                const result = await apiCall(`categories/${categoryId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(categoryData)
+                });
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `تم تعديل التصنيف بنجاح:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `خطأ: ${error.message}`;
+            }
+        }
+
+        async function testDeleteCategory() {
+            const resultDiv = document.getElementById('deleteCategoryResult');
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'جاري حذف التصنيف...';
+
+            const categoryId = document.getElementById('deleteCategoryId').value;
+
+            if (!categoryId) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'يرجى إدخال معرف التصنيف';
+                return;
+            }
+
+            try {
+                const result = await apiCall(`categories/${categoryId}`, {
+                    method: 'DELETE'
+                });
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `تم حذف التصنيف بنجاح:\n${JSON.stringify(result, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `خطأ: ${error.message}`;
+            }
+        }
+
+        // Load categories on page load
+        window.onload = function() {
+            testGetCategories();
+        };
+    </script>
+</body>
+</html> 

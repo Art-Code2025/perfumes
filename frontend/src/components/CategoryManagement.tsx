@@ -14,8 +14,7 @@ import {
   Folder,
   Image as ImageIcon
 } from 'lucide-react';
-import { categoriesAPI, productsAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 import { createCategorySlug } from '../utils/slugify';
 
 interface Category {
@@ -52,23 +51,18 @@ const CategoryManagement: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [categoriesResponse, productsResponse] = await Promise.all([
-        categoriesAPI.getAll(),
-        productsAPI.getAll()
+      const [categoriesData, productsData] = await Promise.all([
+        apiCall(API_ENDPOINTS.CATEGORIES),
+        apiCall(API_ENDPOINTS.PRODUCTS)
       ]);
 
-      if (categoriesResponse.success && productsResponse.success) {
-        const categoriesData = categoriesResponse.data;
-        const productsData = productsResponse.data;
+      // Count products for each category
+      const categoriesWithStats: CategoryWithStats[] = categoriesData.map((category: Category) => ({
+        ...category,
+        productCount: productsData.filter((product: any) => product.categoryId === category.id).length
+      }));
 
-        // Count products for each category
-        const categoriesWithStats: CategoryWithStats[] = categoriesData.map((category: Category) => ({
-          ...category,
-          productCount: productsData.filter((product: any) => product.categoryId === category.id).length
-        }));
-
-        setCategories(categoriesWithStats);
-      }
+      setCategories(categoriesWithStats);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('فشل في جلب البيانات');
@@ -116,13 +110,11 @@ const CategoryManagement: React.FC = () => {
     if (!window.confirm(`هل أنت متأكد من حذف التصنيف "${name}"؟`)) return;
 
     try {
-      const response = await categoriesAPI.delete(id);
-      if (response.success) {
-        setCategories(categories.filter(c => c.id !== id));
-        toast.success('تم حذف التصنيف بنجاح');
-      } else {
-        toast.error(response.message || 'فشل في حذف التصنيف');
-      }
+      await apiCall(`${API_ENDPOINTS.CATEGORIES}/${id}`, {
+        method: 'DELETE'
+      });
+      setCategories(categories.filter(c => c.id !== id));
+      toast.success('تم حذف التصنيف بنجاح');
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error('خطأ في حذف التصنيف');

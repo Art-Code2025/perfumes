@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ArrowLeft, Upload, X, Save } from 'lucide-react';
-import { categoriesAPI, uploadAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { ArrowLeft, Upload, X, Save, Image as ImageIcon } from 'lucide-react';
+import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 
 // تعريف نوع التصنيف
 interface Category {
@@ -26,7 +25,8 @@ const CategoryForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     if (isEdit && id) {
@@ -37,12 +37,10 @@ const CategoryForm: React.FC = () => {
   const fetchCategory = async (categoryId: number) => {
     try {
       setLoading(true);
-      const response = await categoriesAPI.getById(categoryId);
-      if (response.success) {
-        setCategory(response.data);
-      } else {
-        toast.error('التصنيف غير موجود');
-        navigate('/admin/categories');
+      const response = await apiCall(`${API_ENDPOINTS.CATEGORIES}/${categoryId}`);
+      setCategory(response);
+      if (response.image) {
+        setImagePreview(buildImageUrl(response.image));
       }
     } catch (error) {
       console.error('Error fetching category:', error);
@@ -53,25 +51,57 @@ const CategoryForm: React.FC = () => {
     }
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
-
-    try {
-      setUploading(true);
-      const response = await uploadAPI.single(imageFile, 'categories');
-      if (response.success) {
-        return response.data.url;
-      } else {
-        toast.error('فشل في رفع الصورة');
-        return null;
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('فشل في رفع الصورة');
-      return null;
-    } finally {
-      setUploading(false);
+  const handleImageChange = (file: File) => {
+    // Check file size (10MB = 10 * 1024 * 1024 bytes)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('حجم الصورة يجب أن يكون أقل من 10 ميجابايت');
+      return;
     }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('يرجى اختيار ملف صورة صحيح');
+      return;
+    }
+
+    setImageFile(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageChange(e.dataTransfer.files[0]);
+    }
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,33 +117,39 @@ const CategoryForm: React.FC = () => {
     try {
       let updatedCategory = { ...category };
 
-      // Upload image if new one is selected
+      // Convert image to base64 if new one is selected
       if (imageFile) {
-        const imageUrl = await uploadImage();
-        if (imageUrl) {
-          updatedCategory.image = imageUrl;
-        }
+        const base64Image = await convertImageToBase64(imageFile);
+        updatedCategory.image = base64Image;
       }
 
       let response;
       if (isEdit && id) {
-        response = await categoriesAPI.update(parseInt(id), updatedCategory);
+        response = await apiCall(`${API_ENDPOINTS.CATEGORIES}/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(updatedCategory),
+        });
       } else {
-        response = await categoriesAPI.create(updatedCategory);
+        response = await apiCall(API_ENDPOINTS.CATEGORIES, {
+          method: 'POST',
+          body: JSON.stringify(updatedCategory),
+        });
       }
 
-      if (response.success) {
-        toast.success(isEdit ? 'تم تحديث التصنيف بنجاح' : 'تم إضافة التصنيف بنجاح');
-        navigate('/admin/categories');
-      } else {
-        toast.error(response.message || 'فشل في حفظ التصنيف');
-      }
+      toast.success(isEdit ? 'تم تحديث التصنيف بنجاح' : 'تم إضافة التصنيف بنجاح');
+      navigate('/admin/categories');
     } catch (error: any) {
       console.error('Error saving category:', error);
       toast.error(error.message || 'خطأ في حفظ التصنيف');
     } finally {
       setLoading(false);
     }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setCategory({ ...category, image: '' });
   };
 
   if (loading && isEdit) {
@@ -153,7 +189,7 @@ const CategoryForm: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">معلومات التصنيف</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   اسم التصنيف *
@@ -170,61 +206,83 @@ const CategoryForm: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  وصف التصنيف *
+                </label>
+                <textarea
+                  value={category.description}
+                  onChange={(e) => setCategory({ ...category, description: e.target.value })}
+                  rows={4}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="اكتب وصفاً للتصنيف"
+                  required
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   صورة التصنيف
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  {category.image && !imageFile ? (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    dragActive
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  {imagePreview ? (
                     <div className="relative">
                       <img
-                        src={buildImageUrl(category.image)}
-                        alt="صورة التصنيف"
-                        className="w-32 h-32 object-cover mx-auto rounded-lg"
-                      />
-                      <p className="mt-2 text-sm text-gray-600">الصورة الحالية</p>
-                    </div>
-                  ) : imageFile ? (
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(imageFile)}
-                        alt="الصورة الجديدة"
-                        className="w-32 h-32 object-cover mx-auto rounded-lg"
+                        src={imagePreview}
+                        alt="معاينة الصورة"
+                        className="w-48 h-48 object-cover mx-auto rounded-lg shadow-md"
                       />
                       <button
                         type="button"
-                        onClick={() => setImageFile(null)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
                       >
                         <X className="h-4 w-4" />
                       </button>
+                      <p className="mt-4 text-sm text-gray-600">
+                        {imageFile ? 'صورة جديدة' : 'الصورة الحالية'}
+                      </p>
                     </div>
                   ) : (
-                    <div>
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">اختر صورة التصنيف</p>
+                    <div className="py-8">
+                      <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-lg font-medium text-gray-600 mb-2">
+                        اسحب الصورة هنا أو انقر للاختيار
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        حد أقصى: 10 ميجابايت • PNG, JPG, GIF
+                      </p>
                     </div>
                   )}
+                  
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    className="mt-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    onChange={(e) => e.target.files?.[0] && handleImageChange(e.target.files[0])}
+                    className="hidden"
+                    id="image-upload"
                   />
+                  
+                  {!imagePreview && (
+                    <label
+                      htmlFor="image-upload"
+                      className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <Upload className="h-4 w-4 ml-2" />
+                      اختر صورة
+                    </label>
+                  )}
                 </div>
               </div>
-            </div>
-
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                وصف التصنيف *
-              </label>
-              <textarea
-                value={category.description}
-                onChange={(e) => setCategory({ ...category, description: e.target.value })}
-                rows={4}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="اكتب وصفاً للتصنيف"
-                required
-              />
             </div>
           </div>
 
@@ -239,13 +297,13 @@ const CategoryForm: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={loading || uploading}
+              disabled={loading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              {loading || uploading ? (
+              {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                  {uploading ? 'جاري رفع الصورة...' : 'جاري الحفظ...'}
+                  جاري الحفظ...
                 </>
               ) : (
                 <>

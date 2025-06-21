@@ -122,9 +122,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEdit: propIsEdit = false })
         return;
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)');
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('حجم الصورة كبير جداً (الحد الأقصى 10 ميجابايت)');
         return;
       }
       
@@ -465,7 +465,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isEdit: propIsEdit = false })
                           <div>
                             <div className="text-2xl mb-2">📤</div>
                             <div className="text-sm font-medium text-black">اختر صورة من الجهاز</div>
-                            <div className="text-xs text-gray-500 mt-1">PNG, JPG, GIF حتى 5MB</div>
+                            <div className="text-xs text-gray-500 mt-1">PNG, JPG, GIF حتى 10MB</div>
                           </div>
                         )}
                       </div>

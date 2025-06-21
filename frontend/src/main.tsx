@@ -18,6 +18,7 @@ const Dashboard = React.lazy(() => import('./Dashboard'));
 const ServiceForm = React.lazy(() => import('./ServiceForm'));
 const ServiceDetails = React.lazy(() => import('./ServiceDetails'));
 const ProductForm = React.lazy(() => import('./components/ProductForm'));
+const CategoryForm = React.lazy(() => import('./components/CategoryForm'));
 const CategoryAdd = React.lazy(() => import('./CategoryAdd'));
 const CategoryEdit = React.lazy(() => import('./CategoryEdit'));
 const CouponForm = React.lazy(() => import('./components/CouponForm'));
@@ -167,8 +168,13 @@ const LayoutWrapper: React.FC = () => {
             <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
             <Route path="/admin/coupon/edit/:id" element={<ProtectedRoute><CouponForm isEdit={true} /></ProtectedRoute>} />
             
+            {/* Category Management Routes - Legacy */}
             <Route path="/admin/category/add" element={<ProtectedRoute><CategoryAdd /></ProtectedRoute>} />
             <Route path="/admin/category/edit/:id" element={<ProtectedRoute><CategoryEdit /></ProtectedRoute>} />
+            
+            {/* Category Management Routes - New */}
+            <Route path="/admin/categories/new" element={<ProtectedRoute><CategoryForm /></ProtectedRoute>} />
+            <Route path="/admin/categories/edit/:id" element={<ProtectedRoute><CategoryForm /></ProtectedRoute>} />
             
             {/* Other Routes */}
             <Route path="/about" element={<About />} />

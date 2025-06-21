@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ChevronLeft, ChevronRight, Menu, X, Search, ShoppingCart, Heart, Package, Gift, Sparkles, ArrowLeft, Plus, Minus, Star, Users, Shield, Crown, Truck, Medal, Award, Tag, Zap } from 'lucide-react';
-import { FaInstagram, FaTiktok, FaSnapchatGhost, FaWhatsapp } from 'react-icons/fa';import { FaUser } from 'react-icons/fa';
+import { FaInstagram, FaTiktok, FaSnapchatGhost, FaWhatsapp, FaUser } from 'react-icons/fa';
 // Import components directly for debugging
 import ImageSlider from './components/ImageSlider';
 import ProductCard from './components/ProductCard';
@@ -220,27 +220,34 @@ const App: React.FC = () => {
     }));
   };
 
+  // Handle add to cart
   const handleAddToCart = async (productId: number, productName: string) => {
     try {
       const quantity = quantities[productId] || 1;
       
-      // البحث عن المنتج للحصول على السعر والصورة
-      let productPrice = 0;
-      let productImage = '';
+      // Find the product to get its details
+      const product = categoryProducts
+        .flatMap(cp => cp.products)
+        .find(p => p.id === productId);
       
-      // البحث في جميع الكاتيجوريات عن المنتج
-      for (const categoryData of categoryProducts) {
-        const product = categoryData.products.find(p => p.id === productId);
-        if (product) {
-          productPrice = product.price;
-          productImage = product.mainImage;
-          break;
-        }
+      if (!product) {
+        toast.error('لم يتم العثور على المنتج');
+        return;
       }
       
-      console.log('🛒 [App] Adding to cart:', { productId, productName, quantity, productPrice, productImage });
+      console.log('🛒 [App] Adding to cart:', { productId, productName, quantity, product });
       
-      const success = await addToCartUnified(productId, productName, quantity, {}, {}, productPrice, productImage);
+      const success = await addToCartUnified(
+        productId,
+        productName,
+        product.price,
+        quantity,
+        {}, // selectedOptions
+        {}, // optionsPricing
+        {}, // attachments
+        product // product object
+      );
+      
       if (success) {
         console.log('✅ [App] Successfully added to cart');
         // إعادة تعيين الكمية إلى 1 بعد الإضافة الناجحة

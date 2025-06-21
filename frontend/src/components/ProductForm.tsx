@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Plus, Minus, Upload, X, Save } from 'lucide-react';
-import { productsAPI, categoriesAPI, uploadAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { productsAPI, uploadAPI } from '../utils/api';
+import { buildImageUrl, apiCall, API_ENDPOINTS } from '../config/api';
 
 interface DynamicOption {
   name: string;
@@ -33,10 +33,11 @@ interface Product {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
+  createdAt?: string;
 }
 
 const ProductForm: React.FC = () => {
@@ -68,6 +69,18 @@ const ProductForm: React.FC = () => {
   // Load categories
   useEffect(() => {
     fetchCategories();
+    
+    // Listen for category updates
+    const handleCategoriesUpdated = () => {
+      console.log('📂 Categories updated event received, refreshing...');
+      fetchCategories();
+    };
+    
+    window.addEventListener('categoriesUpdated', handleCategoriesUpdated);
+    
+    return () => {
+      window.removeEventListener('categoriesUpdated', handleCategoriesUpdated);
+    };
   }, []);
 
   // Load product if editing
@@ -80,13 +93,16 @@ const ProductForm: React.FC = () => {
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
-      const response = await categoriesAPI.getAll();
-      if (response.success) {
-        setCategories(response.data);
-      }
+      console.log('🔄 Fetching categories for product form...');
+      
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      console.log('✅ Categories loaded:', categories.length);
+      
+      setCategories(categories);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
+      setCategories([]); // Set empty array as fallback
     } finally {
       setLoadingCategories(false);
     }
@@ -295,19 +311,48 @@ const ProductForm: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   التصنيف *
                 </label>
-                <select
-                  value={product.categoryId}
-                  onChange={(e) => setProduct({ ...product, categoryId: parseInt(e.target.value) })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value={0}>اختر التصنيف</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                {loadingCategories ? (
+                  <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                    جاري تحميل التصنيفات...
+                  </div>
+                ) : (
+                  <select
+                    value={product.categoryId}
+                    onChange={(e) => setProduct({ ...product, categoryId: parseInt(e.target.value) })}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value={0}>
+                      {categories.length === 0 ? 'لا توجد تصنيفات متاحة' : 'اختر التصنيف'}
                     </option>
-                  ))}
-                </select>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                
+                {!loadingCategories && categories.length === 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-red-600 mb-2">
+                      لم يتم العثور على تصنيفات. يرجى إضافة تصنيفات أولاً.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={fetchCategories}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      إعادة المحاولة
+                    </button>
+                  </div>
+                )}
+                
+                {!loadingCategories && categories.length > 0 && (
+                  <p className="mt-2 text-sm text-green-600">
+                    تم تحميل {categories.length} تصنيف
+                  </p>
+                )}
               </div>
 
               <div>

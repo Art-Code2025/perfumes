@@ -92,8 +92,10 @@ export const API_ENDPOINTS = {
   // Initialize Collections
   INIT_COLLECTIONS: 'init-collections',
   
-  // Auth
+  // Auth - UPDATED
   AUTH: 'auth/admin',
+  LOGIN: 'auth/login',
+  REGISTER: 'auth/register',
   
   // Test
   TEST_FIREBASE: 'test-firebase'

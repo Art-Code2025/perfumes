@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ArrowLeft, ShoppingCart, User, Phone, Mail, MapPin, CreditCard, Tag, Package, Check, X } from 'lucide-react';
-import { ordersAPI, couponsAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 
 interface CartItem {
   id: number;
@@ -20,7 +19,7 @@ interface CustomerInfo {
   email: string;
   address: string;
   city: string;
-  notes?: string;
+  notes: string;
 }
 
 interface CouponInfo {
@@ -93,19 +92,25 @@ const Checkout: React.FC = () => {
 
     setValidatingCoupon(true);
     try {
-      const response = await couponsAPI.validate(couponCode, subtotal);
+      // Simple coupon validation - you can enhance this
+      const validCoupons = [
+        { code: 'WELCOME10', type: 'percentage', value: 10 },
+        { code: 'SAVE50', type: 'fixed', value: 50 }
+      ];
       
-      if (response.success && response.data.isValid) {
+      const coupon = validCoupons.find(c => c.code === couponCode.toUpperCase());
+      
+      if (coupon) {
         setAppliedCoupon({
           code: couponCode,
-          type: response.data.type,
-          value: response.data.value,
+          type: coupon.type as 'percentage' | 'fixed',
+          value: coupon.value,
           isValid: true,
-          discount: response.data.discount
+          discount: coupon.type === 'percentage' ? (subtotal * coupon.value) / 100 : coupon.value
         });
         toast.success('تم تطبيق الكوبون بنجاح');
       } else {
-        toast.error(response.message || 'كوبون غير صالح');
+        toast.error('كوبون غير صالح');
         setAppliedCoupon(null);
       }
     } catch (error: any) {
@@ -142,39 +147,65 @@ const Checkout: React.FC = () => {
     try {
       // Prepare order data
       const orderData = {
-        customerInfo,
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        customerEmail: customerInfo.email,
+        address: customerInfo.address,
+        city: customerInfo.city,
+        notes: customerInfo.notes,
         items: cartItems.map(item => ({
           productId: item.id,
           productName: item.name,
           quantity: item.quantity,
           price: item.price,
-          selectedOptions: item.selectedOptions || {}
+          totalPrice: item.price * item.quantity,
+          selectedOptions: item.selectedOptions || {},
+          productImage: item.image
         })),
         subtotal,
-        discount,
-        shippingCost,
+        deliveryFee: shippingCost,
+        couponDiscount: discount,
         total,
         couponCode: appliedCoupon?.code || null,
+        paymentMethod: 'cash_on_delivery',
+        paymentStatus: 'pending',
         status: 'pending'
       };
 
-      const response = await ordersAPI.create(orderData);
+      console.log('📋 Submitting order:', orderData);
 
-      if (response.success) {
+      const response = await apiCall(API_ENDPOINTS.ORDERS, {
+        method: 'POST',
+        body: JSON.stringify(orderData)
+      });
+
+      if (response) {
         // Clear cart
         localStorage.removeItem('cartItems');
         
         toast.success('تم إرسال طلبك بنجاح! سنتواصل معك قريباً');
         
-        // Navigate to success page or home
-        navigate('/', { 
+        // Navigate to thank you page with order data
+        navigate('/thank-you', { 
           state: { 
-            orderSuccess: true, 
-            orderId: response.data.id 
+            order: {
+              id: response.id,
+              customerName: orderData.customerName,
+              customerPhone: orderData.customerPhone,
+              customerEmail: orderData.customerEmail,
+              address: orderData.address,
+              city: orderData.city,
+              items: orderData.items,
+              totalAmount: subtotal,
+              couponDiscount: discount,
+              deliveryFee: shippingCost,
+              finalAmount: total,
+              paymentMethod: 'الدفع عند الاستلام',
+              status: 'pending',
+              createdAt: new Date().toISOString()
+            }
           } 
         });
-      } else {
-        toast.error(response.message || 'فشل في إرسال الطلب');
       }
     } catch (error: any) {
       console.error('Error submitting order:', error);
@@ -219,16 +250,16 @@ const Checkout: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Customer Information Form */}
+          {/* Checkout Form */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmitOrder} className="space-y-6">
-              {/* Customer Details */}
+            <form onSubmit={handleSubmitOrder} className="space-y-8">
+              {/* Customer Information */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                   <User className="h-5 w-5 ml-2" />
                   معلومات العميل
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -246,7 +277,7 @@ const Checkout: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      رقم الهاتف *
+                      رقم الجوال *
                     </label>
                     <input
                       type="tel"

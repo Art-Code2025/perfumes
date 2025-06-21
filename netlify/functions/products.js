@@ -47,147 +47,39 @@ export const handler = async (event, context) => {
     
     console.log('🛍️ Products API - Method:', method, 'Path:', path, 'Segments:', pathSegments);
 
-    // Validate Firebase connection first
+    // Validate Firebase connection
     if (!db) {
       console.error('❌ Firebase DB not initialized!');
-      throw new Error('Database connection failed');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Database connection failed' }),
+      };
     }
 
     // GET /products - Get all products
     if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'products') {
       console.log('📦 Fetching all products from Firestore');
       
-      try {
-        const productsCollection = collection(db, 'products');
-        const productsSnapshot = await getDocs(productsCollection);
-        
-        const products = [];
-        productsSnapshot.forEach((doc) => {
-          products.push({
-            id: doc.id,
-            ...doc.data()
-          });
+      const productsCollection = collection(db, 'products');
+      const productsQuery = query(productsCollection, orderBy('createdAt', 'desc'));
+      const productsSnapshot = await getDocs(productsQuery);
+      
+      const products = [];
+      productsSnapshot.forEach((doc) => {
+        products.push({
+          id: doc.id,
+          ...doc.data()
         });
-        
-        console.log(`✅ Found ${products.length} products in Firestore`);
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(products),
-        };
-      } catch (firestoreError) {
-        console.error('❌ Firestore error, falling back to mock data:', firestoreError);
-        
-        // Fallback to mock data if Firestore fails
-        const mockProducts = [
-          {
-            id: 'p1',
-            name: 'وشاح التخرج الكلاسيكي',
-            description: 'وشاح تخرج عالي الجودة مصنوع من الساتان الفاخر',
-            price: 85.00,
-            originalPrice: 120.00,
-            stock: 25,
-            categoryId: 'c1',
-            productType: 'graduation',
-            mainImage: 'graduation-sash-1.jpg',
-            detailedImages: ['graduation-sash-1.jpg', 'graduation-sash-2.jpg'],
-            specifications: [
-              { name: 'المادة', value: 'ساتان فاخر' },
-              { name: 'الطول', value: '150 سم' },
-              { name: 'العرض', value: '12 سم' }
-            ],
-            dynamicOptions: [
-              {
-                name: 'nameOnSash',
-                label: 'الاسم على الوشاح',
-                type: 'text',
-                required: true,
-                placeholder: 'أدخل الاسم المطلوب'
-              },
-              {
-                name: 'embroideryColor',
-                label: 'لون التطريز',
-                type: 'select',
-                required: true,
-                options: ['ذهبي', 'فضي', 'أسود', 'أبيض']
-              }
-            ],
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'p2',
-            name: 'عباءة التخرج الأكاديمية',
-            description: 'عباءة تخرج رسمية للمراسم الأكاديمية',
-            price: 180.00,
-            originalPrice: 250.00,
-            stock: 15,
-            categoryId: 'c2',
-            productType: 'graduation',
-            mainImage: 'graduation-gown-1.jpg',
-            detailedImages: ['graduation-gown-1.jpg', 'graduation-gown-2.jpg'],
-            specifications: [
-              { name: 'المادة', value: 'بوليستر عالي الجودة' },
-              { name: 'النوع', value: 'عباءة أكاديمية' }
-            ],
-            dynamicOptions: [
-              {
-                name: 'size',
-                label: 'المقاس',
-                type: 'select',
-                required: true,
-                options: ['صغير', 'متوسط', 'كبير', 'كبير جداً']
-              },
-              {
-                name: 'capColor',
-                label: 'لون الكاب',
-                type: 'select',
-                required: false,
-                options: ['أسود', 'أزرق داكن', 'أحمر', 'أخضر']
-              }
-            ],
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'p3',
-            name: 'زي مدرسي موحد',
-            description: 'زي مدرسي عالي الجودة للطلاب',
-            price: 120.00,
-            stock: 30,
-            categoryId: 'c3',
-            productType: 'school',
-            mainImage: 'school-uniform-1.jpg',
-            detailedImages: ['school-uniform-1.jpg', 'school-uniform-2.jpg'],
-            specifications: [
-              { name: 'المادة', value: 'قطن مخلوط' },
-              { name: 'النوع', value: 'زي مدرسي' }
-            ],
-            dynamicOptions: [
-              {
-                name: 'size',
-                label: 'المقاس',
-                type: 'select',
-                required: true,
-                options: ['XS', 'S', 'M', 'L', 'XL']
-              },
-              {
-                name: 'color',
-                label: 'اللون',
-                type: 'select',
-                required: true,
-                options: ['أزرق', 'رمادي', 'كحلي', 'أبيض']
-              }
-            ],
-            createdAt: new Date().toISOString()
-          }
-        ];
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(mockProducts),
-        };
-      }
+      });
+      
+      console.log(`✅ Found ${products.length} products in Firestore`);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(products),
+      };
     }
 
     // GET /products/{id} - Get single product
@@ -195,38 +87,29 @@ export const handler = async (event, context) => {
       const productId = pathSegments[pathSegments.length - 1];
       console.log('📦 Fetching product:', productId);
       
-      try {
-        const productDoc = doc(db, 'products', productId);
-        const productSnapshot = await getDoc(productDoc);
-        
-        if (!productSnapshot.exists()) {
-          return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: 'المنتج غير موجود' }),
-          };
-        }
-        
-        const product = {
-          id: productSnapshot.id,
-          ...productSnapshot.data()
-        };
-        
-        console.log('✅ Product found:', product.name);
-        
+      const productDoc = doc(db, 'products', productId);
+      const productSnapshot = await getDoc(productDoc);
+      
+      if (!productSnapshot.exists()) {
         return {
-          statusCode: 200,
+          statusCode: 404,
           headers,
-          body: JSON.stringify(product),
-        };
-      } catch (error) {
-        console.error('❌ Error fetching product:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في جلب المنتج' }),
+          body: JSON.stringify({ error: 'المنتج غير موجود' }),
         };
       }
+      
+      const product = {
+        id: productSnapshot.id,
+        ...productSnapshot.data()
+      };
+      
+      console.log('✅ Product found:', product.name);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(product),
+      };
     }
 
     // POST /products - Create new product
@@ -234,36 +117,38 @@ export const handler = async (event, context) => {
       const body = event.body ? JSON.parse(event.body) : {};
       console.log('➕ Creating new product:', body.name);
       
-      try {
-        const productData = {
-          ...body,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        const productsCollection = collection(db, 'products');
-        const docRef = await addDoc(productsCollection, productData);
-        
-        const newProduct = {
-          id: docRef.id,
-          ...productData
-        };
-        
-        console.log('✅ Product created with ID:', docRef.id);
-        
+      // Validate required fields
+      if (!body.name || !body.price || !body.categoryId) {
         return {
-          statusCode: 201,
+          statusCode: 400,
           headers,
-          body: JSON.stringify(newProduct),
-        };
-      } catch (error) {
-        console.error('❌ Error creating product:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في إنشاء المنتج: ' + error.message }),
+          body: JSON.stringify({ error: 'البيانات المطلوبة ناقصة (الاسم، السعر، التصنيف)' }),
         };
       }
+      
+      const productData = {
+        ...body,
+        price: parseFloat(body.price),
+        stock: parseInt(body.stock) || 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const productsCollection = collection(db, 'products');
+      const docRef = await addDoc(productsCollection, productData);
+      
+      const newProduct = {
+        id: docRef.id,
+        ...productData
+      };
+      
+      console.log('✅ Product created with ID:', docRef.id);
+      
+      return {
+        statusCode: 201,
+        headers,
+        body: JSON.stringify(newProduct),
+      };
     }
 
     // PUT /products/{id} - Update product
@@ -272,37 +157,39 @@ export const handler = async (event, context) => {
       const body = event.body ? JSON.parse(event.body) : {};
       console.log('✏️ Updating product:', productId);
       
-      try {
-        const productDoc = doc(db, 'products', productId);
-        const updateData = {
-          ...body,
-          updatedAt: new Date().toISOString()
-        };
-        
-        await updateDoc(productDoc, updateData);
-        
-        // Get updated product
-        const updatedSnapshot = await getDoc(productDoc);
-        const updatedProduct = {
-          id: updatedSnapshot.id,
-          ...updatedSnapshot.data()
-        };
-        
-        console.log('✅ Product updated:', updatedProduct.name);
-        
+      const productDoc = doc(db, 'products', productId);
+      const productSnapshot = await getDoc(productDoc);
+      
+      if (!productSnapshot.exists()) {
         return {
-          statusCode: 200,
+          statusCode: 404,
           headers,
-          body: JSON.stringify(updatedProduct),
-        };
-      } catch (error) {
-        console.error('❌ Error updating product:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في تحديث المنتج: ' + error.message }),
+          body: JSON.stringify({ error: 'المنتج غير موجود' }),
         };
       }
+      
+      const updateData = {
+        ...body,
+        price: parseFloat(body.price),
+        stock: parseInt(body.stock) || 0,
+        updatedAt: new Date().toISOString()
+      };
+      
+      await updateDoc(productDoc, updateData);
+      
+      const updatedProduct = {
+        id: productId,
+        ...productSnapshot.data(),
+        ...updateData
+      };
+      
+      console.log('✅ Product updated:', productId);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(updatedProduct),
+      };
     }
 
     // DELETE /products/{id} - Delete product
@@ -310,32 +197,63 @@ export const handler = async (event, context) => {
       const productId = pathSegments[pathSegments.length - 1];
       console.log('🗑️ Deleting product:', productId);
       
-      try {
-        const productDoc = doc(db, 'products', productId);
-        await deleteDoc(productDoc);
-        
-        console.log('✅ Product deleted successfully');
-        
+      const productDoc = doc(db, 'products', productId);
+      const productSnapshot = await getDoc(productDoc);
+      
+      if (!productSnapshot.exists()) {
         return {
-          statusCode: 200,
+          statusCode: 404,
           headers,
-          body: JSON.stringify({ message: 'تم حذف المنتج بنجاح' }),
-        };
-      } catch (error) {
-        console.error('❌ Error deleting product:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في حذف المنتج: ' + error.message }),
+          body: JSON.stringify({ error: 'المنتج غير موجود' }),
         };
       }
+      
+      await deleteDoc(productDoc);
+      
+      console.log('✅ Product deleted:', productId);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'تم حذف المنتج بنجاح' }),
+      };
     }
 
-    // Method not allowed
+    // GET /products/category/{categoryId} - Get products by category
+    if (method === 'GET' && pathSegments.includes('category')) {
+      const categoryId = pathSegments[pathSegments.length - 1];
+      console.log('📦 Fetching products for category:', categoryId);
+      
+      const productsCollection = collection(db, 'products');
+      const productsQuery = query(
+        productsCollection, 
+        where('categoryId', '==', categoryId),
+        orderBy('createdAt', 'desc')
+      );
+      const productsSnapshot = await getDocs(productsQuery);
+      
+      const products = [];
+      productsSnapshot.forEach((doc) => {
+        products.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log(`✅ Found ${products.length} products for category ${categoryId}`);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(products),
+      };
+    }
+
+    // If no route matches
     return {
-      statusCode: 405,
+      statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
+      body: JSON.stringify({ error: 'الطريق غير موجود' }),
     };
 
   } catch (error) {
@@ -344,7 +262,7 @@ export const handler = async (event, context) => {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
-        error: 'خطأ في الخادم',
+        error: 'خطأ في الخادم', 
         details: error.message 
       }),
     };

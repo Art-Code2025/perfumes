@@ -16,18 +16,17 @@ import {
   Upload,
   Download
 } from 'lucide-react';
-import { productsAPI, categoriesAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { buildImageUrl, apiCall, API_ENDPOINTS } from '../config/api';
 import { createProductSlug } from '../utils/slugify';
 
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   stock: number;
-  categoryId: number;
+  categoryId: string | number; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -38,10 +37,11 @@ interface Product {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
+  createdAt?: string;
 }
 
 const ProductManagement: React.FC = () => {
@@ -67,21 +67,24 @@ const ProductManagement: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productsResponse, categoriesResponse] = await Promise.all([
-        productsAPI.getAll(),
-        categoriesAPI.getAll()
+      console.log('🔄 Fetching products and categories...');
+      
+      const [products, categories] = await Promise.all([
+        apiCall(API_ENDPOINTS.PRODUCTS),
+        apiCall(API_ENDPOINTS.CATEGORIES)
       ]);
 
-      if (productsResponse.success) {
-        setProducts(productsResponse.data);
-      }
-
-      if (categoriesResponse.success) {
-        setCategories(categoriesResponse.data);
-      }
+      console.log('✅ Products loaded:', products.length);
+      console.log('✅ Categories loaded:', categories.length);
+      
+      setProducts(products);
+      setCategories(categories);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       toast.error('فشل في جلب البيانات');
+      // Set empty arrays as fallback
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -123,25 +126,27 @@ const ProductManagement: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleDeleteProduct = async (id: number, name: string) => {
+  const handleDeleteProduct = async (id: string | number, name: string) => {
     if (!window.confirm(`هل أنت متأكد من حذف المنتج "${name}"؟`)) return;
 
     try {
-      const response = await productsAPI.delete(id);
-      if (response.success) {
-        setProducts(products.filter(p => p.id !== id));
-        toast.success('تم حذف المنتج بنجاح');
-      } else {
-        toast.error(response.message || 'فشل في حذف المنتج');
-      }
+      console.log('🗑️ Deleting product:', id);
+      
+      await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(id), {
+        method: 'DELETE'
+      });
+      
+      setProducts(products.filter(p => p.id !== id));
+      toast.success('تم حذف المنتج بنجاح');
+      console.log('✅ Product deleted successfully');
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error('❌ Error deleting product:', error);
       toast.error('خطأ في حذف المنتج');
     }
   };
 
-  const getCategoryName = (categoryId: number) => {
-    const category = categories.find(c => c.id === categoryId);
+  const getCategoryName = (categoryId: string | number) => {
+    const category = categories.find(c => c.id === categoryId || c.id.toString() === categoryId.toString());
     return category ? category.name : 'غير محدد';
   };
 

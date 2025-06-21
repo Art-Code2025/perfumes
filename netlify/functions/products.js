@@ -1,4 +1,18 @@
-// Simple Products Function with Mock Data
+import { db } from './config/firebase.js';
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  getDoc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit 
+} from 'firebase/firestore';
+
 export const handler = async (event, context) => {
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
@@ -13,235 +27,313 @@ export const handler = async (event, context) => {
     };
   }
 
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  };
+
   try {
     const method = event.httpMethod;
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
-    const queryParams = event.queryStringParameters || {};
+    
+    console.log('🛍️ Products API - Method:', method, 'Path:', path);
 
-    // Mock products data
-    const mockProducts = [
-      {
-        id: 1,
-        numericId: 1,
-        name: "وشاح تخرج أسود مطرز ذهبي مع كاب",
-        description: "وشاح تخرج أنيق باللون الأسود مطرّز بخيوط ذهبية لامعة، مع كاب مطرّز يضفي لمسة فخامة على إطلالة التخرج.",
-        price: 99,
-        originalPrice: 120,
-        stock: 50,
-        categoryId: 3,
-        productType: "وشاح وكاب",
-        mainImage: "/images/sash-1.jpg",
-        detailedImages: ["/images/sash-1-detail.jpg"],
-        isActive: true,
-        dynamicOptions: [
-          {
-            optionName: "nameOnSash",
-            optionType: "text",
-            required: true,
-            placeholder: "الاسم على الوشاح (ثنائي أو ثلاثي)"
-          },
-          {
-            optionName: "embroideryColor",
-            optionType: "select",
-            required: true,
-            options: [
-              { value: "ذهبي", price: 0 },
-              { value: "فضي", price: 0 },
-              { value: "أبيض", price: 0 }
-            ]
-          }
-        ]
-      },
-      {
-        id: 2,
-        numericId: 2,
-        name: "عباية تخرج كحلي أنيقة",
-        description: "عباية كحلي أنيقة تمنحك حضوراً فخماً في يوم التخرج.",
-        price: 149,
-        originalPrice: 170,
-        stock: 30,
-        categoryId: 2,
-        productType: "عباية تخرج",
-        mainImage: "/images/abaya-1.jpg",
-        detailedImages: ["/images/abaya-1-detail.jpg"],
-        isActive: true,
-        dynamicOptions: [
-          {
-            optionName: "size",
-            optionType: "select",
-            required: true,
-            options: [
-              { value: "48", price: 0 },
-              { value: "50", price: 0 },
-              { value: "52", price: 0 },
-              { value: "54", price: 0 },
-              { value: "56", price: 0 }
-            ]
-          }
-        ]
-      },
-      {
-        id: 3,
-        numericId: 3,
-        name: "مريول مدرسي كحلي",
-        description: "مريول كحلي كلاسيكي بتصميم عملي ومريح يناسب اليوم الدراسي.",
-        price: 89,
-        originalPrice: 110,
-        stock: 100,
-        categoryId: 5,
-        productType: "مريول مدرسي",
-        mainImage: "/images/uniform-1.jpg",
-        detailedImages: [],
-        isActive: true,
-        dynamicOptions: [
-          {
-            optionName: "size",
-            optionType: "select",
-            required: true,
-            options: [
-              { value: "34", price: 0 },
-              { value: "36", price: 0 },
-              { value: "38", price: 0 },
-              { value: "40", price: 0 },
-              { value: "42", price: 0 }
-            ]
-          }
-        ]
-      }
-    ];
-
-    // Get all products
-    if (method === 'GET' && (pathSegments.length === 2 || pathSegments[pathSegments.length - 1] === 'products')) {
-      // Apply filters if provided
-      let filteredProducts = [...mockProducts];
+    // GET /products - Get all products
+    if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'products') {
+      console.log('📦 Fetching all products from Firestore');
       
-      if (queryParams.category) {
-        filteredProducts = filteredProducts.filter(p => p.categoryId.toString() === queryParams.category);
-      }
-      
-      if (queryParams.search) {
-        const searchTerm = queryParams.search.toLowerCase();
-        filteredProducts = filteredProducts.filter(p => 
-          p.name.toLowerCase().includes(searchTerm) || 
-          p.description.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: filteredProducts,
-          total: filteredProducts.length
-        }),
-      };
-    }
-
-    // Get single product by ID
-    if (method === 'GET' && pathSegments.length === 3) {
-      const productId = parseInt(pathSegments[2]);
-      const product = mockProducts.find(p => p.id === productId);
-      
-      if (!product) {
+      try {
+        const productsCollection = collection(db, 'products');
+        const productsSnapshot = await getDocs(productsCollection);
+        
+        const products = [];
+        productsSnapshot.forEach((doc) => {
+          products.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log(`✅ Found ${products.length} products in Firestore`);
+        
         return {
-          statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(products),
+        };
+      } catch (firestoreError) {
+        console.error('❌ Firestore error, falling back to mock data:', firestoreError);
+        
+        // Fallback to mock data if Firestore fails
+        const mockProducts = [
+          {
+            id: 'p1',
+            name: 'وشاح التخرج الكلاسيكي',
+            description: 'وشاح تخرج عالي الجودة مصنوع من الساتان الفاخر',
+            price: 85.00,
+            originalPrice: 120.00,
+            stock: 25,
+            categoryId: 'c1',
+            productType: 'graduation',
+            mainImage: 'graduation-sash-1.jpg',
+            detailedImages: ['graduation-sash-1.jpg', 'graduation-sash-2.jpg'],
+            specifications: [
+              { name: 'المادة', value: 'ساتان فاخر' },
+              { name: 'الطول', value: '150 سم' },
+              { name: 'العرض', value: '12 سم' }
+            ],
+            dynamicOptions: [
+              {
+                name: 'nameOnSash',
+                label: 'الاسم على الوشاح',
+                type: 'text',
+                required: true,
+                placeholder: 'أدخل الاسم المطلوب'
+              },
+              {
+                name: 'embroideryColor',
+                label: 'لون التطريز',
+                type: 'select',
+                required: true,
+                options: ['ذهبي', 'فضي', 'أسود', 'أبيض']
+              }
+            ],
+            createdAt: new Date().toISOString()
           },
-          body: JSON.stringify({
-            success: false,
-            message: 'المنتج غير موجود'
-          }),
+          {
+            id: 'p2',
+            name: 'عباءة التخرج الأكاديمية',
+            description: 'عباءة تخرج رسمية للمراسم الأكاديمية',
+            price: 180.00,
+            originalPrice: 250.00,
+            stock: 15,
+            categoryId: 'c2',
+            productType: 'graduation',
+            mainImage: 'graduation-gown-1.jpg',
+            detailedImages: ['graduation-gown-1.jpg', 'graduation-gown-2.jpg'],
+            specifications: [
+              { name: 'المادة', value: 'بوليستر عالي الجودة' },
+              { name: 'النوع', value: 'عباءة أكاديمية' }
+            ],
+            dynamicOptions: [
+              {
+                name: 'size',
+                label: 'المقاس',
+                type: 'select',
+                required: true,
+                options: ['صغير', 'متوسط', 'كبير', 'كبير جداً']
+              },
+              {
+                name: 'capColor',
+                label: 'لون الكاب',
+                type: 'select',
+                required: false,
+                options: ['أسود', 'أزرق داكن', 'أحمر', 'أخضر']
+              }
+            ],
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'p3',
+            name: 'زي مدرسي موحد',
+            description: 'زي مدرسي عالي الجودة للطلاب',
+            price: 120.00,
+            stock: 30,
+            categoryId: 'c3',
+            productType: 'school',
+            mainImage: 'school-uniform-1.jpg',
+            detailedImages: ['school-uniform-1.jpg', 'school-uniform-2.jpg'],
+            specifications: [
+              { name: 'المادة', value: 'قطن مخلوط' },
+              { name: 'النوع', value: 'زي مدرسي' }
+            ],
+            dynamicOptions: [
+              {
+                name: 'size',
+                label: 'المقاس',
+                type: 'select',
+                required: true,
+                options: ['XS', 'S', 'M', 'L', 'XL']
+              },
+              {
+                name: 'color',
+                label: 'اللون',
+                type: 'select',
+                required: true,
+                options: ['أزرق', 'رمادي', 'كحلي', 'أبيض']
+              }
+            ],
+            createdAt: new Date().toISOString()
+          }
+        ];
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(mockProducts),
         };
       }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: product
-        }),
-      };
     }
 
-    // For other operations (POST, PUT, DELETE), return success for demo
+    // GET /products/{id} - Get single product
+    if (method === 'GET' && pathSegments.length >= 2) {
+      const productId = pathSegments[pathSegments.length - 1];
+      console.log('📦 Fetching product:', productId);
+      
+      try {
+        const productDoc = doc(db, 'products', productId);
+        const productSnapshot = await getDoc(productDoc);
+        
+        if (!productSnapshot.exists()) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'المنتج غير موجود' }),
+          };
+        }
+        
+        const product = {
+          id: productSnapshot.id,
+          ...productSnapshot.data()
+        };
+        
+        console.log('✅ Product found:', product.name);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(product),
+        };
+      } catch (error) {
+        console.error('❌ Error fetching product:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في جلب المنتج' }),
+        };
+      }
+    }
+
+    // POST /products - Create new product
     if (method === 'POST') {
-      return {
-        statusCode: 201,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم إنشاء المنتج بنجاح (Demo)',
-          data: { id: Date.now() }
-        }),
-      };
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('➕ Creating new product:', body.name);
+      
+      try {
+        const productData = {
+          ...body,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        const productsCollection = collection(db, 'products');
+        const docRef = await addDoc(productsCollection, productData);
+        
+        const newProduct = {
+          id: docRef.id,
+          ...productData
+        };
+        
+        console.log('✅ Product created with ID:', docRef.id);
+        
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(newProduct),
+        };
+      } catch (error) {
+        console.error('❌ Error creating product:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في إنشاء المنتج: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'PUT') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم تحديث المنتج بنجاح (Demo)'
-        }),
-      };
+    // PUT /products/{id} - Update product
+    if (method === 'PUT' && pathSegments.length >= 2) {
+      const productId = pathSegments[pathSegments.length - 1];
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('✏️ Updating product:', productId);
+      
+      try {
+        const productDoc = doc(db, 'products', productId);
+        const updateData = {
+          ...body,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await updateDoc(productDoc, updateData);
+        
+        // Get updated product
+        const updatedSnapshot = await getDoc(productDoc);
+        const updatedProduct = {
+          id: updatedSnapshot.id,
+          ...updatedSnapshot.data()
+        };
+        
+        console.log('✅ Product updated:', updatedProduct.name);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(updatedProduct),
+        };
+      } catch (error) {
+        console.error('❌ Error updating product:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في تحديث المنتج: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'DELETE') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم حذف المنتج بنجاح (Demo)'
-        }),
-      };
+    // DELETE /products/{id} - Delete product
+    if (method === 'DELETE' && pathSegments.length >= 2) {
+      const productId = pathSegments[pathSegments.length - 1];
+      console.log('🗑️ Deleting product:', productId);
+      
+      try {
+        const productDoc = doc(db, 'products', productId);
+        await deleteDoc(productDoc);
+        
+        console.log('✅ Product deleted successfully');
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ message: 'تم حذف المنتج بنجاح' }),
+        };
+      } catch (error) {
+        console.error('❌ Error deleting product:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في حذف المنتج: ' + error.message }),
+        };
+      }
     }
 
     // Method not allowed
     return {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'Method not allowed'
-      }),
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' }),
     };
 
   } catch (error) {
-    console.error('Products function error:', error);
+    console.error('❌ Products API Error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'خطأ في الخادم'
+      headers,
+      body: JSON.stringify({ 
+        error: 'خطأ في الخادم',
+        details: error.message 
       }),
     };
   }

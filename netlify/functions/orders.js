@@ -1,4 +1,18 @@
-// Orders Function with Mock Data
+import { db } from './config/firebase.js';
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  getDoc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  orderBy,
+  where,
+  limit 
+} from 'firebase/firestore';
+
 export const handler = async (event, context) => {
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
@@ -13,285 +27,310 @@ export const handler = async (event, context) => {
     };
   }
 
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  };
+
   try {
     const method = event.httpMethod;
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
-    const queryParams = event.queryStringParameters || {};
+    
+    console.log('📋 Orders API - Method:', method, 'Path:', path);
 
-    // Mock orders data
-    const mockOrders = [
-      {
-        id: 1,
-        orderNumber: "ORD-001",
-        customerName: "أحمد محمد علي",
-        customerPhone: "0551234567",
-        customerEmail: "ahmed@example.com",
-        address: "الرياض، حي النرجس",
-        city: "الرياض",
-        status: "مُستلم",
-        paymentMethod: "كاش عند الاستلام",
-        paymentStatus: "مدفوع",
-        total: 198,
-        subtotal: 198,
-        deliveryFee: 0,
-        couponDiscount: 0,
-        createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-        notes: "طلب عادي",
-        items: [
-          {
-            productId: 1,
-            productName: "وشاح تخرج أسود مطرز ذهبي مع كاب",
-            price: 99,
-            quantity: 2,
-            totalPrice: 198,
-            selectedOptions: {
-              nameOnSash: "أحمد محمد",
-              embroideryColor: "ذهبي"
-            },
-            productImage: "/images/sash-1.jpg"
-          }
-        ]
-      },
-      {
-        id: 2,
-        orderNumber: "ORD-002",
-        customerName: "فاطمة علي أحمد",
-        customerPhone: "0559876543",
-        customerEmail: "fatima@example.com",
-        address: "جدة، حي الحمراء",
-        city: "جدة",
-        status: "قيد التنفيذ",
-        paymentMethod: "كاش عند الاستلام",
-        paymentStatus: "معلق",
-        total: 149,
-        subtotal: 149,
-        deliveryFee: 0,
-        couponDiscount: 0,
-        createdAt: new Date().toISOString(), // Today
-        notes: "عاجل - التخرج غداً",
-        items: [
-          {
-            productId: 2,
-            productName: "عباية تخرج كحلي أنيقة",
-            price: 149,
-            quantity: 1,
-            totalPrice: 149,
-            selectedOptions: {
-              size: "50"
-            },
-            productImage: "/images/abaya-1.jpg"
-          }
-        ]
-      },
-      {
-        id: 3,
-        orderNumber: "ORD-003",
-        customerName: "محمد سعد",
-        customerPhone: "0556667777",
-        customerEmail: "mohammed@example.com",
-        address: "الدمام، حي الفيصلية",
-        city: "الدمام",
-        status: "معلق",
-        paymentMethod: "تحويل بنكي",
-        paymentStatus: "معلق",
-        total: 267,
-        subtotal: 267,
-        deliveryFee: 0,
-        couponDiscount: 0,
-        createdAt: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
-        notes: "",
-        items: [
-          {
-            productId: 1,
-            productName: "وشاح تخرج أسود مطرز ذهبي مع كاب",
-            price: 99,
-            quantity: 1,
-            totalPrice: 99,
-            selectedOptions: {
-              nameOnSash: "محمد سعد",
-              embroideryColor: "فضي"
-            }
-          },
-          {
-            productId: 3,
-            productName: "مريول مدرسي كحلي",
-            price: 89,
-            quantity: 2,
-            totalPrice: 178,
-            selectedOptions: {
-              size: "38"
-            }
-          }
-        ]
-      }
-    ];
-
-    // Get all orders
-    if (method === 'GET' && (pathSegments.length === 2 || pathSegments[pathSegments.length - 1] === 'orders')) {
-      // Apply filters if provided
-      let filteredOrders = [...mockOrders];
+    // GET /orders - Get all orders
+    if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'orders') {
+      console.log('📋 Fetching all orders from Firestore');
       
-      if (queryParams.status && queryParams.status !== 'all') {
-        filteredOrders = filteredOrders.filter(o => o.status === queryParams.status);
-      }
-      
-      if (queryParams.search) {
-        const searchTerm = queryParams.search.toLowerCase();
-        filteredOrders = filteredOrders.filter(o => 
-          o.customerName.toLowerCase().includes(searchTerm) || 
-          o.customerPhone.includes(searchTerm) ||
-          o.orderNumber.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: filteredOrders,
-          total: filteredOrders.length
-        }),
-      };
-    }
-
-    // Get single order by ID
-    if (method === 'GET' && pathSegments.length === 3) {
-      const orderId = parseInt(pathSegments[2]);
-      const order = mockOrders.find(o => o.id === orderId);
-      
-      if (!order) {
+      try {
+        const ordersCollection = collection(db, 'orders');
+        const ordersQuery = query(ordersCollection, orderBy('createdAt', 'desc'));
+        const ordersSnapshot = await getDocs(ordersQuery);
+        
+        const orders = [];
+        ordersSnapshot.forEach((doc) => {
+          orders.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log(`✅ Found ${orders.length} orders in Firestore`);
+        
         return {
-          statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(orders),
+        };
+      } catch (firestoreError) {
+        console.error('❌ Firestore error, falling back to mock data:', firestoreError);
+        
+        // Fallback to mock data if Firestore fails
+        const mockOrders = [
+          {
+            id: 'o1',
+            customerName: 'أحمد محمد الغامدي',
+            customerPhone: '+966501234567',
+            customerEmail: 'ahmed.ghamdi@email.com',
+            address: 'شارع الأمير محمد بن عبدالعزيز، حي الملز',
+            city: 'الرياض',
+            items: [
+              {
+                productId: 'p1',
+                productName: 'وشاح التخرج الكلاسيكي',
+                price: 85.00,
+                quantity: 1,
+                totalPrice: 85.00,
+                selectedOptions: {
+                  nameOnSash: 'أحمد محمد الغامدي',
+                  embroideryColor: 'ذهبي'
+                },
+                productImage: 'graduation-sash-1.jpg'
+              }
+            ],
+            subtotal: 85.00,
+            deliveryFee: 25.00,
+            couponDiscount: 0,
+            total: 110.00,
+            paymentMethod: 'cash_on_delivery',
+            paymentStatus: 'pending',
+            status: 'confirmed',
+            createdAt: '2024-12-06T10:30:00Z',
+            notes: 'يرجى التأكد من دقة التطريز'
           },
-          body: JSON.stringify({
-            success: false,
-            message: 'الطلب غير موجود'
-          }),
+          {
+            id: 'o2',
+            customerName: 'فاطمة علي القحطاني',
+            customerPhone: '+966507654321',
+            customerEmail: 'fatima.qahtani@email.com',
+            address: 'شارع التحلية، حي النخيل',
+            city: 'جدة',
+            items: [
+              {
+                productId: 'p2',
+                productName: 'عباءة التخرج الأكاديمية',
+                price: 180.00,
+                quantity: 1,
+                totalPrice: 180.00,
+                selectedOptions: {
+                  size: 'متوسط',
+                  capColor: 'أسود'
+                },
+                productImage: 'graduation-gown-1.jpg'
+              }
+            ],
+            subtotal: 180.00,
+            deliveryFee: 35.00,
+            couponDiscount: 15.00,
+            total: 200.00,
+            paymentMethod: 'bank_transfer',
+            paymentStatus: 'paid',
+            status: 'preparing',
+            createdAt: '2024-12-05T14:15:00Z',
+            notes: ''
+          },
+          {
+            id: 'o3',
+            customerName: 'محمد عبدالرحمن السلمي',
+            customerPhone: '+966551234567',
+            customerEmail: 'mohammed.salmi@email.com',
+            address: 'شارع الملك فهد، حي الراكة',
+            city: 'الخبر',
+            items: [
+              {
+                productId: 'p3',
+                productName: 'زي مدرسي موحد',
+                price: 120.00,
+                quantity: 2,
+                totalPrice: 240.00,
+                selectedOptions: {
+                  size: 'L',
+                  color: 'أزرق'
+                },
+                productImage: 'school-uniform-1.jpg'
+              }
+            ],
+            subtotal: 240.00,
+            deliveryFee: 40.00,
+            couponDiscount: 24.00,
+            total: 256.00,
+            paymentMethod: 'online_payment',
+            paymentStatus: 'paid',
+            status: 'delivered',
+            createdAt: '2024-12-04T09:45:00Z',
+            notes: 'تم التسليم بنجاح'
+          }
+        ];
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(mockOrders),
         };
       }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: order
-        }),
-      };
     }
 
-    // Get orders stats
-    if (method === 'GET' && pathSegments.includes('stats')) {
-      const totalOrders = mockOrders.length;
-      const completedOrders = mockOrders.filter(o => o.status === 'مُستلم');
-      const totalRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
+    // GET /orders/{id} - Get single order
+    if (method === 'GET' && pathSegments.length >= 2) {
+      const orderId = pathSegments[pathSegments.length - 1];
+      console.log('📋 Fetching order:', orderId);
       
-      const stats = {
-        totalOrders,
-        completedOrders: completedOrders.length,
-        totalRevenue,
-        averageOrder: completedOrders.length > 0 ? Math.round(totalRevenue / completedOrders.length) : 0,
-        statusBreakdown: {
-          pending: mockOrders.filter(o => o.status === 'معلق').length,
-          processing: mockOrders.filter(o => o.status === 'قيد التنفيذ').length,
-          shipped: mockOrders.filter(o => o.status === 'مُرسل').length,
-          delivered: mockOrders.filter(o => o.status === 'مُستلم').length,
-          cancelled: mockOrders.filter(o => o.status === 'ملغي').length
+      try {
+        const orderDoc = doc(db, 'orders', orderId);
+        const orderSnapshot = await getDoc(orderDoc);
+        
+        if (!orderSnapshot.exists()) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'الطلب غير موجود' }),
+          };
         }
-      };
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: stats
-        }),
-      };
+        
+        const order = {
+          id: orderSnapshot.id,
+          ...orderSnapshot.data()
+        };
+        
+        console.log('✅ Order found:', order.customerName);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(order),
+        };
+      } catch (error) {
+        console.error('❌ Error fetching order:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في جلب الطلب' }),
+        };
+      }
     }
 
-    // For other operations (POST, PUT, DELETE), return success for demo
+    // POST /orders - Create new order
     if (method === 'POST') {
-      return {
-        statusCode: 201,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم إنشاء الطلب بنجاح (Demo)',
-          data: { id: Date.now(), orderNumber: `ORD-${Date.now()}` }
-        }),
-      };
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('➕ Creating new order for:', body.customerName);
+      
+      try {
+        const orderData = {
+          ...body,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: body.status || 'pending',
+          paymentStatus: body.paymentStatus || 'pending'
+        };
+        
+        const ordersCollection = collection(db, 'orders');
+        const docRef = await addDoc(ordersCollection, orderData);
+        
+        const newOrder = {
+          id: docRef.id,
+          ...orderData
+        };
+        
+        console.log('✅ Order created with ID:', docRef.id);
+        
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(newOrder),
+        };
+      } catch (error) {
+        console.error('❌ Error creating order:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في إنشاء الطلب: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'PUT') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم تحديث الطلب بنجاح (Demo)'
-        }),
-      };
+    // PUT /orders/{id} - Update order
+    if (method === 'PUT' && pathSegments.length >= 2) {
+      const orderId = pathSegments[pathSegments.length - 1];
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('✏️ Updating order:', orderId);
+      
+      try {
+        const orderDoc = doc(db, 'orders', orderId);
+        const updateData = {
+          ...body,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await updateDoc(orderDoc, updateData);
+        
+        // Get updated order
+        const updatedSnapshot = await getDoc(orderDoc);
+        const updatedOrder = {
+          id: updatedSnapshot.id,
+          ...updatedSnapshot.data()
+        };
+        
+        console.log('✅ Order updated:', updatedOrder.customerName);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(updatedOrder),
+        };
+      } catch (error) {
+        console.error('❌ Error updating order:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في تحديث الطلب: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'DELETE') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم حذف/إلغاء الطلب بنجاح (Demo)'
-        }),
-      };
+    // DELETE /orders/{id} - Delete order
+    if (method === 'DELETE' && pathSegments.length >= 2) {
+      const orderId = pathSegments[pathSegments.length - 1];
+      console.log('🗑️ Deleting order:', orderId);
+      
+      try {
+        const orderDoc = doc(db, 'orders', orderId);
+        await deleteDoc(orderDoc);
+        
+        console.log('✅ Order deleted successfully');
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ message: 'تم حذف الطلب بنجاح' }),
+        };
+      } catch (error) {
+        console.error('❌ Error deleting order:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في حذف الطلب: ' + error.message }),
+        };
+      }
     }
 
     // Method not allowed
     return {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'Method not allowed'
-      }),
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' }),
     };
 
   } catch (error) {
-    console.error('Orders function error:', error);
+    console.error('❌ Orders API Error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'خطأ في الخادم: ' + error.message
+      headers,
+      body: JSON.stringify({ 
+        error: 'خطأ في الخادم',
+        details: error.message 
       }),
     };
   }

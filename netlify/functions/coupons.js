@@ -1,4 +1,17 @@
-// Coupons Function with Mock Data
+import { db } from './config/firebase.js';
+import { 
+  collection, 
+  doc, 
+  getDocs, 
+  getDoc, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  orderBy,
+  where 
+} from 'firebase/firestore';
+
 export const handler = async (event, context) => {
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
@@ -13,352 +26,289 @@ export const handler = async (event, context) => {
     };
   }
 
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  };
+
   try {
     const method = event.httpMethod;
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
-    const queryParams = event.queryStringParameters || {};
+    
+    console.log('🎫 Coupons API - Method:', method, 'Path:', path);
 
-    // Mock coupons data
-    const mockCoupons = [
-      {
-        id: 1,
-        numericId: 1,
-        code: "GRAD2024",
-        type: "percentage",
-        value: 10,
-        description: "خصم 10% على جميع منتجات التخرج",
-        minOrderValue: 100,
-        maxDiscount: 50,
-        maxUses: 100,
-        currentUses: 15,
-        isActive: true,
-        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 2,
-        numericId: 2,
-        code: "WELCOME20",
-        type: "percentage",
-        value: 20,
-        description: "خصم 20% للعملاء الجدد",
-        minOrderValue: 200,
-        maxDiscount: 100,
-        maxUses: 50,
-        currentUses: 8,
-        isActive: true,
-        startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days ago
-        endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 3,
-        numericId: 3,
-        code: "FIXED50",
-        type: "fixed",
-        value: 50,
-        description: "خصم 50 ريال ثابت",
-        minOrderValue: 300,
-        maxDiscount: 50,
-        maxUses: 25,
-        currentUses: 3,
-        isActive: true,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days from now
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 4,
-        numericId: 4,
-        code: "EXPIRED10",
-        type: "percentage",
-        value: 10,
-        description: "كوبون منتهي الصلاحية",
-        minOrderValue: 100,
-        maxDiscount: 30,
-        maxUses: 20,
-        currentUses: 20, // Used all available uses
-        isActive: false,
-        startDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days ago
-        endDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago (expired)
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    // Get all coupons
-    if (method === 'GET' && (pathSegments.length === 2 || pathSegments[pathSegments.length - 1] === 'coupons')) {
-      // Apply filters if provided
-      let filteredCoupons = [...mockCoupons];
+    // GET /coupons - Get all coupons
+    if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'coupons') {
+      console.log('🎫 Fetching all coupons from Firestore');
       
-      if (queryParams.active === 'true') {
-        filteredCoupons = filteredCoupons.filter(c => c.isActive && new Date(c.endDate) > new Date());
-      }
-      
-      if (queryParams.search) {
-        const searchTerm = queryParams.search.toLowerCase();
-        filteredCoupons = filteredCoupons.filter(c => 
-          c.code.toLowerCase().includes(searchTerm) || 
-          c.description.toLowerCase().includes(searchTerm)
-        );
-      }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: filteredCoupons,
-          total: filteredCoupons.length
-        }),
-      };
-    }
-
-    // Get single coupon by ID
-    if (method === 'GET' && pathSegments.length === 3) {
-      const couponId = parseInt(pathSegments[2]);
-      const coupon = mockCoupons.find(c => c.id === couponId || c.numericId === couponId);
-      
-      if (!coupon) {
+      try {
+        const couponsCollection = collection(db, 'coupons');
+        const couponsQuery = query(couponsCollection, orderBy('createdAt', 'desc'));
+        const couponsSnapshot = await getDocs(couponsQuery);
+        
+        const coupons = [];
+        couponsSnapshot.forEach((doc) => {
+          coupons.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        
+        console.log(`✅ Found ${coupons.length} coupons in Firestore`);
+        
         return {
-          statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            success: false,
-            message: 'الكوبون غير موجود'
-          }),
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(coupons),
         };
-      }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          data: coupon
-        }),
-      };
-    }
-
-    // Validate coupon
-    if (method === 'POST' && pathSegments.includes('validate')) {
-      const body = event.body ? JSON.parse(event.body) : {};
-      const { code, orderValue } = body;
-
-      if (!code) {
-        return {
-          statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+      } catch (firestoreError) {
+        console.error('❌ Firestore error, falling back to mock data:', firestoreError);
+        
+        // Fallback to mock data if Firestore fails
+        const mockCoupons = [
+          {
+            id: 'cp1',
+            name: 'خصم الطلاب الجدد',
+            code: 'WELCOME10',
+            description: 'خصم 10% على أول طلب للطلاب الجدد',
+            discountType: 'percentage',
+            discountValue: 10,
+            minOrderAmount: 100,
+            maxDiscountAmount: 50,
+            usageLimit: 100,
+            usedCount: 15,
+            isActive: true,
+            validFrom: '2024-12-01T00:00:00Z',
+            validUntil: '2024-12-31T23:59:59Z',
+            applicableCategories: [],
+            applicableProducts: [],
+            createdAt: '2024-12-01T08:00:00Z'
           },
-          body: JSON.stringify({
-            success: false,
-            message: 'كود الكوبون مطلوب'
-          }),
-        };
-      }
-
-      const coupon = mockCoupons.find(c => c.code.toUpperCase() === code.toUpperCase());
-
-      if (!coupon) {
-        return {
-          statusCode: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+          {
+            id: 'cp2',
+            name: 'خصم التخرج الذهبي',
+            code: 'GRAD25',
+            description: 'خصم 25% على منتجات التخرج',
+            discountType: 'percentage',
+            discountValue: 25,
+            minOrderAmount: 200,
+            maxDiscountAmount: 100,
+            usageLimit: 50,
+            usedCount: 8,
+            isActive: true,
+            validFrom: '2024-12-01T00:00:00Z',
+            validUntil: '2024-12-25T23:59:59Z',
+            applicableCategories: ['c1', 'c2'],
+            applicableProducts: [],
+            createdAt: '2024-12-01T09:00:00Z'
           },
-          body: JSON.stringify({
-            success: false,
-            message: 'كود الكوبون غير صحيح'
-          }),
-        };
-      }
-
-      // Check if active
-      if (!coupon.isActive) {
-        return {
-          statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
+          {
+            id: 'cp3',
+            name: 'خصم ثابت للمناسبات',
+            code: 'SPECIAL50',
+            description: 'خصم 50 ريال على الطلبات فوق 300 ريال',
+            discountType: 'fixed',
+            discountValue: 50,
+            minOrderAmount: 300,
+            maxDiscountAmount: 50,
+            usageLimit: 30,
+            usedCount: 12,
+            isActive: true,
+            validFrom: '2024-12-01T00:00:00Z',
+            validUntil: '2024-12-20T23:59:59Z',
+            applicableCategories: [],
+            applicableProducts: [],
+            createdAt: '2024-12-01T10:00:00Z'
           },
-          body: JSON.stringify({
-            success: false,
-            message: 'هذا الكوبون غير نشط'
-          }),
-        };
-      }
-
-      // Check if expired
-      if (new Date(coupon.endDate) < new Date()) {
-        return {
-          statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            success: false,
-            message: 'انتهت صلاحية هذا الكوبون'
-          }),
-        };
-      }
-
-      // Check usage limit
-      if (coupon.currentUses >= coupon.maxUses) {
-        return {
-          statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            success: false,
-            message: 'تم استنفاد عدد مرات استخدام هذا الكوبون'
-          }),
-        };
-      }
-
-      // Check minimum order value
-      if (orderValue && orderValue < coupon.minOrderValue) {
-        return {
-          statusCode: 400,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            success: false,
-            message: `الحد الأدنى للطلب هو ${coupon.minOrderValue} ريال`
-          }),
-        };
-      }
-
-      // Calculate discount amount
-      let discountAmount = 0;
-      if (coupon.type === 'percentage') {
-        discountAmount = (orderValue * coupon.value) / 100;
-        if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-          discountAmount = coupon.maxDiscount;
-        }
-      } else if (coupon.type === 'fixed') {
-        discountAmount = coupon.value;
-      }
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'الكوبون صالح للاستخدام',
-          data: {
-            ...coupon,
-            discountAmount: Math.round(discountAmount * 100) / 100
+          {
+            id: 'cp4',
+            name: 'خصم منتهي الصلاحية',
+            code: 'EXPIRED20',
+            description: 'خصم 20% منتهي الصلاحية',
+            discountType: 'percentage',
+            discountValue: 20,
+            minOrderAmount: 150,
+            maxDiscountAmount: 75,
+            usageLimit: 20,
+            usedCount: 20,
+            isActive: false,
+            validFrom: '2024-11-01T00:00:00Z',
+            validUntil: '2024-11-30T23:59:59Z',
+            applicableCategories: [],
+            applicableProducts: [],
+            createdAt: '2024-11-01T08:00:00Z'
           }
-        }),
-      };
+        ];
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(mockCoupons),
+        };
+      }
     }
 
-    // Apply coupon (increment usage)
-    if (method === 'POST' && pathSegments.includes('apply')) {
-      const body = event.body ? JSON.parse(event.body) : {};
-      const { code } = body;
-
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم تطبيق الكوبون بنجاح (Demo)'
-        }),
-      };
+    // GET /coupons/{id} - Get single coupon
+    if (method === 'GET' && pathSegments.length >= 2) {
+      const couponId = pathSegments[pathSegments.length - 1];
+      console.log('🎫 Fetching coupon:', couponId);
+      
+      try {
+        const couponDoc = doc(db, 'coupons', couponId);
+        const couponSnapshot = await getDoc(couponDoc);
+        
+        if (!couponSnapshot.exists()) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'الكوبون غير موجود' }),
+          };
+        }
+        
+        const coupon = {
+          id: couponSnapshot.id,
+          ...couponSnapshot.data()
+        };
+        
+        console.log('✅ Coupon found:', coupon.name);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(coupon),
+        };
+      } catch (error) {
+        console.error('❌ Error fetching coupon:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في جلب الكوبون' }),
+        };
+      }
     }
 
-    // For other operations (POST, PUT, DELETE), return success for demo
+    // POST /coupons - Create new coupon
     if (method === 'POST') {
-      return {
-        statusCode: 201,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم إنشاء الكوبون بنجاح (Demo)',
-          data: { id: Date.now() }
-        }),
-      };
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('➕ Creating new coupon:', body.name);
+      
+      try {
+        const couponData = {
+          ...body,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          usedCount: 0,
+          isActive: body.isActive !== undefined ? body.isActive : true
+        };
+        
+        const couponsCollection = collection(db, 'coupons');
+        const docRef = await addDoc(couponsCollection, couponData);
+        
+        const newCoupon = {
+          id: docRef.id,
+          ...couponData
+        };
+        
+        console.log('✅ Coupon created with ID:', docRef.id);
+        
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(newCoupon),
+        };
+      } catch (error) {
+        console.error('❌ Error creating coupon:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في إنشاء الكوبون: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'PUT') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم تحديث الكوبون بنجاح (Demo)'
-        }),
-      };
+    // PUT /coupons/{id} - Update coupon
+    if (method === 'PUT' && pathSegments.length >= 2) {
+      const couponId = pathSegments[pathSegments.length - 1];
+      const body = event.body ? JSON.parse(event.body) : {};
+      console.log('✏️ Updating coupon:', couponId);
+      
+      try {
+        const couponDoc = doc(db, 'coupons', couponId);
+        const updateData = {
+          ...body,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await updateDoc(couponDoc, updateData);
+        
+        // Get updated coupon
+        const updatedSnapshot = await getDoc(couponDoc);
+        const updatedCoupon = {
+          id: updatedSnapshot.id,
+          ...updatedSnapshot.data()
+        };
+        
+        console.log('✅ Coupon updated:', updatedCoupon.name);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(updatedCoupon),
+        };
+      } catch (error) {
+        console.error('❌ Error updating coupon:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في تحديث الكوبون: ' + error.message }),
+        };
+      }
     }
 
-    if (method === 'DELETE') {
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success: true,
-          message: 'تم حذف الكوبون بنجاح (Demo)'
-        }),
-      };
+    // DELETE /coupons/{id} - Delete coupon
+    if (method === 'DELETE' && pathSegments.length >= 2) {
+      const couponId = pathSegments[pathSegments.length - 1];
+      console.log('🗑️ Deleting coupon:', couponId);
+      
+      try {
+        const couponDoc = doc(db, 'coupons', couponId);
+        await deleteDoc(couponDoc);
+        
+        console.log('✅ Coupon deleted successfully');
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ message: 'تم حذف الكوبون بنجاح' }),
+        };
+      } catch (error) {
+        console.error('❌ Error deleting coupon:', error);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'خطأ في حذف الكوبون: ' + error.message }),
+        };
+      }
     }
 
     // Method not allowed
     return {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'Method not allowed'
-      }),
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' }),
     };
 
   } catch (error) {
-    console.error('Coupons function error:', error);
+    console.error('❌ Coupons API Error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        success: false,
-        message: 'خطأ في الخادم: ' + error.message
+      headers,
+      body: JSON.stringify({ 
+        error: 'خطأ في الخادم',
+        details: error.message 
       }),
     };
   }

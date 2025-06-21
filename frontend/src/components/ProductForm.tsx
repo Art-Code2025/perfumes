@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Plus, Minus, Upload, X, Save } from 'lucide-react';
-import { productsAPI, uploadAPI } from '../utils/api';
 import { buildImageUrl, apiCall, API_ENDPOINTS } from '../config/api';
 
 interface DynamicOption {
@@ -111,15 +110,14 @@ const ProductForm: React.FC = () => {
   const fetchProduct = async (productId: number) => {
     try {
       setLoading(true);
-      const response = await productsAPI.getById(productId);
-      if (response.success) {
-        setProduct(response.data);
-      } else {
-        toast.error('المنتج غير موجود');
-        navigate('/admin/products');
-      }
+      console.log('🔄 Fetching product:', productId);
+      
+      const product = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(productId));
+      console.log('✅ Product loaded:', product.name);
+      
+      setProduct(product);
     } catch (error) {
-      console.error('Error fetching product:', error);
+      console.error('❌ Error fetching product:', error);
       toast.error('فشل في جلب بيانات المنتج');
       navigate('/admin/products');
     } finally {
@@ -132,31 +130,45 @@ const ProductForm: React.FC = () => {
     
     try {
       setUploading(true);
+      console.log('📸 Processing images...');
 
-      // Upload main image
+      // For now, we'll use placeholder images or data URLs
+      // In a real app, you would implement actual file upload to a service like Cloudinary
+      
       if (mainImageFile) {
-        const mainImageResponse = await uploadAPI.single(mainImageFile, 'products');
-        if (mainImageResponse.success) {
-          uploadedImages.push(mainImageResponse.data.url);
-        }
+        // Convert to data URL for immediate use
+        const dataUrl = await fileToDataUrl(mainImageFile);
+        uploadedImages.push(dataUrl);
+        console.log('✅ Main image processed');
       }
 
-      // Upload detailed images
       if (detailedImageFiles.length > 0) {
-        const detailedImagesResponse = await uploadAPI.multiple(detailedImageFiles, 'products');
-        if (detailedImagesResponse.success) {
-          uploadedImages.push(...detailedImagesResponse.data.urls);
+        // Convert detailed images to data URLs
+        for (const file of detailedImageFiles) {
+          const dataUrl = await fileToDataUrl(file);
+          uploadedImages.push(dataUrl);
         }
+        console.log('✅ Detailed images processed:', detailedImageFiles.length);
       }
 
       return uploadedImages;
     } catch (error) {
-      console.error('Error uploading images:', error);
-      toast.error('فشل في رفع الصور');
+      console.error('❌ Error processing images:', error);
+      toast.error('فشل في معالجة الصور');
       return [];
     } finally {
       setUploading(false);
     }
+  };
+
+  // Helper function to convert file to data URL
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -172,13 +184,16 @@ const ProductForm: React.FC = () => {
     try {
       let updatedProduct = { ...product };
 
-      // Upload images if any
+      // Process images if any
       const uploadedImages = await uploadImages();
       if (uploadedImages.length > 0) {
         updatedProduct.mainImage = uploadedImages[0];
         if (uploadedImages.length > 1) {
           updatedProduct.detailedImages = uploadedImages.slice(1);
         }
+      } else if (!updatedProduct.mainImage) {
+        // Set a default image if no image is provided
+        updatedProduct.mainImage = 'products/default-product.jpg';
       }
 
       // Prepare product data
@@ -190,19 +205,27 @@ const ProductForm: React.FC = () => {
         categoryId: Number(updatedProduct.categoryId) // Convert to number for API
       };
 
-      let response;
+      console.log('💾 Saving product:', productData);
+
+      let result;
       if (isEdit && id) {
-        response = await productsAPI.update(parseInt(id), productData);
+        result = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(id), {
+          method: 'PUT',
+          body: JSON.stringify(productData)
+        });
       } else {
-        response = await productsAPI.create(productData);
+        result = await apiCall(API_ENDPOINTS.PRODUCTS, {
+          method: 'POST',
+          body: JSON.stringify(productData)
+        });
       }
 
-      if (response.success) {
-        toast.success(isEdit ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
-        navigate('/admin/products');
-      } else {
-        toast.error(response.message || 'فشل في حفظ المنتج');
-      }
+      console.log('✅ Product saved successfully:', result);
+      toast.success(isEdit ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
+      
+      // Trigger refresh in main app
+      window.dispatchEvent(new Event('productsUpdated'));
+      navigate('/admin/products');
     } catch (error: any) {
       console.error('Error saving product:', error);
       toast.error(error.message || 'خطأ في حفظ المنتج');

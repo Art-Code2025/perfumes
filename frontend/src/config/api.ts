@@ -82,7 +82,16 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   };
   
   try {
-    const response = await fetch(url, config);
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -91,6 +100,10 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     
     return await response.json();
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('API Request Timeout:', url);
+      throw new Error('Request timeout - please try again');
+    }
     console.error('API Error:', error);
     throw error;
   }

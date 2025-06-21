@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { 
@@ -146,14 +146,23 @@ interface ShippingSettings {
 }
 
 const Dashboard: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'overview';
-  
-  // الحالات المشتركة
-  const [loading, setLoading] = useState<boolean>(true);
+  // Emergency fallback - force loading to false after 20 seconds
+  useEffect(() => {
+    const emergencyTimeout = setTimeout(() => {
+      console.warn('🚨 EMERGENCY: Forcing dashboard to load after 20 seconds');
+      setLoading(false);
+      setError('تم تحميل لوحة التحكم بالوضع الآمن - بعض البيانات قد تكون غير متاحة');
+    }, 20000);
+    
+    return () => clearTimeout(emergencyTimeout);
+  }, []);
+
+  // State definitions
+  const [currentTab, setCurrentTab] = useState('overview');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   // حالات المنتجات والتصنيفات
@@ -281,43 +290,79 @@ const Dashboard: React.FC = () => {
         
         console.log('🔄 Loading Dashboard data...');
         
-        // Load essential data first (products and categories)
+        // Set a maximum timeout for the entire loading process
+        const loadingTimeout = setTimeout(() => {
+          console.warn('⚠️ Dashboard loading timeout - forcing completion');
+          setLoading(false);
+        }, 15000); // 15 seconds maximum
+        
+        // Load essential data first (products and categories) with individual timeouts
         try {
-          await fetchProducts();
+          const productsPromise = Promise.race([
+            fetchProducts(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Products timeout')), 8000))
+          ]);
+          await productsPromise;
           console.log('✅ Products loaded');
         } catch (err) {
           console.error('❌ Products failed:', err);
-          // Continue even if products fail
+          // Use fallback data for products
+          setProducts([]);
+          setFilteredProducts([]);
         }
         
         try {
-          await fetchCategories();
+          const categoriesPromise = Promise.race([
+            fetchCategories(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Categories timeout')), 8000))
+          ]);
+          await categoriesPromise;
           console.log('✅ Categories loaded');
         } catch (err) {
           console.error('❌ Categories failed:', err);
-          // Continue even if categories fail
+          // Use fallback data for categories
+          setCategories([]);
+          setFilteredCategories([]);
         }
         
-        // Load secondary data
+        // Load secondary data with shorter timeouts
         try {
-          await fetchCoupons();
+          const couponsPromise = Promise.race([
+            fetchCoupons(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Coupons timeout')), 5000))
+          ]);
+          await couponsPromise;
           console.log('✅ Coupons loaded');
         } catch (err) {
           console.error('❌ Coupons failed:', err);
+          setCoupons([]);
+          setFilteredCoupons([]);
         }
         
         try {
-          await fetchOrders();
+          const ordersPromise = Promise.race([
+            fetchOrders(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Orders timeout')), 5000))
+          ]);
+          await ordersPromise;
           console.log('✅ Orders loaded');
         } catch (err) {
           console.error('❌ Orders failed:', err);
+          setOrders([]);
+          setFilteredOrders([]);
         }
         
         try {
-          await fetchCustomers();
+          const customersPromise = Promise.race([
+            fetchCustomers(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Customers timeout')), 5000))
+          ]);
+          await customersPromise;
           console.log('✅ Customers loaded');
         } catch (err) {
           console.error('❌ Customers failed:', err);
+          setCustomers([]);
+          setFilteredCustomers([]);
         }
         
         // Generate sales data after products are loaded
@@ -325,11 +370,28 @@ const Dashboard: React.FC = () => {
         
         console.log('✅ Dashboard data loading completed');
         
+        // Clear the timeout since we completed successfully
+        clearTimeout(loadingTimeout);
+        
       } catch (error) {
         console.error('❌ Dashboard loading error:', error);
-        setError('حدث خطأ في تحميل بيانات لوحة التحكم');
+        setError('حدث خطأ في تحميل بيانات لوحة التحكم - سيتم المتابعة بالبيانات المتاحة');
+        
+        // Even with error, set fallback data
+        setProducts([]);
+        setCategories([]);
+        setCoupons([]);
+        setOrders([]);
+        setCustomers([]);
+        setFilteredProducts([]);
+        setFilteredCategories([]);
+        setFilteredCoupons([]);
+        setFilteredOrders([]);
+        setFilteredCustomers([]);
       } finally {
+        // ALWAYS set loading to false - this is critical!
         setLoading(false);
+        console.log('✅ Dashboard loading state set to false');
       }
     };
 
@@ -748,7 +810,7 @@ const Dashboard: React.FC = () => {
   };
 
   const switchTab = (tab: string) => {
-    setSearchParams({ tab });
+    setCurrentTab(tab);
     setIsMobileMenuOpen(false); // Close mobile menu when switching tabs
   };
 
@@ -786,14 +848,6 @@ const Dashboard: React.FC = () => {
     };
   };
 
-  const stats = getStoreStats();
-
-  // Refresh categories when returning from add/edit
-  useEffect(() => {
-    if (currentTab === 'categories') {
-      fetchCategories();
-    }
-  }, [currentTab]);
 
   // Delete Modal Functions
   const openDeleteModal = (type: 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone', id: number, name: string) => {
@@ -1101,6 +1155,9 @@ const Dashboard: React.FC = () => {
       fetchShippingZones();
     }
   }, [currentTab]);
+
+  // Calculate stats after all data is loaded
+  const stats = getStoreStats();
 
   // Show loading screen while data is loading
   if (loading) {

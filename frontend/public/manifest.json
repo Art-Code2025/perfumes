@@ -1,0 +1,51 @@
+{
+  "name": "GHEM Store - متجر غيم",
+  "short_name": "GHEM Store",
+  "description": "متجر إلكتروني متخصص في الملابس والإكسسوارات",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "المنتجات",
+      "short_name": "المنتجات",
+      "description": "تصفح جميع المنتجات",
+      "url": "/products",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "السلة",
+      "short_name": "السلة",
+      "description": "عرض سلة التسوق",
+      "url": "/cart",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المفضلة",
+      "short_name": "المفضلة",
+      "description": "عرض المنتجات المفضلة",
+      "url": "/wishlist",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+} 

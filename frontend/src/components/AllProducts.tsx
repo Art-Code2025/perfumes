@@ -5,17 +5,16 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Search, Filter, Grid, List, Package, Sparkles, ChevronDown, X, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { createCategorySlug, createProductSlug } from '../utils/slugify';
-import { productsAPI, categoriesAPI } from '../utils/api';
-import { buildImageUrl } from '../config/api';
+import { buildImageUrl, apiCall, API_ENDPOINTS } from '../config/api';
 
 
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   stock: number;
-  categoryId: number | null;
+  categoryId: string | number | null; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -25,7 +24,7 @@ interface Product {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
@@ -59,7 +58,7 @@ const AllProducts: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   // No loading state needed
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -76,19 +75,18 @@ const AllProducts: React.FC = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productsAPI.getAll();
+      console.log('🔄 Fetching products...');
       
-      if (response.success) {
-        setProducts(response.data);
-        // حفظ في localStorage لتجنب الفلاش في المرة القادمة
-        localStorage.setItem('cachedAllProducts', JSON.stringify(response.data));
-      } else {
-        // If API fails, keep cached data
-        console.warn('Failed to fetch products from API, using cached data');
-      }
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+      
+      console.log('✅ Products loaded:', products.length);
+      setProducts(products);
+      // حفظ في localStorage لتجنب الفلاش في المرة القادمة
+      localStorage.setItem('cachedAllProducts', JSON.stringify(products));
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
       toast.error('فشل في جلب المنتجات');
+      // Keep cached data if API fails
     } finally {
       setLoading(false);
     }
@@ -96,24 +94,29 @@ const AllProducts: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await categoriesAPI.getAll();
+      console.log('🔄 Fetching categories...');
       
-      if (response.success) {
-        setCategories(response.data);
-        // حفظ في localStorage لتجنب الفلاش في المرة القادمة
-        localStorage.setItem('cachedCategories', JSON.stringify(response.data));
-      } else {
-        console.warn('Failed to fetch categories from API, using cached data');
-      }
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      
+      console.log('✅ Categories loaded:', categories.length);
+      setCategories(categories);
+      // حفظ في localStorage لتجنب الفلاش في المرة القادمة
+      localStorage.setItem('cachedCategories', JSON.stringify(categories));
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
+      // Keep cached data if API fails
     }
   };
 
   const filterAndSortProducts = () => {
     let filtered = [...products];
-    if (selectedCategory) filtered = filtered.filter(product => product.categoryId === selectedCategory);
+    if (selectedCategory) {
+      filtered = filtered.filter(product => 
+        product.categoryId === selectedCategory || 
+        product.categoryId?.toString() === selectedCategory.toString()
+      );
+    }
     if (searchTerm) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -137,7 +140,7 @@ const AllProducts: React.FC = () => {
 
 
 
-  const handleCategoryFilter = (categoryId: number | null) => setSelectedCategory(categoryId);
+  const handleCategoryFilter = (categoryId: string | number | null) => setSelectedCategory(categoryId);
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
   const handleSort = (e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value);
 

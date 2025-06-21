@@ -8,13 +8,13 @@ import { addToCartUnified } from '../utils/cartUtils';
 
 
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   stock: number;
-  categoryId?: number | null;
+  categoryId?: string | number | null; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -61,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
       if (savedWishlist) {
         const parsedWishlist = JSON.parse(savedWishlist);
         if (Array.isArray(parsedWishlist)) {
-          setIsInWishlist(parsedWishlist.includes(product.id));
+          setIsInWishlist(parsedWishlist.some(id => id.toString() === product.id.toString()));
         }
       }
     } catch (error) {
@@ -76,7 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     
     try {
       const savedWishlist = localStorage.getItem('wishlist');
-      let currentWishlist: number[] = [];
+      let currentWishlist: (string | number)[] = [];
       
       if (savedWishlist) {
         const parsedWishlist = JSON.parse(savedWishlist);
@@ -85,10 +85,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
         }
       }
 
-      let newWishlist: number[];
+      let newWishlist: (string | number)[];
       if (isInWishlist) {
         // Remove from wishlist
-        newWishlist = currentWishlist.filter(id => id !== product.id);
+        newWishlist = currentWishlist.filter(id => id.toString() !== product.id.toString());
         setIsInWishlist(false);
       } else {
         // Add to wishlist
@@ -118,14 +118,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
     // Check if product has required options
     if (product.dynamicOptions && product.dynamicOptions.some((opt: any) => opt.required)) {
       console.log('🔄 [ProductCard] Product has required options, redirecting to product page');
-      const productPath = `/product/${createProductSlug(product.id, product.name)}`;
+      const productPath = `/product/${createProductSlug(product.id.toString(), product.name)}`;
       navigate(productPath);
       return;
     }
     
     try {
       const success = await addToCartUnified(
-        product.id,
+        product.id, // Use product.id directly
         product.name,
         product.price,
         quantity,
@@ -163,7 +163,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'grid' })
   const handleProductClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const productPath = `/product/${createProductSlug(product.id, product.name)}`;
+    const productPath = `/product/${createProductSlug(product.id.toString(), product.name)}`;
     console.log('🔗 [ProductCard] Navigating to:', productPath);
     navigate(productPath);
   };

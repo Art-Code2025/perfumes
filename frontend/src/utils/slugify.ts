@@ -15,21 +15,21 @@ export const slugify = (text: string): string => {
 };
 
 // إنشاء رابط احترافي للمنتج
-export const createProductSlug = (id: number, name: string): string => {
+export const createProductSlug = (id: string | number, name: string): string => {
   const slug = slugify(name);
   return slug ? `${slug}-${id}` : `product-${id}`;
 };
 
 // إنشاء رابط احترافي للفئة
-export const createCategorySlug = (id: number, name: string): string => {
+export const createCategorySlug = (id: string | number, name: string): string => {
   const slug = slugify(name);
   return slug ? `${slug}-${id}` : `category-${id}`;
 };
 
 // استخراج ID من slug
-export const extractIdFromSlug = (slug: string): number => {
-  const match = slug.match(/-(\d+)$/);
-  return match ? parseInt(match[1], 10) : 0;
+export const extractIdFromSlug = (slug: string): string => {
+  const match = slug.match(/-([a-zA-Z0-9]+)$/);
+  return match ? match[1] : '0';
 };
 
 // التحقق من صحة slug

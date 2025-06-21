@@ -3,7 +3,7 @@ import { apiCall, API_ENDPOINTS } from '../config/api';
 
 // دالة موحدة لإضافة منتج إلى السلة - تدعم المستخدمين المسجلين والضيوف
 export const addToCartUnified = async (
-  productId: number,
+  productId: string | number, // Support both string and number IDs
   productName: string,
   price: number,
   quantity: number = 1,

@@ -20,6 +20,11 @@ const FORCE_FALLBACK_MODE = false; // Set to true to use mock data temporarily
 export const buildImageUrl = (imagePath) => {
   if (!imagePath) return '/images/placeholder.jpg';
   
+  // If it's a data URL (base64), return as is
+  if (imagePath.startsWith('data:image/')) {
+    return imagePath;
+  }
+  
   // If it's already a full URL, return as is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;

@@ -16,6 +16,29 @@ console.log('🔧 API Configuration:', {
 // Force fallback mode if Firebase is having permission issues
 const FORCE_FALLBACK_MODE = true; // Set to true to use mock data temporarily
 
+// Image URL builder function
+export const buildImageUrl = (imagePath) => {
+  if (!imagePath) return '/images/placeholder.jpg';
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it starts with '/', return as is (absolute path)
+  if (imagePath.startsWith('/')) {
+    return imagePath;
+  }
+  
+  // Otherwise, prepend with /images/
+  return `/images/${imagePath}`;
+};
+
+// API URL builder function
+export const buildApiUrl = (endpoint) => {
+  return `${API_BASE_URL}/${endpoint}`;
+};
+
 export const API_ENDPOINTS = {
   // Products
   PRODUCTS: 'products',

@@ -126,3 +126,25 @@ export const queryDocuments = async (collectionName, conditions = [], orderByFie
     throw error;
   }
 }; 
+
+// Get next sequential numeric ID for a collection
+export const getNextId = async (collectionName) => {
+  try {
+    // Get all documents and find the highest numeric ID
+    const documents = await getAllDocuments(collectionName);
+    
+    if (documents.length === 0) {
+      return 1; // Start with 1 if no documents exist
+    }
+    
+    // Find the highest numericId
+    const maxId = documents.reduce((max, doc) => {
+      const numericId = doc.numericId || 0;
+      return numericId > max ? numericId : max;
+    }, 0);
+    
+    return maxId + 1;
+  } catch (error) {
+    throw error;
+  }
+}; 

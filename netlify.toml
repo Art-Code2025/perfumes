@@ -4,7 +4,7 @@
   publish = "frontend/dist"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "18"
 
 [[redirects]]
   from = "/api/*"
@@ -18,6 +18,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  external_node_modules = ["firebase", "firebase-admin", "firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage", "cloudinary"]
 
 [build.processing]
   skip_processing = false

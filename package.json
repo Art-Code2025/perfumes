@@ -15,7 +15,9 @@
     "react-router-dom": "^6.8.1",
     "react-toastify": "^9.1.1",
     "lucide-react": "^0.263.1",
-    "formidable": "^3.5.1"
+    "firebase": "^10.14.1",
+    "firebase-admin": "^13.4.0",
+    "cloudinary": "^1.41.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

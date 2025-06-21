@@ -1,4 +1,4 @@
-export const handler = async (event, context) => {
+exports.handler = async (event, context) => {
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -25,31 +25,34 @@ export const handler = async (event, context) => {
   try {
     console.log('🔄 Upload function called');
     
-    // For now, return a simple response that tells the client to use base64 encoding
-    // This is a temporary solution until we implement proper file upload
+    // For now, return a simple success response
+    // The frontend will handle base64 encoding directly
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         success: true,
-        message: 'Upload endpoint is ready',
-        note: 'Please use base64 data URLs for images temporarily'
+        message: 'Upload endpoint ready',
+        note: 'Use base64 encoding in frontend for now'
       })
     };
-
+    
   } catch (error) {
-    console.error('Upload handler error:', error);
+    console.error('❌ Upload function error:', error);
+    
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ error: 'Internal server error' })
+      body: JSON.stringify({
+        success: false,
+        error: 'Server error'
+      })
     };
   }
 }; 

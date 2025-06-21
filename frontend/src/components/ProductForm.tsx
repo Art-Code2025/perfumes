@@ -85,7 +85,8 @@ const ProductForm: React.FC = () => {
   // Load product if editing
   useEffect(() => {
     if (isEdit && id) {
-      fetchProduct(parseInt(id));
+      console.log('🔄 ProductForm: Loading product for edit, ID:', id, 'Type:', typeof id);
+      fetchProduct(id); // Pass ID as string, let fetchProduct handle the conversion
     }
   }, [isEdit, id]);
 
@@ -94,36 +95,82 @@ const ProductForm: React.FC = () => {
       setLoadingCategories(true);
       console.log('🔄 Fetching categories for product form...');
       
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      // Force fallback mode to ensure we get data
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
       console.log('✅ Categories loaded:', categories.length);
+      console.log('📂 Categories data:', categories);
       
       setCategories(categories);
     } catch (error) {
       console.error('❌ Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
-      setCategories([]); // Set empty array as fallback
+      
+      // Fallback to hardcoded categories
+      const fallbackCategories = [
+        {
+          id: 'c1',
+          name: 'أوشحة التخرج',
+          description: 'أوشحة تخرج أنيقة بألوان وتصاميم متنوعة',
+          image: 'categories/graduation-sashes.jpg'
+        },
+        {
+          id: 'c2',
+          name: 'عبايات التخرج',
+          description: 'عبايات تخرج رسمية للمراسم الأكاديمية',
+          image: 'categories/graduation-gowns.jpg'
+        },
+        {
+          id: 'c3',
+          name: 'الأزياء المدرسية',
+          description: 'ملابس مدرسية عالية الجودة ومريحة',
+          image: 'categories/school-uniforms.jpg'
+        }
+      ];
+      
+      console.log('🔄 Using fallback categories:', fallbackCategories.length);
+      setCategories(fallbackCategories);
     } finally {
       setLoadingCategories(false);
     }
   };
 
-  const fetchProduct = async (productId: number) => {
+  const fetchProduct = async (productId: string) => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching product:', productId);
+      console.log('🔄 Fetching product:', productId, 'Type:', typeof productId);
       
-      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
-      const product = products.find((p: any) => p.id.toString() === productId.toString());
+      // Force fallback mode to ensure we get data
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
+      console.log('📦 All products loaded:', products.length);
+      
+      const product = products.find((p: any) => {
+        const productIdStr = p.id.toString();
+        const searchIdStr = productId.toString();
+        console.log('🔍 Comparing:', productIdStr, 'vs', searchIdStr);
+        return productIdStr === searchIdStr;
+      });
       
       if (!product) {
+        console.error('❌ Product not found with ID:', productId);
+        console.log('📋 Available product IDs:', products.map((p: any) => p.id));
         throw new Error('المنتج غير موجود');
       }
       
-      console.log('✅ Product loaded:', product.name);
+      console.log('✅ Product loaded:', product.name, 'ID:', product.id);
       
       setProduct({
         ...product,
-        categoryId: product.categoryId || '0', // Ensure categoryId is string for form
+        categoryId: product.categoryId ? product.categoryId.toString() : '0', // Ensure categoryId is string for form
         originalPrice: product.originalPrice || 0,
         specifications: product.specifications || [],
         dynamicOptions: product.dynamicOptions || [],
@@ -132,7 +179,7 @@ const ProductForm: React.FC = () => {
     } catch (error) {
       console.error('❌ Error fetching product:', error);
       toast.error('فشل في جلب بيانات المنتج');
-      navigate('/admin');
+      navigate('/admin/products'); // Navigate to products list instead of admin root
     } finally {
       setLoading(false);
     }

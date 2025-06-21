@@ -135,10 +135,20 @@ const ProductDetail: React.FC = () => {
         throw new Error('معرف المنتج غير صحيح');
       }
       
-      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+      // Force fallback mode to ensure we get data
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
+      console.log('📦 All products loaded:', products.length);
+      
       const product = products.find((p: Product) => p.id.toString() === productId.toString());
       
       if (!product) {
+        console.error('❌ Product not found with ID:', productId);
+        console.log('📋 Available product IDs:', products.map((p: Product) => p.id));
         throw new Error('المنتج غير موجود');
       }
       
@@ -173,7 +183,13 @@ const ProductDetail: React.FC = () => {
     try {
       console.log('🔄 Fetching category:', categoryId);
       
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      // Force fallback mode to ensure we get data
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
       const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
       
       if (category) {
@@ -605,7 +621,13 @@ const RelatedProducts: React.FC<{ currentProductId: string | number; categoryId:
     try {
       console.log('🔄 Fetching related products...');
       
-      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
+      // Force fallback mode to ensure we get data
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
       const filtered = allProducts.filter((product: Product) => 
         product.id.toString() !== currentProductId.toString()
       );

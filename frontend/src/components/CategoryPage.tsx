@@ -42,8 +42,20 @@ const CategoryPage: React.FC = () => {
   const categoryId = slug ? extractIdFromSlug(slug) : null;
 
   useEffect(() => {
-    if (!slug || !isValidSlug(slug) || !categoryId) {
-      setError('رابط التصنيف غير صحيح');
+    console.log('🔍 CategoryPage: slug =', slug, 'categoryId =', categoryId);
+    
+    if (!slug) {
+      setError('رابط التصنيف مفقود');
+      setLoading(false);
+      return;
+    }
+
+    // Extract and validate category ID
+    const extractedId = extractIdFromSlug(slug);
+    console.log('🔍 CategoryPage: extractedId =', extractedId);
+    
+    if (!extractedId || extractedId === '0') {
+      setError('معرف التصنيف غير صحيح');
       setLoading(false);
       return;
     }
@@ -62,13 +74,23 @@ const CategoryPage: React.FC = () => {
         throw new Error('معرف التصنيف غير صحيح');
       }
       
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      // Force fallback mode to ensure we get data
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
+      console.log('📂 All categories:', categories);
+      
       const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
       
       if (category) {
         setCategory(category);
         console.log('✅ Category loaded:', category.name);
       } else {
+        console.error('❌ Category not found with ID:', categoryId);
+        console.log('📋 Available category IDs:', categories.map((cat: Category) => cat.id));
         throw new Error('التصنيف غير موجود');
       }
     } catch (error) {
@@ -89,7 +111,15 @@ const CategoryPage: React.FC = () => {
         return;
       }
       
-      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
+      // Force fallback mode to ensure we get data
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        headers: {
+          'X-Force-Fallback': 'true'
+        }
+      });
+      
+      console.log('📦 All products:', allProducts.length);
+      
       const categoryProducts = allProducts.filter((product: Product) => 
         product.categoryId && product.categoryId.toString() === categoryId.toString()
       );

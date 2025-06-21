@@ -34,5 +34,6 @@ export const extractIdFromSlug = (slug: string): string => {
 
 // التحقق من صحة slug
 export const isValidSlug = (slug: string): boolean => {
-  return /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-z0-9\-]+-\d+$/.test(slug);
+  // يجب أن ينتهي بـ dash متبوعاً بـ ID (أرقام أو أحرف)
+  return /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-z0-9\-]+-[a-zA-Z0-9]+$/.test(slug);
 }; 

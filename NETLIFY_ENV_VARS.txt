@@ -15,4 +15,6 @@ VITE_CLOUDINARY_UPLOAD_PRESET=perfume
 
 # Admin Configuration
 ADMIN_REGISTRATION_KEY=super-secret-admin-key-2024
+
+# API Configuration - IMPORTANT!
 VITE_API_BASE_URL=/.netlify/functions 

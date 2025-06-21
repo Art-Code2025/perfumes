@@ -49,7 +49,7 @@ interface Product {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
@@ -219,13 +219,13 @@ const Dashboard: React.FC = () => {
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     type: 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone';
-    id: number;
+    id: string | number;
     name: string;
     loading: boolean;
   }>({
     isOpen: false,
     type: 'product',
-    id: 0,
+    id: '',
     name: '',
     loading: false
   });
@@ -829,11 +829,11 @@ const Dashboard: React.FC = () => {
 
 
   // Delete Modal Functions
-  const openDeleteModal = (type: 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone', id: number, name: string) => {
+  const openDeleteModal = (type: 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone', id: string | number, name: string) => {
     setDeleteModal({
       isOpen: true,
       type,
-      id,
+      id: typeof id === 'string' ? id : id.toString(),
       name,
       loading: false
     });
@@ -849,7 +849,7 @@ const Dashboard: React.FC = () => {
     try {
       // التعامل مع مناطق الشحن محلياً
       if (deleteModal.type === 'shippingZone') {
-        const updatedZones = shippingZones.filter(item => item.id !== deleteModal.id);
+        const updatedZones = shippingZones.filter(item => item.id.toString() !== deleteModal.id.toString());
         setShippingZones(updatedZones);
         setFilteredShippingZones(updatedZones);
         
@@ -891,46 +891,48 @@ const Dashboard: React.FC = () => {
           break;
       }
 
+      console.log('🗑️ Deleting via API:', endpoint);
       await apiCall(endpoint, { method: 'DELETE' });
 
       // Update local state
       switch (deleteModal.type) {
         case 'product':
-          setProducts(prev => prev.filter(item => item.id !== deleteModal.id));
-          setFilteredProducts(prev => prev.filter(item => item.id !== deleteModal.id));
+          setProducts(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
+          setFilteredProducts(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
           break;
         case 'category':
-          setCategories(prev => prev.filter(item => item.id !== deleteModal.id));
-          setFilteredCategories(prev => prev.filter(item => item.id !== deleteModal.id));
+          setCategories(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
+          setFilteredCategories(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
           // Update products that had this category
           const updatedProducts = products.map(product => 
-            product.categoryId === deleteModal.id ? { ...product, categoryId: null } : product
+            product.categoryId?.toString() === deleteModal.id.toString() ? { ...product, categoryId: null } : product
           );
           setProducts(updatedProducts);
           setFilteredProducts(filteredProducts.map(product => 
-            product.categoryId === deleteModal.id ? { ...product, categoryId: null } : product
+            product.categoryId?.toString() === deleteModal.id.toString() ? { ...product, categoryId: null } : product
           ));
           window.dispatchEvent(new Event('categoriesUpdated'));
           break;
         case 'order':
-          setOrders(prev => prev.filter(item => item.id !== deleteModal.id));
-          setFilteredOrders(prev => prev.filter(item => item.id !== deleteModal.id));
+          setOrders(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
+          setFilteredOrders(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
           break;
         case 'customer':
-          setCustomers(prev => prev.filter(item => item.id !== deleteModal.id));
-          setFilteredCustomers(prev => prev.filter(item => item.id !== deleteModal.id));
+          setCustomers(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
+          setFilteredCustomers(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
           break;
         case 'coupon':
-          setCoupons(prev => prev.filter(item => item.id !== deleteModal.id));
-          setFilteredCoupons(prev => prev.filter(item => item.id !== deleteModal.id));
+          setCoupons(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
+          setFilteredCoupons(prev => prev.filter(item => item.id.toString() !== deleteModal.id.toString()));
           break;
       }
 
       toast.success(successMessage);
       closeDeleteModal();
     } catch (error) {
-      console.error('Error deleting item:', error);
-      toast.error('فشل في الحذف');
+      console.error('❌ Error deleting item:', error);
+      const errorMessage = error instanceof Error ? error.message : 'فشل في الحذف';
+      toast.error(errorMessage);
       setDeleteModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -2068,7 +2070,7 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredCategories.map(category => {
-                    const categoryProductsCount = products.filter(p => p.categoryId === category.id).length;
+                    const categoryProductsCount = products.filter(p => p.categoryId?.toString() === category.id?.toString()).length;
                     
                     return (
                       <div key={category.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { apiCall, API_ENDPOINTS, buildApiUrl, buildImageUrl } from './config/api';
+import { apiCall, API_ENDPOINTS } from './config/api';
 import { RefreshCw } from 'lucide-react';
 
 interface Category {
-  id: number;
+  id: string;
   name: string;
   description: string;
   image: string;
@@ -21,7 +21,7 @@ const CategoryEdit: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    image: null as File | null
+    image: ''
   });
 
   useEffect(() => {
@@ -33,15 +33,19 @@ const CategoryEdit: React.FC = () => {
     
     try {
       setFetchLoading(true);
+      console.log('🔍 Fetching category with ID:', id);
+      
       const data = await apiCall(API_ENDPOINTS.CATEGORY_BY_ID(id));
+      console.log('✅ Category data received:', data);
+      
       setCategory(data);
       setFormData({
-        name: data.name,
-        description: data.description,
-        image: null
+        name: data.name || '',
+        description: data.description || '',
+        image: data.image || ''
       });
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error fetching category:', error);
       toast.error('فشل في جلب بيانات التصنيف');
       navigate('/admin?tab=categories');
     } finally {
@@ -51,33 +55,39 @@ const CategoryEdit: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim() || !formData.description.trim()) {
+      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      const submitData = new FormData();
-      submitData.append('name', formData.name);
-      submitData.append('description', formData.description);
+      console.log('🔄 Updating category with data:', formData);
       
-      if (formData.image) {
-        submitData.append('mainImage', formData.image);
-      }
+      const categoryData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        image: formData.image || 'categories/default-category.jpg'
+      };
 
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CATEGORY_BY_ID(id!)), {
+      const result = await apiCall(API_ENDPOINTS.CATEGORY_BY_ID(id!), {
         method: 'PUT',
-        body: submitData
+        body: JSON.stringify(categoryData)
       });
 
-      if (!response.ok) {
-        throw new Error('فشل في تحديث التصنيف');
-      }
-
+      console.log('✅ Category updated successfully:', result);
       toast.success('تم تحديث التصنيف بنجاح!');
+      
       // Trigger a refresh in the main app
       window.dispatchEvent(new Event('categoriesUpdated'));
       navigate('/admin?tab=categories');
+      
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('فشل في تحديث التصنيف');
+      console.error('❌ Error updating category:', error);
+      const errorMessage = error instanceof Error ? error.message : 'فشل في تحديث التصنيف';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -89,15 +99,6 @@ const CategoryEdit: React.FC = () => {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        image: e.target.files![0]
-      }));
-    }
   };
 
   if (fetchLoading) {
@@ -190,7 +191,7 @@ const CategoryEdit: React.FC = () => {
 
                 {/* وصف التصنيف */}
                 <div>
-                  <label htmlFor="description" className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                  <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-3">
                     وصف التصنيف *
                   </label>
                   <textarea
@@ -203,6 +204,35 @@ const CategoryEdit: React.FC = () => {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 shadow-sm transition-all duration-200 resize-none"
                     placeholder="أدخل وصف مفصل للتصنيف وما يحتويه من منتجات"
                   />
+                </div>
+
+                {/* رابط صورة التصنيف */}
+                <div>
+                  <label htmlFor="image" className="block text-sm font-semibold text-gray-700 mb-3">
+                    رابط صورة التصنيف (اختياري)
+                  </label>
+                  <input
+                    type="url"
+                    id="image"
+                    name="image"
+                    value={formData.image}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 shadow-sm transition-all duration-200"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  
+                  {formData.image && (
+                    <div className="mt-3">
+                      <img
+                        src={formData.image}
+                        alt="معاينة الصورة"
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* أزرار الحفظ والإلغاء */}
@@ -259,7 +289,7 @@ const CategoryEdit: React.FC = () => {
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">الصورة الحالية</h4>
                     <div className="relative">
                       <img
-                        src={buildImageUrl(category.image)}
+                        src={category.image}
                         alt={category.name}
                         className="w-full h-48 object-cover rounded-xl shadow-md border border-gray-200"
                       />
@@ -276,13 +306,13 @@ const CategoryEdit: React.FC = () => {
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">الصورة الجديدة</h4>
                     <div className="relative">
                       <img
-                        src={URL.createObjectURL(formData.image)}
+                        src={formData.image}
                         alt="معاينة"
                         className="w-full h-48 object-cover rounded-xl shadow-md border border-gray-200"
                       />
                       <button
                         type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                        onClick={() => setFormData(prev => ({ ...prev, image: '' }))}
                         className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg"
                         title="إزالة الصورة الجديدة"
                       >
@@ -292,9 +322,9 @@ const CategoryEdit: React.FC = () => {
                       </button>
                     </div>
                     <div className="text-center mt-2">
-                      <p className="text-sm font-medium text-gray-900">{formData.image.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{formData.image.split('/').pop()}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {(formData.image.size / 1024 / 1024).toFixed(2)} MB
+                        {/* {(formData.image.size / 1024 / 1024).toFixed(2)} MB */}
                       </p>
                     </div>
                   </div>
@@ -312,7 +342,7 @@ const CategoryEdit: React.FC = () => {
                       type="file"
                       className="hidden"
                       accept="image/*"
-                      onChange={handleImageChange}
+                      onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files && e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : '' }))}
                     />
                     <label htmlFor="image" className="cursor-pointer">
                       <div className="text-purple-500 mb-3">

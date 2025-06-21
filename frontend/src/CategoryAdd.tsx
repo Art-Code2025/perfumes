@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { apiCall, API_ENDPOINTS, buildApiUrl } from './config/api';
+import { apiCall, API_ENDPOINTS } from './config/api';
 
 const CategoryAdd: React.FC = () => {
   const navigate = useNavigate();
@@ -9,53 +9,44 @@ const CategoryAdd: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    image: null as File | null
+    image: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim() || !formData.description.trim()) {
+      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('description', formData.description);
-      if (formData.image) {
-        formDataToSend.append('mainImage', formData.image);
-      }
+      console.log('🔄 Submitting category data:', formData);
+      
+      const categoryData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        image: formData.image || 'categories/default-category.jpg'
+      };
 
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CATEGORIES), {
+      const result = await apiCall(API_ENDPOINTS.CATEGORIES, {
         method: 'POST',
-        body: formDataToSend,
-        headers: {
-          // لا نضع Content-Type للـ FormData - المتصفح يضعه تلقائياً
-        }
+        body: JSON.stringify(categoryData)
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'فشل في إضافة التصنيف';
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          // إذا لم يكن JSON، استخدم النص كما هو
-          errorMessage = errorText || errorMessage;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const result = await response.json();
-      toast.success(result.message || 'تم إضافة التصنيف بنجاح!');
+      console.log('✅ Category created successfully:', result);
+      toast.success('تم إضافة التصنيف بنجاح!');
       
       // Trigger a refresh in the main app
       window.dispatchEvent(new Event('categoriesUpdated'));
       navigate('/admin?tab=categories');
+      
     } catch (error) {
-      console.error('Error adding category:', error);
-      toast.error(error instanceof Error ? error.message : 'فشل في إضافة التصنيف');
+      console.error('❌ Error adding category:', error);
+      const errorMessage = error instanceof Error ? error.message : 'فشل في إضافة التصنيف';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -67,15 +58,6 @@ const CategoryAdd: React.FC = () => {
       ...prev,
       [name]: value
     }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        image: e.target.files![0]
-      }));
-    }
   };
 
   return (
@@ -157,6 +139,35 @@ const CategoryAdd: React.FC = () => {
                   />
                 </div>
 
+                {/* صورة التصنيف */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
+                    رابط صورة التصنيف (اختياري)
+                  </label>
+                  
+                  <input
+                    type="url"
+                    name="image"
+                    value={formData.image}
+                    onChange={handleInputChange}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 shadow-sm transition-all duration-200 text-sm sm:text-base"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  
+                  {formData.image && (
+                    <div className="mt-3">
+                      <img
+                        src={formData.image}
+                        alt="معاينة الصورة"
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* أزرار الحفظ والإلغاء */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-gray-200">
                   <button
@@ -195,69 +206,6 @@ const CategoryAdd: React.FC = () => {
 
           {/* Image Upload Sidebar */}
           <div className="space-y-4 sm:space-y-6">
-            {/* صورة التصنيف */}
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 sm:px-6 py-3 sm:py-4">
-                <h2 className="text-base sm:text-lg font-bold text-white flex items-center">
-                  <span className="w-5 h-5 sm:w-6 sm:h-6 bg-white bg-opacity-30 rounded-lg flex items-center justify-center text-purple-600 text-xs sm:text-sm ml-2 sm:ml-3">🖼️</span>
-                  صورة التصنيف
-                </h2>
-              </div>
-              
-              <div className="p-4 sm:p-6">
-                {formData.image ? (
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(formData.image)}
-                        alt="معاينة"
-                        className="w-full h-40 sm:h-48 object-cover rounded-lg sm:rounded-xl shadow-md border border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                        className="absolute top-2 right-2 p-1.5 sm:p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg"
-                        title="إزالة الصورة"
-                      >
-                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{formData.image.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(formData.image.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-4 sm:p-8 text-center hover:border-purple-400 transition-colors">
-                    <input
-                      id="image"
-                      name="image"
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                    />
-                    <label htmlFor="image" className="cursor-pointer">
-                      <div className="text-purple-500 mb-3 sm:mb-4">
-                        <svg className="mx-auto h-12 w-12 sm:h-16 sm:w-16" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                      <div className="space-y-1 sm:space-y-2">
-                        <p className="text-base sm:text-lg font-semibold text-gray-900">ارفع صورة التصنيف</p>
-                        <p className="text-xs sm:text-sm text-gray-600">اسحب وأفلت أو انقر للاختيار</p>
-                        <p className="text-xs text-gray-500">PNG, JPG, GIF حتى 10MB</p>
-                      </div>
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Tips Card */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-blue-200">
               <div className="flex items-start space-x-2 sm:space-x-3">

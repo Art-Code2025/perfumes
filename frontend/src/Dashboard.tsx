@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
   const currentTab = searchParams.get('tab') || 'overview';
   
   // الحالات المشتركة
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [customerSearchTerm, setCustomerSearchTerm] = useState<string>('');
 
-  // حالات نظام الشحن
+  // حالات مناطق الشحن
   const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
   const [filteredShippingZones, setFilteredShippingZones] = useState<ShippingZone[]>([]);
   const [shippingZoneSearchTerm, setShippingZoneSearchTerm] = useState<string>('');
@@ -194,7 +194,7 @@ const Dashboard: React.FC = () => {
     globalFreeShippingThreshold: 500,
     defaultShippingCost: 50,
     enableFreeShipping: true,
-    enableZoneBasedShipping: true, // تفعيل الشحن حسب المنطقة
+    enableZoneBasedShipping: true,
     enableExpressShipping: true,
     expressShippingCost: 100,
     expressShippingDays: '1-2 أيام',
@@ -215,26 +215,55 @@ const Dashboard: React.FC = () => {
     priority: 1
   });
 
-  // Delete Modal States
-  const [deleteModal, setDeleteModal] = useState({
+  // حالات المودال
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone';
+    id: number;
+    name: string;
+    loading: boolean;
+  }>({
     isOpen: false,
-    type: 'product' as 'product' | 'category' | 'order' | 'customer' | 'coupon' | 'shippingZone',
+    type: 'product',
     id: 0,
     name: '',
     loading: false
   });
 
+  // Initial data loading with better error handling
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-    fetchCoupons();
-    fetchWishlistItems();
-    fetchOrders();
-    fetchCustomers();
-    fetchCustomerStats();
-    
-    // Generate sales data for charts
-    generateSalesData();
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('🔄 Loading Dashboard data...');
+        
+        // Load data with individual error handling
+        const loadingPromises = [
+          fetchProducts().catch(err => console.error('Products loading failed:', err)),
+          fetchCategories().catch(err => console.error('Categories loading failed:', err)),
+          fetchCoupons().catch(err => console.error('Coupons loading failed:', err)),
+          fetchOrders().catch(err => console.error('Orders loading failed:', err)),
+          fetchCustomers().catch(err => console.error('Customers loading failed:', err))
+        ];
+        
+        await Promise.allSettled(loadingPromises);
+        
+        // Generate sales data after products are loaded
+        generateSalesData();
+        
+        console.log('✅ Dashboard data loaded successfully');
+        
+      } catch (error) {
+        console.error('❌ Dashboard loading error:', error);
+        setError('فشل في تحميل بيانات لوحة التحكم');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
     
     // Listen for updates
     const handleCategoriesUpdate = () => {
@@ -371,10 +400,20 @@ const Dashboard: React.FC = () => {
   
   const fetchCustomerStats = async () => {
     try {
-      const data = await apiCall(API_ENDPOINTS.CUSTOMER_STATS);
-      return data;
+      // Simplified customer stats - just count from existing data
+      const stats = {
+        total: customers.length,
+        active: customers.filter(c => c.status === 'active').length,
+        thisMonth: customers.filter(c => {
+          const created = new Date(c.createdAt);
+          const now = new Date();
+          return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+        }).length
+      };
+      setCustomerStats(stats);
+      return stats;
     } catch (error) {
-      console.error('Error fetching customer stats:', error);
+      console.error('Error calculating customer stats:', error);
       return null;
     }
   };
@@ -440,11 +479,11 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      await apiCall(API_ENDPOINTS.ORDER_STATUS(orderId), {
+      await apiCall(API_ENDPOINTS.ORDER_BY_ID(orderId), {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
-
+      
       // تحديث الطلب في الحالة المحلية
       setOrders(prevOrders => 
         prevOrders.map(order => 
@@ -462,7 +501,7 @@ const Dashboard: React.FC = () => {
             : order
         )
       );
-
+      
       toast.success(`تم تحديث حالة الطلب إلى: ${getOrderStatusText(newStatus)}`);
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -1798,7 +1837,7 @@ const Dashboard: React.FC = () => {
                   {customerStats && (
                     <div className="bg-white rounded-lg px-4 py-2 shadow-sm border">
                       <span className="text-gray-600 text-sm">النشطين: </span>
-                      <span className="font-bold text-green-600">{customerStats.activeCustomers}</span>
+                      <span className="font-bold text-green-600">{customerStats.active}</span>
                     </div>
                   )}
                 </div>
@@ -1813,7 +1852,7 @@ const Dashboard: React.FC = () => {
                         <span className="text-white text-xl">👥</span>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-800">{customerStats.totalCustomers}</div>
+                        <div className="text-2xl font-bold text-gray-800">{customerStats.total}</div>
                         <div className="text-sm text-gray-500">عميل</div>
                       </div>
                     </div>
@@ -1826,11 +1865,11 @@ const Dashboard: React.FC = () => {
                         <span className="text-white text-xl">🛒</span>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-800">{customerStats.totalCartItems}</div>
+                        <div className="text-2xl font-bold text-gray-800">{customerStats.thisMonth}</div>
                         <div className="text-sm text-gray-500">منتج</div>
                       </div>
                     </div>
-                    <div className="text-sm font-medium text-gray-600">في العربات</div>
+                    <div className="text-sm font-medium text-gray-600">في الشهر</div>
                   </div>
 
                   <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">

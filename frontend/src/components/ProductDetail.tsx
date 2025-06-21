@@ -135,12 +135,7 @@ const ProductDetail: React.FC = () => {
         throw new Error('معرف المنتج غير صحيح');
       }
       
-      // Force fallback mode to ensure we get data
-      const products = await apiCall(API_ENDPOINTS.PRODUCTS, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
       
       console.log('📦 All products loaded:', products.length);
       
@@ -183,12 +178,7 @@ const ProductDetail: React.FC = () => {
     try {
       console.log('🔄 Fetching category:', categoryId);
       
-      // Force fallback mode to ensure we get data
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
       
       const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
       
@@ -621,12 +611,7 @@ const RelatedProducts: React.FC<{ currentProductId: string | number; categoryId:
     try {
       console.log('🔄 Fetching related products...');
       
-      // Force fallback mode to ensure we get data
-      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
       
       const filtered = allProducts.filter((product: Product) => 
         product.id.toString() !== currentProductId.toString()

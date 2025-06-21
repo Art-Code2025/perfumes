@@ -74,12 +74,7 @@ const CategoryPage: React.FC = () => {
         throw new Error('معرف التصنيف غير صحيح');
       }
       
-      // Force fallback mode to ensure we get data
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
       
       console.log('📂 All categories:', categories);
       
@@ -111,12 +106,7 @@ const CategoryPage: React.FC = () => {
         return;
       }
       
-      // Force fallback mode to ensure we get data
-      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
       
       console.log('📦 All products:', allProducts.length);
       

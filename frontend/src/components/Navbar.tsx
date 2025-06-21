@@ -285,12 +285,7 @@ function Navbar() {
     try {
       console.log('🔄 [Navbar] Fetching categories...');
       
-      // Force fallback mode to ensure we get data
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
       
       console.log('✅ [Navbar] Categories loaded:', categories.length);
       console.log('📂 [Navbar] Categories data:', categories);
@@ -316,45 +311,9 @@ function Navbar() {
         }
       }
       
-      // Final fallback to hardcoded categories
-      const fallbackCategories = [
-        {
-          id: 'c1',
-          name: 'أوشحة التخرج',
-          description: 'أوشحة تخرج أنيقة بألوان وتصاميم متنوعة',
-          image: 'categories/graduation-sashes.jpg'
-        },
-        {
-          id: 'c2',
-          name: 'عبايات التخرج',
-          description: 'عبايات تخرج رسمية للمراسم الأكاديمية',
-          image: 'categories/graduation-gowns.jpg'
-        },
-        {
-          id: 'c3',
-          name: 'الأزياء المدرسية',
-          description: 'ملابس مدرسية عالية الجودة ومريحة',
-          image: 'categories/school-uniforms.jpg'
-        },
-        {
-          id: 'c4',
-          name: 'كاب التخرج',
-          description: 'كاب تخرج أكاديمي بتصاميم مختلفة',
-          image: 'categories/graduation-caps.jpg'
-        },
-        {
-          id: 'c5',
-          name: 'إكسسوارات التخرج',
-          description: 'إكسسوارات مكملة لإطلالة التخرج المثالية',
-          image: 'categories/graduation-accessories.jpg'
-        }
-      ];
-      
-      console.log('🔄 [Navbar] Using hardcoded fallback categories:', fallbackCategories.length);
-      setCategories(fallbackCategories);
-      
-      // Cache the fallback categories
-      localStorage.setItem('cachedCategories', JSON.stringify(fallbackCategories));
+      // Set empty array if no cache available
+      console.log('🔄 [Navbar] No categories available');
+      setCategories([]);
     }
   };
 

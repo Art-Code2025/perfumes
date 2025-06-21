@@ -187,12 +187,7 @@ function Home() {
     try {
       console.log('🔄 Fetching categories for home page...');
       
-      // Force fallback mode to ensure we get data
-      const data = await apiCall(API_ENDPOINTS.CATEGORIES, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const data = await apiCall(API_ENDPOINTS.CATEGORIES);
       
       console.log('✅ Categories loaded for home:', data.length);
       console.log('📂 Categories data:', data);
@@ -203,45 +198,9 @@ function Home() {
       
     } catch (error) {
       console.error('❌ Error fetching categories:', error);
+      setCategories([]); // Set empty array instead of hardcoded data
       
-      // Fallback to hardcoded categories if API fails
-      const fallbackCategories = [
-        {
-          id: 'c1',
-          name: 'أوشحة التخرج',
-          description: 'أوشحة تخرج أنيقة بألوان وتصاميم متنوعة',
-          image: 'categories/graduation-sashes.jpg'
-        },
-        {
-          id: 'c2',
-          name: 'عبايات التخرج',
-          description: 'عبايات تخرج رسمية للمراسم الأكاديمية',
-          image: 'categories/graduation-gowns.jpg'
-        },
-        {
-          id: 'c3',
-          name: 'الأزياء المدرسية',
-          description: 'ملابس مدرسية عالية الجودة ومريحة',
-          image: 'categories/school-uniforms.jpg'
-        },
-        {
-          id: 'c4',
-          name: 'كاب التخرج',
-          description: 'كاب تخرج أكاديمي بتصاميم مختلفة',
-          image: 'categories/graduation-caps.jpg'
-        },
-        {
-          id: 'c5',
-          name: 'إكسسوارات التخرج',
-          description: 'إكسسوارات مكملة لإطلالة التخرج المثالية',
-          image: 'categories/graduation-accessories.jpg'
-        }
-      ];
-      
-      console.log('🔄 Using fallback categories:', fallbackCategories.length);
-      setCategories(fallbackCategories);
-      
-      // Trigger navbar update with fallback data
+      // Trigger navbar update with empty data
       window.dispatchEvent(new Event('categoriesUpdated'));
     }
   };

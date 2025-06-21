@@ -95,12 +95,7 @@ const ProductForm: React.FC = () => {
       setLoadingCategories(true);
       console.log('🔄 Fetching categories for product form...');
       
-      // Force fallback mode to ensure we get data
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
       
       console.log('✅ Categories loaded:', categories.length);
       console.log('📂 Categories data:', categories);
@@ -109,31 +104,7 @@ const ProductForm: React.FC = () => {
     } catch (error) {
       console.error('❌ Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
-      
-      // Fallback to hardcoded categories
-      const fallbackCategories = [
-        {
-          id: 'c1',
-          name: 'أوشحة التخرج',
-          description: 'أوشحة تخرج أنيقة بألوان وتصاميم متنوعة',
-          image: 'categories/graduation-sashes.jpg'
-        },
-        {
-          id: 'c2',
-          name: 'عبايات التخرج',
-          description: 'عبايات تخرج رسمية للمراسم الأكاديمية',
-          image: 'categories/graduation-gowns.jpg'
-        },
-        {
-          id: 'c3',
-          name: 'الأزياء المدرسية',
-          description: 'ملابس مدرسية عالية الجودة ومريحة',
-          image: 'categories/school-uniforms.jpg'
-        }
-      ];
-      
-      console.log('🔄 Using fallback categories:', fallbackCategories.length);
-      setCategories(fallbackCategories);
+      setCategories([]); // Set empty array as fallback
     } finally {
       setLoadingCategories(false);
     }
@@ -144,12 +115,7 @@ const ProductForm: React.FC = () => {
       setLoading(true);
       console.log('🔄 Fetching product:', productId, 'Type:', typeof productId);
       
-      // Force fallback mode to ensure we get data
-      const products = await apiCall(API_ENDPOINTS.PRODUCTS, {
-        headers: {
-          'X-Force-Fallback': 'true'
-        }
-      });
+      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
       
       console.log('📦 All products loaded:', products.length);
       

@@ -15,7 +15,7 @@ interface CartItem {
 }
 
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
@@ -283,12 +283,32 @@ function Navbar() {
 
   const fetchCategories = async () => {
     try {
-      const response = await categoriesAPI.getAll();
-      if (response.success) {
-        setCategories(response.data);
-      }
+      console.log('🔄 [Navbar] Fetching categories...');
+      
+      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
+      console.log('✅ [Navbar] Categories loaded:', categories.length);
+      
+      setCategories(categories);
+      
+      // Cache categories in localStorage
+      localStorage.setItem('cachedCategories', JSON.stringify(categories));
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ [Navbar] Error fetching categories:', error);
+      
+      // Try to use cached categories as fallback
+      const cached = localStorage.getItem('cachedCategories');
+      if (cached) {
+        try {
+          const cachedCategories = JSON.parse(cached);
+          console.log('🔄 [Navbar] Using cached categories:', cachedCategories.length);
+          setCategories(cachedCategories);
+        } catch (parseError) {
+          console.error('❌ [Navbar] Error parsing cached categories:', parseError);
+          setCategories([]);
+        }
+      } else {
+        setCategories([]);
+      }
     }
   };
 

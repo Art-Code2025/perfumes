@@ -24,7 +24,7 @@ const heroImages = [b1, b2, b3, b4];
 
 // تعريف نوع الخدمة
 interface Service {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   homeShortDescription: string;
   detailsShortDescription: string;
@@ -37,13 +37,13 @@ interface Service {
 
 // تعريف نوع المنتج
 interface Product {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   price: number;
   originalPrice?: number;
   stock: number;
-  categoryId: number | null;
+  categoryId: string | number | null; // Support both string and number IDs
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -54,7 +54,7 @@ interface Product {
 
 // تعريف نوع الفئة
 interface Category {
-  id: number;
+  id: string | number; // Support both string and number IDs
   name: string;
   description: string;
   image: string;
@@ -161,33 +161,42 @@ function Home() {
 
   const fetchServices = async () => {
     try {
-      const data = await apiCall(API_ENDPOINTS.SERVICES);
-      setServices(data);
+      // For now, we'll use empty array since SERVICES endpoint doesn't exist
+      // You can add services data later or create a services endpoint
+      console.log('📝 Services endpoint not implemented yet');
+      setServices([]);
     } catch (error) {
       console.error('Error fetching services:', error);
+      setServices([]);
     }
   };
 
   const fetchProducts = async () => {
     try {
+      console.log('🔄 Fetching products for home page...');
       const data = await apiCall(API_ENDPOINTS.PRODUCTS);
+      console.log('✅ Products loaded for home:', data.length);
       setProducts(data.slice(0, 8)); // أخذ أول 8 منتجات فقط
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
+      setProducts([]);
     }
   };
 
   const fetchCategories = async () => {
     try {
+      console.log('🔄 Fetching categories for home page...');
       const data = await apiCall(API_ENDPOINTS.CATEGORIES);
+      console.log('✅ Categories loaded for home:', data.length);
       setCategories(data);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ Error fetching categories:', error);
+      setCategories([]);
     }
   };
 
   // دالة لتتبع زيارات الخدمة
-  const trackVisit = (serviceId: number) => {
+  const trackVisit = (serviceId: string | number) => {
     const visits = JSON.parse(localStorage.getItem('serviceVisits') || '{}');
     visits[serviceId] = (visits[serviceId] || 0) + 1;
     localStorage.setItem('serviceVisits', JSON.stringify(visits));
@@ -572,6 +581,197 @@ function Home() {
             >
               <Package className="w-6 h-6" />
               <span>عرض جميع الخدمات</span>
+              <ArrowLeft className="w-5 h-5 transform rotate-180" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      <div className="bg-white py-24 relative overflow-hidden">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                تصنيفاتنا المتنوعة
+              </span>
+            </h2>
+            <div className="h-1 w-24 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto mb-8 rounded-full"></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              اكتشف مجموعتنا المتنوعة من التصنيفات المختارة بعناية لتلبية جميع احتياجاتك
+            </p>
+          </div>
+
+          {categories.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+              {categories.map((category, index) => (
+                <Link
+                  key={category.id}
+                  to={`/category/${createCategorySlug(category.id, category.name)}`}
+                  className="group bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-500 hover:shadow-2xl hover:scale-105 glass-effect border-2 border-transparent hover:border-pink-200 flex flex-col h-full"
+                >
+                  <div className="h-48 overflow-hidden relative bg-gradient-to-br from-pink-50 to-purple-50">
+                    <img
+                      src={buildImageUrl(category.image)}
+                      alt={category.name}
+                      className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/placeholder.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-pink-600/30 to-purple-600/30 transition-all duration-500"></div>
+                  </div>
+                  <div className="p-6 flex-grow flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 group-hover:text-pink-600 transition-colors duration-300 mb-2">
+                        {category.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
+                        {category.description}
+                      </p>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="text-pink-600 font-semibold group-hover:text-pink-700 transition-colors">
+                        استكشف التصنيف
+                      </span>
+                      <ArrowLeft className="w-4 h-4 text-pink-600 transform rotate-180 group-hover:translate-x-1 transition-transform duration-300" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 glass-effect p-8 rounded-2xl shadow-lg border-2 border-pink-200 mb-16">
+              <div className="w-16 h-16 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-8 h-8 text-pink-500" />
+              </div>
+              <p className="text-gray-600 text-lg">لا توجد تصنيفات متاحة حاليًا</p>
+            </div>
+          )}
+
+          {/* View All Categories Button */}
+          <div className="text-center">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <Package className="w-6 h-6" />
+              <span>عرض جميع التصنيفات</span>
+              <ArrowLeft className="w-5 h-5 transform rotate-180" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Products Section */}
+      <div className="bg-gradient-to-br from-gray-50 to-white py-24 relative overflow-hidden">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                منتجاتنا المميزة
+              </span>
+            </h2>
+            <div className="h-1 w-24 bg-gradient-to-r from-pink-500 to-purple-500 mx-auto mb-8 rounded-full"></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              اختر من مجموعتنا المتميزة من المنتجات عالية الجودة والمصممة خصيصاً لتلبية احتياجاتك
+            </p>
+          </div>
+
+          {products.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+              {products.map((product, index) => (
+                <Link
+                  key={product.id}
+                  to={`/product/${createProductSlug(product.id, product.name)}`}
+                  className="group bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-500 hover:shadow-2xl hover:scale-105 glass-effect border-2 border-transparent hover:border-pink-200 flex flex-col h-full"
+                >
+                  <div className="h-48 overflow-hidden relative bg-gradient-to-br from-pink-50 to-purple-50">
+                    <img
+                      src={buildImageUrl(product.mainImage)}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/placeholder.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-pink-600/30 to-purple-600/30 transition-all duration-500"></div>
+                    {product.originalPrice && product.originalPrice > product.price && (
+                      <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                        -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                      </div>
+                    )}
+                    {product.stock === 0 && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="text-white font-bold bg-red-600 px-3 py-1 rounded-lg text-sm">
+                          نفذت الكمية
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 flex-grow flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-800 group-hover:text-pink-600 transition-colors duration-300 mb-2 line-clamp-2">
+                        {product.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 mb-3">
+                        {product.description}
+                      </p>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        {product.originalPrice && product.originalPrice > product.price ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-400 line-through">
+                              {product.originalPrice.toFixed(0)} ر.س
+                            </span>
+                            <span className="text-lg font-bold text-pink-600">
+                              {product.price.toFixed(0)} ر.س
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-lg font-bold text-pink-600">
+                            {product.price.toFixed(0)} ر.س
+                          </span>
+                        )}
+                        <div className="text-sm text-gray-500">
+                          {product.stock > 0 ? (
+                            <span className="text-green-600 font-medium">متوفر</span>
+                          ) : (
+                            <span className="text-red-600 font-medium">نفذ</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-pink-600 font-semibold group-hover:text-pink-700 transition-colors">
+                          عرض المنتج
+                        </span>
+                        <ArrowLeft className="w-4 h-4 text-pink-600 transform rotate-180 group-hover:translate-x-1 transition-transform duration-300" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 glass-effect p-8 rounded-2xl shadow-lg border-2 border-pink-200 mb-16">
+              <div className="w-16 h-16 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Gift className="w-8 h-8 text-pink-500" />
+              </div>
+              <p className="text-gray-600 text-lg">لا توجد منتجات متاحة حاليًا</p>
+            </div>
+          )}
+
+          {/* View All Products Button */}
+          <div className="text-center">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <Gift className="w-6 h-6" />
+              <span>عرض جميع المنتجات</span>
               <ArrowLeft className="w-5 h-5 transform rotate-180" />
             </Link>
           </div>

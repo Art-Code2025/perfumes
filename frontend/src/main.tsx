@@ -143,8 +143,8 @@ const LayoutWrapper: React.FC = () => {
           <Route path="/admin/service/edit/:id" element={<ProtectedRoute><ServiceForm /></ProtectedRoute>} />
           
           {/* New E-commerce Management Routes */}
-          <Route path="/admin/product/add" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
-          <Route path="/admin/product/edit/:id" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+          <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+          <Route path="/admin/products/edit/:id" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
           <Route path="/admin/category/add" element={<ProtectedRoute><CategoryAdd /></ProtectedRoute>} />
           <Route path="/admin/category/edit/:id" element={<ProtectedRoute><CategoryEdit /></ProtectedRoute>} />
           <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />

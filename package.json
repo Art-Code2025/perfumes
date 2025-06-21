@@ -1,40 +1,35 @@
 {
-  "name": "mawasiem-store-serverless",
-  "version": "2.0.0",
-  "description": "متجر مواسم الإلكتروني - نسخة Serverless",
+  "name": "mawasiem-ecommerce",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "preview": "cd frontend && npm run preview",
-    "install-frontend": "cd frontend && npm install",
-    "install-all": "npm install && cd frontend && npm install",
-    "dev": "concurrently \"netlify dev\" \"cd frontend && npm run dev\"",
-    "deploy": "netlify deploy --prod",
-    "test": "echo \"No tests specified\" && exit 0"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "concurrently": "^8.2.2",
-    "firebase": "^10.14.1",
-    "firebase-admin": "^13.4.0",
-    "cloudinary": "^1.41.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
+    "react-toastify": "^9.1.1",
+    "lucide-react": "^0.263.1",
+    "formidable": "^3.5.1"
   },
   "devDependencies": {
-    "@netlify/functions": "^2.4.1",
-    "netlify-cli": "^17.10.1"
-  },
-  "engines": {
-    "node": ">=22.0.0"
-  },
-  "author": "Art-code",
-  "license": "MIT",
-  "keywords": [
-    "ecommerce",
-    "serverless",
-    "firebase",
-    "cloudinary",
-    "netlify",
-    "arabic",
-    "react"
-  ]
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.3",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
+  }
 }

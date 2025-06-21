@@ -2383,15 +2383,15 @@ const Dashboard: React.FC = () => {
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-500">نوع الخصم:</span>
                               <span className="text-sm font-medium">
-                                {coupon.discountType === 'percentage' ? 'نسبة مئوية' : 'مبلغ ثابت'}
+                                {coupon.type === 'percentage' ? 'نسبة مئوية' : 'مبلغ ثابت'}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-500">قيمة الخصم:</span>
                               <span className="text-sm font-bold text-black">
-                                {coupon.discountType === 'percentage' 
-                                  ? `${coupon.discountValue}%` 
-                                  : `${coupon.discountValue} ر.س`
+                                {coupon.type === 'percentage' 
+                                  ? `${coupon.value}%` 
+                                  : `${coupon.value} ر.س`
                                 }
                               </span>
                             </div>

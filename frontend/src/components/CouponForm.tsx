@@ -138,32 +138,32 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
+      <div className="flex justify-center items-center min-h-screen bg-white">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-xl text-white">جاري التحميل...</div>
+          <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-xl text-black">جاري التحميل...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       {/* Mobile Header */}
-      <div className="bg-gray-900 border-b border-gray-800 p-4 sm:p-6">
+      <div className="bg-white border-b-2 border-black p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold text-black">
                 {isEdit ? 'تعديل الكوبون' : 'إضافة كوبون جديد'}
               </h1>
-              <p className="text-gray-400 mt-1 text-sm sm:text-base">
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
                 {isEdit ? 'تحديث بيانات الكوبون' : 'إنشاء كوبون خصم جديد'}
               </p>
             </div>
             <button
               onClick={() => navigate('/admin')}
-              className="text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
+              className="text-gray-600 hover:text-black transition-colors text-sm sm:text-base border border-black px-4 py-2 rounded-lg hover:bg-gray-100"
             >
               ← العودة للداشبورد
             </button>
@@ -175,23 +175,23 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
       <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
         <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* Basic Information Card */}
-          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
-              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">🎫</span>
+          <div className="bg-white rounded-lg sm:rounded-xl border-2 border-black p-4 sm:p-6 shadow-lg">
+            <h2 className="text-lg sm:text-xl font-semibold text-black mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center text-sm mr-3">🎫</span>
               معلومات الكوبون الأساسية
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {/* Coupon Code */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   كود الكوبون *
                 </label>
                 <input
                   type="text"
                   value={coupon.code}
                   onChange={(e) => setCoupon({ ...coupon, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                   placeholder="SAVE20"
                   required
                 />
@@ -200,14 +200,14 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
               {/* Coupon Name */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   اسم الكوبون *
                 </label>
                 <input
                   type="text"
                   value={coupon.name}
                   onChange={(e) => setCoupon({ ...coupon, name: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                   placeholder="خصم 20% على جميع المنتجات"
                   required
                 />
@@ -215,14 +215,14 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
               {/* Description */}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   وصف الكوبون
                 </label>
                 <textarea
                   value={coupon.description}
                   onChange={(e) => setCoupon({ ...coupon, description: e.target.value })}
                   rows={3}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 resize-none text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 resize-none text-sm sm:text-base"
                   placeholder="وصف مختصر للكوبون وشروط الاستخدام"
                 />
               </div>
@@ -230,22 +230,22 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
           </div>
 
           {/* Discount Settings Card */}
-          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
-              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">💰</span>
+          <div className="bg-white rounded-lg sm:rounded-xl border-2 border-black p-4 sm:p-6 shadow-lg">
+            <h2 className="text-lg sm:text-xl font-semibold text-black mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center text-sm mr-3">💰</span>
               إعدادات الخصم
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {/* Discount Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   نوع الخصم *
                 </label>
                 <select
                   value={coupon.type}
                   onChange={(e) => setCoupon({ ...coupon, type: e.target.value as 'percentage' | 'fixed' })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black text-sm sm:text-base"
                   required
                 >
                   <option value="percentage">نسبة مئوية (%)</option>
@@ -255,7 +255,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
               {/* Discount Value */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   قيمة الخصم *
                 </label>
                 <input
@@ -264,7 +264,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
                   min="0"
                   value={coupon.value}
                   onChange={(e) => setCoupon({ ...coupon, value: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                   placeholder={coupon.type === 'percentage' ? '20' : '50.00'}
                   required
                 />
@@ -276,7 +276,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
               {/* Max Discount (for percentage only) */}
               {coupon.type === 'percentage' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     الحد الأقصى للخصم (ر.س)
                   </label>
                   <input
@@ -285,7 +285,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
                     min="0"
                     value={coupon.maxDiscount || ''}
                     onChange={(e) => setCoupon({ ...coupon, maxDiscount: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                     placeholder="100.00"
                   />
                   <p className="text-xs text-gray-500 mt-1">اتركه فارغاً لعدم وضع حد أقصى</p>
@@ -294,7 +294,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
               {/* Min Order Value */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   الحد الأدنى لقيمة الطلب (ر.س)
                 </label>
                 <input
@@ -303,7 +303,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
                   min="0"
                   value={coupon.minOrderValue || ''}
                   onChange={(e) => setCoupon({ ...coupon, minOrderValue: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                   placeholder="200.00"
                 />
                 <p className="text-xs text-gray-500 mt-1">الحد الأدنى لقيمة الطلب لتطبيق الكوبون</p>
@@ -312,16 +312,16 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
           </div>
 
           {/* Usage & Expiry Settings Card */}
-          <div className="bg-gray-900 rounded-lg sm:rounded-xl border border-gray-800 p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center">
-              <span className="w-6 h-6 bg-white bg-opacity-20 rounded-lg flex items-center justify-center text-sm mr-3">⏰</span>
+          <div className="bg-white rounded-lg sm:rounded-xl border-2 border-black p-4 sm:p-6 shadow-lg">
+            <h2 className="text-lg sm:text-xl font-semibold text-black mb-4 sm:mb-6 flex items-center">
+              <span className="w-6 h-6 bg-black text-white rounded-lg flex items-center justify-center text-sm mr-3">⏰</span>
               إعدادات الاستخدام والانتهاء
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {/* Usage Limit */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   حد الاستخدام
                 </label>
                 <input
@@ -329,7 +329,7 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
                   min="0"
                   value={coupon.usageLimit || ''}
                   onChange={(e) => setCoupon({ ...coupon, usageLimit: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white placeholder-gray-500 text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black placeholder-gray-500 text-sm sm:text-base"
                   placeholder="100"
                 />
                 <p className="text-xs text-gray-500 mt-1">عدد المرات المسموح باستخدام الكوبون</p>
@@ -337,14 +337,14 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
 
               {/* Expiry Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-black mb-2">
                   تاريخ الانتهاء
                 </label>
                 <input
                   type="date"
                   value={coupon.expiryDate || ''}
                   onChange={(e) => setCoupon({ ...coupon, expiryDate: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-white focus:border-white text-white text-sm sm:text-base"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-600 text-black text-sm sm:text-base"
                 />
                 <p className="text-xs text-gray-500 mt-1">اتركه فارغاً للكوبون دائم</p>
               </div>
@@ -356,9 +356,9 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
                     type="checkbox"
                     checked={coupon.isActive}
                     onChange={(e) => setCoupon({ ...coupon, isActive: e.target.checked })}
-                    className="w-4 h-4 text-white bg-black border-gray-700 rounded focus:ring-white focus:ring-2"
+                    className="w-4 h-4 text-black bg-white border-2 border-black rounded focus:ring-black focus:ring-2"
                   />
-                  <span className="mr-3 text-sm font-medium text-gray-300">
+                  <span className="mr-3 text-sm font-medium text-black">
                     الكوبون نشط ومتاح للاستخدام
                   </span>
                 </label>
@@ -371,18 +371,18 @@ const CouponForm: React.FC<CouponFormProps> = ({ isEdit: propIsEdit = false }) =
             <button
               type="button"
               onClick={() => navigate('/admin')}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 hover:text-white transition-colors text-sm sm:text-base font-medium"
+              className="w-full sm:w-auto px-6 py-3 border-2 border-black text-black rounded-lg hover:bg-gray-100 transition-colors text-sm sm:text-base font-medium"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base font-medium"
+              className="w-full sm:w-auto px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base font-medium"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   جاري الحفظ...
                 </>
               ) : (

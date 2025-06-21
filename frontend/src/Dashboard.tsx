@@ -146,17 +146,8 @@ interface ShippingSettings {
 }
 
 const Dashboard: React.FC = () => {
-  // Emergency fallback - force loading to false after 20 seconds
-  useEffect(() => {
-    const emergencyTimeout = setTimeout(() => {
-      console.warn('🚨 EMERGENCY: Forcing dashboard to load after 20 seconds');
-      setLoading(false);
-      setError('تم تحميل لوحة التحكم بالوضع الآمن - بعض البيانات قد تكون غير متاحة');
-    }, 20000);
-    
-    return () => clearTimeout(emergencyTimeout);
-  }, []);
-
+  console.log('🎯 Dashboard component started rendering...');
+  
   // State definitions
   const [currentTab, setCurrentTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -241,6 +232,89 @@ const Dashboard: React.FC = () => {
 
   // جلب إحصائيات العملاء
   const [customerStats, setCustomerStats] = useState<any>(null);
+
+  // CRITICAL: Force loading to false immediately and then try to load data
+  useEffect(() => {
+    console.log('🚀 Dashboard initializing...');
+    
+    // STEP 1: Immediately show the dashboard (no more white screen!)
+    const immediateLoad = () => {
+      setLoading(false);
+      console.log('✅ Dashboard UI loaded immediately');
+    };
+    
+    // Show dashboard immediately
+    immediateLoad();
+    
+    // STEP 2: Load data in background without blocking UI
+    const loadDataInBackground = async () => {
+      console.log('🔄 Loading data in background...');
+      
+      try {
+        // Try to load products
+        try {
+          const data = await apiCall(API_ENDPOINTS.PRODUCTS);
+          setProducts(data || []);
+          setFilteredProducts(data || []);
+          console.log('✅ Products loaded:', data?.length || 0);
+        } catch (err) {
+          console.warn('⚠️ Products failed, using empty array');
+          setProducts([]);
+          setFilteredProducts([]);
+        }
+        
+        // Try to load categories
+        try {
+          const data = await apiCall(API_ENDPOINTS.CATEGORIES);
+          setCategories(data || []);
+          setFilteredCategories(data || []);
+          console.log('✅ Categories loaded:', data?.length || 0);
+        } catch (err) {
+          console.warn('⚠️ Categories failed, using empty array');
+          setCategories([]);
+          setFilteredCategories([]);
+        }
+        
+        // Try to load other data (non-blocking)
+        setTimeout(async () => {
+          try {
+            const couponsData = await apiCall(API_ENDPOINTS.COUPONS);
+            setCoupons(couponsData || []);
+            setFilteredCoupons(couponsData || []);
+          } catch (err) {
+            setCoupons([]);
+            setFilteredCoupons([]);
+          }
+          
+          try {
+            const ordersData = await apiCall(API_ENDPOINTS.ORDERS);
+            setOrders(ordersData || []);
+            setFilteredOrders(ordersData || []);
+          } catch (err) {
+            setOrders([]);
+            setFilteredOrders([]);
+          }
+          
+          try {
+            const customersData = await apiCall(API_ENDPOINTS.CUSTOMERS);
+            setCustomers(customersData || []);
+            setFilteredCustomers(customersData || []);
+          } catch (err) {
+            setCustomers([]);
+            setFilteredCustomers([]);
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Background loading error:', error);
+        // Don't show error to user, just log it
+      }
+    };
+    
+    // Start background loading
+    loadDataInBackground();
+    
+  }, []);
   
   const fetchCustomerStats = async () => {
     try {
@@ -281,146 +355,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Initial data loading with better error handling
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        console.log('🔄 Loading Dashboard data...');
-        
-        // Set a maximum timeout for the entire loading process
-        const loadingTimeout = setTimeout(() => {
-          console.warn('⚠️ Dashboard loading timeout - forcing completion');
-          setLoading(false);
-        }, 15000); // 15 seconds maximum
-        
-        // Load essential data first (products and categories) with individual timeouts
-        try {
-          const productsPromise = Promise.race([
-            fetchProducts(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Products timeout')), 8000))
-          ]);
-          await productsPromise;
-          console.log('✅ Products loaded');
-        } catch (err) {
-          console.error('❌ Products failed:', err);
-          // Use fallback data for products
-          setProducts([]);
-          setFilteredProducts([]);
-        }
-        
-        try {
-          const categoriesPromise = Promise.race([
-            fetchCategories(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Categories timeout')), 8000))
-          ]);
-          await categoriesPromise;
-          console.log('✅ Categories loaded');
-        } catch (err) {
-          console.error('❌ Categories failed:', err);
-          // Use fallback data for categories
-          setCategories([]);
-          setFilteredCategories([]);
-        }
-        
-        // Load secondary data with shorter timeouts
-        try {
-          const couponsPromise = Promise.race([
-            fetchCoupons(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Coupons timeout')), 5000))
-          ]);
-          await couponsPromise;
-          console.log('✅ Coupons loaded');
-        } catch (err) {
-          console.error('❌ Coupons failed:', err);
-          setCoupons([]);
-          setFilteredCoupons([]);
-        }
-        
-        try {
-          const ordersPromise = Promise.race([
-            fetchOrders(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Orders timeout')), 5000))
-          ]);
-          await ordersPromise;
-          console.log('✅ Orders loaded');
-        } catch (err) {
-          console.error('❌ Orders failed:', err);
-          setOrders([]);
-          setFilteredOrders([]);
-        }
-        
-        try {
-          const customersPromise = Promise.race([
-            fetchCustomers(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Customers timeout')), 5000))
-          ]);
-          await customersPromise;
-          console.log('✅ Customers loaded');
-        } catch (err) {
-          console.error('❌ Customers failed:', err);
-          setCustomers([]);
-          setFilteredCustomers([]);
-        }
-        
-        // Generate sales data after products are loaded
-        generateSalesData();
-        
-        console.log('✅ Dashboard data loading completed');
-        
-        // Clear the timeout since we completed successfully
-        clearTimeout(loadingTimeout);
-        
-      } catch (error) {
-        console.error('❌ Dashboard loading error:', error);
-        setError('حدث خطأ في تحميل بيانات لوحة التحكم - سيتم المتابعة بالبيانات المتاحة');
-        
-        // Even with error, set fallback data
-        setProducts([]);
-        setCategories([]);
-        setCoupons([]);
-        setOrders([]);
-        setCustomers([]);
-        setFilteredProducts([]);
-        setFilteredCategories([]);
-        setFilteredCoupons([]);
-        setFilteredOrders([]);
-        setFilteredCustomers([]);
-      } finally {
-        // ALWAYS set loading to false - this is critical!
-        setLoading(false);
-        console.log('✅ Dashboard loading state set to false');
-      }
-    };
-
-    loadInitialData();
-    
-    // Listen for updates
-    const handleCategoriesUpdate = () => {
-      fetchCategories().catch((err: any) => console.error('Categories update failed:', err));
-    };
-    
-    const handleProductsUpdate = () => {
-      fetchProducts().catch((err: any) => console.error('Products update failed:', err));
-    };
-    
-    const handleCouponsUpdate = () => {
-      fetchCoupons().catch((err: any) => console.error('Coupons update failed:', err));
-    };
-    
-    window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
-    window.addEventListener('productsUpdated', handleProductsUpdate);
-    window.addEventListener('couponsUpdated', handleCouponsUpdate);
-    
-    return () => {
-      window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
-      window.removeEventListener('productsUpdated', handleProductsUpdate);
-      window.removeEventListener('couponsUpdated', handleCouponsUpdate);
-    };
-  }, []);
-
   // Update filtered orders when orders change or when switching to orders tab
   useEffect(() => {
     if (currentTab === 'orders') {
@@ -444,11 +378,12 @@ const Dashboard: React.FC = () => {
   const fetchProducts = async () => {
     try {
       const data = await apiCall(API_ENDPOINTS.PRODUCTS);
-      setProducts(data);
-      setFilteredProducts(data);
+      setProducts(data || []);
+      setFilteredProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('فشل في جلب المنتجات');
+      setProducts([]);
+      setFilteredProducts([]);
     }
   };
 
@@ -456,11 +391,12 @@ const Dashboard: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const data = await apiCall(API_ENDPOINTS.CATEGORIES);
-      setCategories(data);
-      setFilteredCategories(data);
+      setCategories(data || []);
+      setFilteredCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      toast.error('فشل في جلب التصنيفات');
+      setCategories([]);
+      setFilteredCategories([]);
     }
   };
 
@@ -468,23 +404,23 @@ const Dashboard: React.FC = () => {
   const fetchCoupons = async () => {
     try {
       const data = await apiCall(API_ENDPOINTS.COUPONS);
-      setCoupons(data);
-      setFilteredCoupons(data);
+      setCoupons(data || []);
+      setFilteredCoupons(data || []);
     } catch (error) {
       console.error('Error fetching coupons:', error);
-      toast.error('فشل في جلب الكوبونات');
+      setCoupons([]);
+      setFilteredCoupons([]);
     }
   };
 
   // وظائف قائمة الأمنيات
   const fetchWishlistItems = async () => {
     try {
-      // Note: This might need user ID - for now using a placeholder
       const data = await apiCall('wishlist');
-      setWishlistItems(data);
+      setWishlistItems(data || []);
     } catch (error) {
       console.error('Error fetching wishlist items:', error);
-      // Don't show error toast for wishlist as it might not be critical
+      setWishlistItems([]);
     }
   };
 
@@ -492,11 +428,12 @@ const Dashboard: React.FC = () => {
   const fetchOrders = async () => {
     try {
       const data = await apiCall(API_ENDPOINTS.ORDERS);
-      setOrders(data);
-      setFilteredOrders(data);
+      setOrders(data || []);
+      setFilteredOrders(data || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('فشل في جلب الطلبات');
+      setOrders([]);
+      setFilteredOrders([]);
     }
   };
 
@@ -504,11 +441,12 @@ const Dashboard: React.FC = () => {
   const fetchCustomers = async () => {
     try {
       const data = await apiCall(API_ENDPOINTS.CUSTOMERS);
-      setCustomers(data);
-      setFilteredCustomers(data);
+      setCustomers(data || []);
+      setFilteredCustomers(data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
-      toast.error('فشل في جلب العملاء');
+      setCustomers([]);
+      setFilteredCustomers([]);
     }
   };
 
@@ -1159,8 +1097,16 @@ const Dashboard: React.FC = () => {
   // Calculate stats after all data is loaded
   const stats = getStoreStats();
 
+  console.log('🔍 Dashboard render check:', {
+    loading,
+    error,
+    productsCount: products.length,
+    categoriesCount: categories.length
+  });
+
   // Show loading screen while data is loading
   if (loading) {
+    console.log('⏳ Still in loading state, showing loading screen');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -1190,6 +1136,8 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
+
+  console.log('🎉 Dashboard rendering main UI!');
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">

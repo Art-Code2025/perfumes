@@ -230,6 +230,48 @@ const Dashboard: React.FC = () => {
     loading: false
   });
 
+  // جلب إحصائيات العملاء
+  const [customerStats, setCustomerStats] = useState<any>(null);
+  
+  const fetchCustomerStats = async () => {
+    try {
+      // Simplified customer stats - just count from existing data
+      const stats = {
+        total: customers.length,
+        active: customers.filter(c => c.status === 'active').length,
+        thisMonth: customers.filter(c => {
+          const created = new Date(c.createdAt);
+          const now = new Date();
+          return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+        }).length
+      };
+      setCustomerStats(stats);
+      return stats;
+    } catch (error) {
+      console.error('Error calculating customer stats:', error);
+      return null;
+    }
+  };
+
+  const generateSalesData = () => {
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
+    const salesData: SalesData[] = months.map((month, index) => ({
+      month,
+      sales: Math.floor(Math.random() * 8000) + 5000 + (index * 500),
+      orders: Math.floor(Math.random() * 40) + 20 + (index * 3)
+    }));
+    setSalesData(salesData);
+
+    if (products.length > 0) {
+      const topProductsData = products.slice(0, 5).map((product, index) => ({
+        name: product.name,
+        sales: Math.floor(Math.random() * 80) + 20 - (index * 5),
+        revenue: (Math.floor(Math.random() * 80) + 20 - (index * 5)) * product.price
+      }));
+      setTopProducts(topProductsData);
+    }
+  };
+
   // Initial data loading with better error handling
   useEffect(() => {
     const loadInitialData = async () => {
@@ -239,25 +281,53 @@ const Dashboard: React.FC = () => {
         
         console.log('🔄 Loading Dashboard data...');
         
-        // Load data with individual error handling
-        const loadingPromises = [
-          fetchProducts().catch(err => console.error('Products loading failed:', err)),
-          fetchCategories().catch(err => console.error('Categories loading failed:', err)),
-          fetchCoupons().catch(err => console.error('Coupons loading failed:', err)),
-          fetchOrders().catch(err => console.error('Orders loading failed:', err)),
-          fetchCustomers().catch(err => console.error('Customers loading failed:', err))
-        ];
+        // Load essential data first (products and categories)
+        try {
+          await fetchProducts();
+          console.log('✅ Products loaded');
+        } catch (err) {
+          console.error('❌ Products failed:', err);
+          // Continue even if products fail
+        }
         
-        await Promise.allSettled(loadingPromises);
+        try {
+          await fetchCategories();
+          console.log('✅ Categories loaded');
+        } catch (err) {
+          console.error('❌ Categories failed:', err);
+          // Continue even if categories fail
+        }
+        
+        // Load secondary data
+        try {
+          await fetchCoupons();
+          console.log('✅ Coupons loaded');
+        } catch (err) {
+          console.error('❌ Coupons failed:', err);
+        }
+        
+        try {
+          await fetchOrders();
+          console.log('✅ Orders loaded');
+        } catch (err) {
+          console.error('❌ Orders failed:', err);
+        }
+        
+        try {
+          await fetchCustomers();
+          console.log('✅ Customers loaded');
+        } catch (err) {
+          console.error('❌ Customers failed:', err);
+        }
         
         // Generate sales data after products are loaded
         generateSalesData();
         
-        console.log('✅ Dashboard data loaded successfully');
+        console.log('✅ Dashboard data loading completed');
         
       } catch (error) {
         console.error('❌ Dashboard loading error:', error);
-        setError('فشل في تحميل بيانات لوحة التحكم');
+        setError('حدث خطأ في تحميل بيانات لوحة التحكم');
       } finally {
         setLoading(false);
       }
@@ -267,15 +337,15 @@ const Dashboard: React.FC = () => {
     
     // Listen for updates
     const handleCategoriesUpdate = () => {
-      fetchCategories();
+      fetchCategories().catch((err: any) => console.error('Categories update failed:', err));
     };
     
     const handleProductsUpdate = () => {
-      fetchProducts();
+      fetchProducts().catch((err: any) => console.error('Products update failed:', err));
     };
     
     const handleCouponsUpdate = () => {
-      fetchCoupons();
+      fetchCoupons().catch((err: any) => console.error('Coupons update failed:', err));
     };
     
     window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
@@ -395,53 +465,11 @@ const Dashboard: React.FC = () => {
     }
   }, [currentTab]);
 
-  // جلب إحصائيات العملاء
-  const [customerStats, setCustomerStats] = useState<any>(null);
-  
-  const fetchCustomerStats = async () => {
-    try {
-      // Simplified customer stats - just count from existing data
-      const stats = {
-        total: customers.length,
-        active: customers.filter(c => c.status === 'active').length,
-        thisMonth: customers.filter(c => {
-          const created = new Date(c.createdAt);
-          const now = new Date();
-          return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-        }).length
-      };
-      setCustomerStats(stats);
-      return stats;
-    } catch (error) {
-      console.error('Error calculating customer stats:', error);
-      return null;
-    }
-  };
-
   useEffect(() => {
     if (currentTab === 'customers') {
       fetchCustomerStats();
     }
   }, [currentTab]);
-
-  const generateSalesData = () => {
-    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
-    const salesData: SalesData[] = months.map((month, index) => ({
-      month,
-      sales: Math.floor(Math.random() * 8000) + 5000 + (index * 500),
-      orders: Math.floor(Math.random() * 40) + 20 + (index * 3)
-    }));
-    setSalesData(salesData);
-
-    if (products.length > 0) {
-      const topProductsData = products.slice(0, 5).map((product, index) => ({
-        name: product.name,
-        sales: Math.floor(Math.random() * 80) + 20 - (index * 5),
-        revenue: (Math.floor(Math.random() * 80) + 20 - (index * 5)) * product.price
-      }));
-      setTopProducts(topProductsData);
-    }
-  };
 
   const handleOrderSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -1074,406 +1102,253 @@ const Dashboard: React.FC = () => {
     }
   }, [currentTab]);
 
-  return (
-    <div className="flex h-screen bg-gray-50 font-sans overflow-hidden" dir="rtl">
-      <ToastContainer position="bottom-left" />
-      
-      {/* Desktop Sidebar - Black Theme */}
-      <aside className="hidden lg:flex flex-col w-64 bg-black border-r border-gray-800 shadow-2xl">
-        {/* Logo Section */}
-        <div className="flex items-center h-16 px-6 border-b border-gray-800">
-          <img src={logo} alt="Ghem Store" className="h-8 w-auto filter brightness-0 invert" />
-          <div className="mr-3">
-            <h1 className="text-white text-sm font-bold">لوحة التحكم</h1>
-            <p className="text-gray-400 text-xs">إدارة المتجر</p>
-          </div>
+  // Show loading screen while data is loading
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">جاري تحميل لوحة التحكم</h2>
+          <p className="text-gray-500">يرجى الانتظار...</p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {/* Dashboard Overview */}
-          <div className="mb-6">
+  // Show error screen if there's a critical error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">حدث خطأ</h2>
+          <p className="text-gray-500 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            إعادة تحميل الصفحة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo and Title */}
+            <div className="flex items-center">
+              <img src={logo} alt="Mawasiem Logo" className="h-10 w-10 ml-3" />
+              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
+                لوحة تحكم مواسم
+              </h1>
+            </div>
+
+            {/* Mobile Menu Button */}
             <button
-              onClick={() => switchTab('overview')}
-              className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                currentTab === 'overview' 
-                  ? 'bg-white text-black shadow-lg' 
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >
-              <BarChart3 className="w-5 h-5 ml-3" />
-              نظرة عامة
+              <span className="sr-only">فتح القائمة الرئيسية</span>
+              {isMobileMenuOpen ? (
+                <X className="block h-6 w-6" />
+              ) : (
+                <Menu className="block h-6 w-6" />
+              )}
             </button>
-          </div>
 
-          {/* Products & Categories */}
-          <div className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-2">الكتالوج</h3>
-            <div className="space-y-1">
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex space-x-8 space-x-reverse">
+              <button
+                onClick={() => switchTab('overview')}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'overview'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Home className="w-4 h-4 inline-block ml-2" />
+                الرئيسية
+              </button>
               <button
                 onClick={() => switchTab('products')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'products' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'products'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Package className="w-5 h-5 ml-3" />
+                <Package className="w-4 h-4 inline-block ml-2" />
                 المنتجات
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {stats.totalProducts}
-                </span>
               </button>
-              
               <button
                 onClick={() => switchTab('categories')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'categories' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'categories'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Grid className="w-5 h-5 ml-3" />
+                <Grid className="w-4 h-4 inline-block ml-2" />
                 التصنيفات
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {stats.totalCategories}
-                </span>
               </button>
-            </div>
-          </div>
-
-          {/* Orders & Customers */}
-          <div className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-2">المبيعات والعملاء</h3>
-            <div className="space-y-1">
               <button
                 onClick={() => switchTab('orders')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'orders' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'orders'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <ShoppingCart className="w-5 h-5 ml-3" />
+                <ShoppingCart className="w-4 h-4 inline-block ml-2" />
                 الطلبات
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {stats.pendingOrders}
-                </span>
               </button>
-              
               <button
                 onClick={() => switchTab('customers')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'customers' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'customers'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Users className="w-5 h-5 ml-3" />
+                <Users className="w-4 h-4 inline-block ml-2" />
                 العملاء
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {customers.length}
-                </span>
               </button>
-            </div>
-          </div>
-
-          {/* Coupons */}
-          <div className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-2">العروض</h3>
-            <div className="space-y-1">
               <button
                 onClick={() => switchTab('coupons')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'coupons' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'coupons'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Tag className="w-5 h-5 ml-3" />
+                <Gift className="w-4 h-4 inline-block ml-2" />
                 الكوبونات
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {stats.activeCoupons}
-                </span>
               </button>
-            </div>
-          </div>
-
-          {/* Shipping */}
-          <div className="mb-6">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 px-2">الشحن والتوصيل</h3>
-            <div className="space-y-1">
               <button
                 onClick={() => switchTab('shipping')}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'shipping' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentTab === 'shipping'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Truck className="w-5 h-5 ml-3" />
-                إدارة الشحن
-                <span className="mr-auto bg-gray-700 text-gray-300 px-2 py-1 rounded-md text-xs">
-                  {shippingZones.length}
-                </span>
+                <Truck className="w-4 h-4 inline-block ml-2" />
+                الشحن
               </button>
-            </div>
-          </div>
-        </nav>
+            </nav>
 
-        {/* Quick Actions */}
-        <div className="p-4 border-t border-gray-800">
-          <div className="space-y-2">
-            <Link
-              to="/admin/product/add"
-              className="w-full flex items-center justify-center bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-            >
-              <Plus className="w-4 h-4 ml-2" />
-              منتج جديد
-            </Link>
-          </div>
-        </div>
-
-        {/* User Section */}
-        <div className="p-4 border-t border-gray-800">
-          <div className="flex items-center mb-3">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black text-sm font-bold ml-3">
-              A
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white">Admin</p>
-              <p className="text-xs text-gray-400">Administrator</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4 ml-2" />
-            تسجيل الخروج
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-      
-      {/* Mobile Sidebar */}
-      <aside className={`fixed top-0 right-0 h-full w-80 bg-black shadow-2xl flex flex-col z-50 transform transition-transform duration-300 lg:hidden ${
-        isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        {/* Mobile Header */}
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logo} alt="Ghem Store" className="h-8 w-auto filter brightness-0 invert" />
-            <div className="mr-3">
-              <h1 className="text-white text-sm font-bold">لوحة التحكم</h1>
-              <p className="text-xs text-gray-400">إدارة المتجر</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="text-gray-400 hover:text-white p-2"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        
-        {/* Mobile Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-6">
-            {/* Dashboard Overview */}
-            <div>
+            {/* User Menu */}
+            <div className="hidden lg:flex items-center space-x-4 space-x-reverse">
               <button
-                onClick={() => {
-                  switchTab('overview');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  currentTab === 'overview' 
-                    ? 'bg-white text-black shadow-lg' 
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                }`}
+                onClick={handleLogout}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
               >
-                <BarChart3 className="w-5 h-5 ml-3" />
-                نظرة عامة
+                <LogOut className="w-4 h-4 ml-2" />
+                تسجيل الخروج
               </button>
             </div>
-
-            {/* Products & Categories */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">الكتالوج</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    switchTab('products');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'products' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Package className="w-5 h-5 ml-3" />
-                  المنتجات
-                </button>
-                
-                <button
-                  onClick={() => {
-                    switchTab('categories');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'categories' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Grid className="w-5 h-5 ml-3" />
-                  التصنيفات
-                </button>
-              </div>
-            </div>
-
-            {/* Orders & Customers */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">المبيعات والعملاء</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    switchTab('orders');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'orders' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <ShoppingCart className="w-5 h-5 ml-3" />
-                  الطلبات
-                </button>
-                
-                <button
-                  onClick={() => {
-                    switchTab('customers');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'customers' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Users className="w-5 h-5 ml-3" />
-                  العملاء
-                </button>
-              </div>
-            </div>
-
-            {/* Coupons */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">العروض</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    switchTab('coupons');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'coupons' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Tag className="w-5 h-5 ml-3" />
-                  الكوبونات
-                </button>
-              </div>
-            </div>
-
-            {/* Shipping */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">الشحن والتوصيل</h3>
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    switchTab('shipping');
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    currentTab === 'shipping' 
-                      ? 'bg-white text-black shadow-lg' 
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Truck className="w-5 h-5 ml-3" />
-                  إدارة الشحن
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">إجراءات سريعة</h3>
-              <div className="space-y-2">
-                <Link
-                  to="/admin/product/add"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-200"
-                >
-                  <Plus className="w-5 h-5 ml-3" />
-                  منتج جديد
-                </Link>
-                
-                <Link
-                  to="/admin/category/add"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-200"
-                >
-                  <Grid className="w-5 h-5 ml-3" />
-                  تصنيف جديد
-                </Link>
-                
-                <Link
-                  to="/admin/coupon/add"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all duration-200"
-                >
-                  <Tag className="w-5 h-5 ml-3" />
-                  كوبون جديد
-                </Link>
-              </div>
-            </div>
           </div>
-        </nav>
-
-        {/* Mobile User Section */}
-        <div className="p-4 border-t border-gray-800">
-          <div className="flex items-center mb-3">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black text-sm font-bold ml-3">
-              A
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white">Admin</p>
-              <p className="text-xs text-gray-400">Administrator</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4 ml-2" />
-            تسجيل الخروج
-          </button>
         </div>
-      </aside>
+
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-200 bg-white">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              <button
+                onClick={() => switchTab('overview')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'overview'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Home className="w-4 h-4 inline-block ml-2" />
+                الرئيسية
+              </button>
+              <button
+                onClick={() => switchTab('products')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'products'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Package className="w-4 h-4 inline-block ml-2" />
+                المنتجات
+              </button>
+              <button
+                onClick={() => switchTab('categories')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'categories'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Grid className="w-4 h-4 inline-block ml-2" />
+                التصنيفات
+              </button>
+              <button
+                onClick={() => switchTab('orders')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'orders'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4 inline-block ml-2" />
+                الطلبات
+              </button>
+              <button
+                onClick={() => switchTab('customers')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'customers'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Users className="w-4 h-4 inline-block ml-2" />
+                العملاء
+              </button>
+              <button
+                onClick={() => switchTab('coupons')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'coupons'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Gift className="w-4 h-4 inline-block ml-2" />
+                الكوبونات
+              </button>
+              <button
+                onClick={() => switchTab('shipping')}
+                className={`block w-full text-right px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  currentTab === 'shipping'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Truck className="w-4 h-4 inline-block ml-2" />
+                الشحن
+              </button>
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-right px-3 py-2 rounded-md text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4 inline-block ml-2" />
+                  تسجيل الخروج
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

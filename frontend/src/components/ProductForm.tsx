@@ -1,110 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ArrowLeft, Plus, Minus, Upload, X, Save } from 'lucide-react';
-import { buildImageUrl, apiCall, API_ENDPOINTS } from '../config/api';
+import { apiCall, API_ENDPOINTS } from '../config/api.js';
 
-interface DynamicOption {
+interface Category {
+  id: string | number;
   name: string;
-  type: 'text' | 'select' | 'number' | 'color';
-  required: boolean;
-  options?: string[];
-}
-
-interface Specification {
-  name: string;
-  value: string;
+  description?: string;
 }
 
 interface Product {
-  id?: number;
+  id: string | number;
   name: string;
   description: string;
   price: number;
-  originalPrice?: number;
+  originalPrice: number;
   stock: number;
-  categoryId: string | number; // Support both string and number IDs
-  productType?: string;
-  dynamicOptions?: DynamicOption[];
+  categoryId: string | number | null;
   mainImage: string;
-  detailedImages?: string[];
-  specifications?: Specification[];
+  detailedImages: string[];
+  specifications: { key: string; value: string }[];
+  productType: string;
+  dynamicOptions: any[];
 }
 
-interface Category {
-  id: string | number; // Support both string and number IDs
-  name: string;
-  description: string;
-  image: string;
-  createdAt?: string;
+interface ProductFormProps {
+  isEdit?: boolean;
 }
 
-const ProductForm: React.FC = () => {
+const ProductForm: React.FC<ProductFormProps> = ({ isEdit = false }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEdit = Boolean(id);
-
-  const [product, setProduct] = useState<Product>({
+  const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     description: '',
     price: 0,
     originalPrice: 0,
     stock: 0,
-    categoryId: '0', // Use string '0' as default
-    productType: '',
-    dynamicOptions: [],
+    categoryId: null,
     mainImage: '',
     detailedImages: [],
-    specifications: []
+    specifications: [],
+    productType: '',
+    dynamicOptions: []
   });
-
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [detailedImageFiles, setDetailedImageFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-
-  // Load categories
-  useEffect(() => {
-    fetchCategories();
-    
-    // Listen for category updates
-    const handleCategoriesUpdated = () => {
-      console.log('📂 Categories updated event received, refreshing...');
-      fetchCategories();
-    };
-    
-    window.addEventListener('categoriesUpdated', handleCategoriesUpdated);
-    
-    return () => {
-      window.removeEventListener('categoriesUpdated', handleCategoriesUpdated);
-    };
-  }, []);
-
-  // Load product if editing
-  useEffect(() => {
-    if (isEdit && id) {
-      console.log('🔄 ProductForm: Loading product for edit, ID:', id, 'Type:', typeof id);
-      fetchProduct(id); // Pass ID as string, let fetchProduct handle the conversion
-    }
-  }, [isEdit, id]);
 
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
-      console.log('🔄 Fetching categories for product form...');
+      console.log('🔄 [ProductForm] Fetching categories...');
       
       const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
       
-      console.log('✅ Categories loaded:', categories.length);
-      console.log('📂 Categories data:', categories);
+      console.log('✅ [ProductForm] Categories loaded:', categories.length);
+      console.log('📂 [ProductForm] Categories data:', categories);
       
       setCategories(categories);
     } catch (error) {
-      console.error('❌ Error fetching categories:', error);
+      console.error('❌ [ProductForm] Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
-      setCategories([]); // Set empty array as fallback
+      setCategories([]);
     } finally {
       setLoadingCategories(false);
     }
@@ -113,493 +71,291 @@ const ProductForm: React.FC = () => {
   const fetchProduct = async (productId: string) => {
     try {
       setLoading(true);
-      console.log('🔄 Fetching product:', productId, 'Type:', typeof productId);
+      console.log('🔄 [ProductForm] Fetching product:', productId, 'Type:', typeof productId);
       
+      // Fetch all products and find the one we need
       const products = await apiCall(API_ENDPOINTS.PRODUCTS);
       
-      console.log('📦 All products loaded:', products.length);
+      console.log('📦 [ProductForm] All products loaded:', products.length);
+      console.log('🔍 [ProductForm] Looking for product ID:', productId);
+      console.log('📋 [ProductForm] Available product IDs:', products.map((p: Product) => p.id));
       
-      const product = products.find((p: any) => {
-        const productIdStr = p.id.toString();
-        const searchIdStr = productId.toString();
-        console.log('🔍 Comparing:', productIdStr, 'vs', searchIdStr);
-        return productIdStr === searchIdStr;
-      });
+      // Find product by ID (handle both string and number IDs)
+      const product = products.find((p: Product) => p.id.toString() === productId.toString());
       
       if (!product) {
-        console.error('❌ Product not found with ID:', productId);
-        console.log('📋 Available product IDs:', products.map((p: any) => p.id));
-        throw new Error('المنتج غير موجود');
+        console.error('❌ [ProductForm] Product not found with ID:', productId);
+        toast.error('المنتج غير موجود');
+        navigate('/admin/products');
+        return;
       }
       
-      console.log('✅ Product loaded:', product.name, 'ID:', product.id);
+      console.log('✅ [ProductForm] Product found:', product.name);
+      setFormData(product);
       
-      setProduct({
-        ...product,
-        categoryId: product.categoryId ? product.categoryId.toString() : '0', // Ensure categoryId is string for form
-        originalPrice: product.originalPrice || 0,
-        specifications: product.specifications || [],
-        dynamicOptions: product.dynamicOptions || [],
-        detailedImages: product.detailedImages || []
-      });
     } catch (error) {
-      console.error('❌ Error fetching product:', error);
+      console.error('❌ [ProductForm] Error fetching product:', error);
       toast.error('فشل في جلب بيانات المنتج');
-      navigate('/admin/products'); // Navigate to products list instead of admin root
+      navigate('/admin/products');
     } finally {
       setLoading(false);
     }
   };
 
-  const uploadImages = async () => {
-    const uploadedImages: string[] = [];
+  useEffect(() => {
+    console.log('🚀 [ProductForm] Component mounted, isEdit:', isEdit, 'id:', id);
     
-    try {
-      setUploading(true);
-      console.log('📸 Processing images...');
-
-      // For now, we'll use placeholder images or data URLs
-      // In a real app, you would implement actual file upload to a service like Cloudinary
-      
-      if (mainImageFile) {
-        // Convert to data URL for immediate use
-        const dataUrl = await fileToDataUrl(mainImageFile);
-        uploadedImages.push(dataUrl);
-        console.log('✅ Main image processed');
-      }
-
-      if (detailedImageFiles.length > 0) {
-        // Convert detailed images to data URLs
-        for (const file of detailedImageFiles) {
-          const dataUrl = await fileToDataUrl(file);
-          uploadedImages.push(dataUrl);
-        }
-        console.log('✅ Detailed images processed:', detailedImageFiles.length);
-      }
-
-      return uploadedImages;
-    } catch (error) {
-      console.error('❌ Error processing images:', error);
-      toast.error('فشل في معالجة الصور');
-      return [];
-    } finally {
-      setUploading(false);
+    fetchCategories();
+    
+    if (isEdit && id) {
+      fetchProduct(id);
     }
-  };
+  }, [isEdit, id]);
 
-  // Helper function to convert file to data URL
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseFloat(value) || 0 : value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!product.name || !product.description || product.price <= 0 || product.categoryId === '0' || product.categoryId === 0) {
+    
+    if (!formData.name || !formData.description || !formData.price) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
-
-    setLoading(true);
-
+    
     try {
-      let updatedProduct = { ...product };
-
-      // Process images if any
-      const uploadedImages = await uploadImages();
-      if (uploadedImages.length > 0) {
-        updatedProduct.mainImage = uploadedImages[0];
-        if (uploadedImages.length > 1) {
-          updatedProduct.detailedImages = uploadedImages.slice(1);
-        }
-      } else if (!updatedProduct.mainImage) {
-        // Set a default image if no image is provided
-        updatedProduct.mainImage = 'products/default-product.jpg';
-      }
-
-      // Prepare product data
+      setLoading(true);
+      
+      // Prepare the data
       const productData = {
-        ...updatedProduct,
-        price: Number(updatedProduct.price),
-        originalPrice: Number(updatedProduct.originalPrice) || null,
-        stock: Number(updatedProduct.stock),
-        categoryId: Number(updatedProduct.categoryId) // Convert to number for API
+        ...formData,
+        price: parseFloat(formData.price.toString()) || 0,
+        originalPrice: parseFloat(formData.originalPrice?.toString() || '0') || 0,
+        stock: parseInt(formData.stock?.toString() || '0') || 0,
+        categoryId: formData.categoryId || null,
+        mainImage: formData.mainImage || '',
+        detailedImages: formData.detailedImages || [],
+        specifications: formData.specifications || [],
+        productType: formData.productType || '',
+        dynamicOptions: formData.dynamicOptions || []
       };
-
-      console.log('💾 Saving product:', productData);
-
-      let result;
+      
+      console.log('💾 [ProductForm] Saving product data:', productData);
+      
       if (isEdit && id) {
-        // For edit mode, we need to use PUT request
-        result = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        // Update existing product using PUT to /products/{id}
+        await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(id), {
           method: 'PUT',
-          body: JSON.stringify({ ...productData, id: parseInt(id) })
+          body: JSON.stringify(productData)
         });
+        toast.success('تم تحديث المنتج بنجاح');
       } else {
-        result = await apiCall(API_ENDPOINTS.PRODUCTS, {
+        // Create new product using POST method
+        await apiCall(API_ENDPOINTS.PRODUCTS, {
           method: 'POST',
           body: JSON.stringify(productData)
         });
+        toast.success('تم إضافة المنتج بنجاح');
       }
-
-      console.log('✅ Product saved successfully:', result);
-      toast.success(isEdit ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح');
       
       // Trigger refresh in main app
       window.dispatchEvent(new Event('productsUpdated'));
       navigate('/admin');
-    } catch (error: any) {
-      console.error('Error saving product:', error);
-      toast.error(error.message || 'خطأ في حفظ المنتج');
+      
+    } catch (error) {
+      console.error('❌ [ProductForm] Error saving product:', error);
+      toast.error(isEdit ? 'فشل في تحديث المنتج' : 'فشل في إضافة المنتج');
     } finally {
       setLoading(false);
     }
   };
 
-  const addDynamicOption = () => {
-    setProduct({
-      ...product,
-      dynamicOptions: [
-        ...(product.dynamicOptions || []),
-        { name: '', type: 'text', required: false, options: [] }
-      ]
-    });
-  };
-
-  const removeDynamicOption = (index: number) => {
-    const newOptions = [...(product.dynamicOptions || [])];
-    newOptions.splice(index, 1);
-    setProduct({ ...product, dynamicOptions: newOptions });
-  };
-
-  const updateDynamicOption = (index: number, field: keyof DynamicOption, value: any) => {
-    const newOptions = [...(product.dynamicOptions || [])];
-    newOptions[index] = { ...newOptions[index], [field]: value };
-    setProduct({ ...product, dynamicOptions: newOptions });
-  };
-
-  const addSpecification = () => {
-    setProduct({
-      ...product,
-      specifications: [
-        ...(product.specifications || []),
-        { name: '', value: '' }
-      ]
-    });
-  };
-
-  const removeSpecification = (index: number) => {
-    const newSpecs = [...(product.specifications || [])];
-    newSpecs.splice(index, 1);
-    setProduct({ ...product, specifications: newSpecs });
-  };
-
-  const updateSpecification = (index: number, field: keyof Specification, value: string) => {
-    const newSpecs = [...(product.specifications || [])];
-    newSpecs[index] = { ...newSpecs[index], [field]: value };
-    setProduct({ ...product, specifications: newSpecs });
-  };
-
-  if (loading && isEdit) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات المنتج...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-xl">جاري التحميل...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8" dir="rtl">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate('/admin/products')}
-                className="ml-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {isEdit ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-              </h1>
-            </div>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">
+        {isEdit ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+      </h1>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Product Name */}
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+            اسم المنتج *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name || ''}
+            onChange={handleInputChange}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="أدخل اسم المنتج"
+          />
+        </div>
+
+        {/* Description */}
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+            الوصف *
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description || ''}
+            onChange={handleInputChange}
+            required
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="أدخل وصف المنتج"
+          />
+        </div>
+
+        {/* Price and Original Price */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+              السعر *
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              value={formData.price || ''}
+              onChange={handleInputChange}
+              required
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="originalPrice" className="block text-sm font-medium text-gray-700 mb-2">
+              السعر الأصلي
+            </label>
+            <input
+              type="number"
+              id="originalPrice"
+              name="originalPrice"
+              value={formData.originalPrice || ''}
+              onChange={handleInputChange}
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">المعلومات الأساسية</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  اسم المنتج *
-                </label>
-                <input
-                  type="text"
-                  value={product.name}
-                  onChange={(e) => setProduct({ ...product, name: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="أدخل اسم المنتج"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  التصنيف *
-                </label>
-                {loadingCategories ? (
-                  <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
-                    جاري تحميل التصنيفات...
-                  </div>
-                ) : (
-                  <select
-                    value={product.categoryId}
-                    onChange={(e) => {
-                      const selectedValue = e.target.value;
-                      console.log('🔄 Selected category value:', selectedValue);
-                      const newCategoryId = selectedValue === '0' ? '0' : selectedValue;
-                      console.log('🎯 Setting categoryId to:', newCategoryId);
-                      setProduct({ ...product, categoryId: newCategoryId });
-                    }}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="0">
-                      {categories.length === 0 ? 'لا توجد تصنيفات متاحة' : 'اختر التصنيف'}
-                    </option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                
-                {!loadingCategories && categories.length === 0 && (
-                  <div className="mt-2">
-                    <p className="text-sm text-red-600 mb-2">
-                      لم يتم العثور على تصنيفات. يرجى إضافة تصنيفات أولاً.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={fetchCategories}
-                      className="text-sm text-blue-600 hover:text-blue-800 underline"
-                    >
-                      إعادة المحاولة
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  السعر *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={product.price}
-                  onChange={(e) => setProduct({ ...product, price: parseFloat(e.target.value) })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  السعر الأصلي (اختياري)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={product.originalPrice || ''}
-                  onChange={(e) => setProduct({ ...product, originalPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  الكمية المتوفرة *
-                </label>
-                <input
-                  type="number"
-                  value={product.stock}
-                  onChange={(e) => setProduct({ ...product, stock: parseInt(e.target.value) })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  نوع المنتج (اختياري)
-                </label>
-                <input
-                  type="text"
-                  value={product.productType || ''}
-                  onChange={(e) => setProduct({ ...product, productType: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="مثال: ملابس، إلكترونيات"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                وصف المنتج *
-              </label>
-              <textarea
-                value={product.description}
-                onChange={(e) => setProduct({ ...product, description: e.target.value })}
-                rows={4}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="اكتب وصفاً مفصلاً للمنتج"
-                required
-              />
-            </div>
+        {/* Stock and Category */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-2">
+              الكمية المتوفرة
+            </label>
+            <input
+              type="number"
+              id="stock"
+              name="stock"
+              value={formData.stock || ''}
+              onChange={handleInputChange}
+              min="0"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0"
+            />
           </div>
-
-          {/* Images */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">الصور</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  الصورة الرئيسية
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  {product.mainImage && !mainImageFile ? (
-                    <div className="relative">
-                      <img
-                        src={buildImageUrl(product.mainImage)}
-                        alt="الصورة الرئيسية"
-                        className="w-32 h-32 object-cover mx-auto rounded-lg"
-                      />
-                      <p className="mt-2 text-sm text-gray-600">الصورة الحالية</p>
-                    </div>
-                  ) : mainImageFile ? (
-                    <div className="relative">
-                      <img
-                        src={URL.createObjectURL(mainImageFile)}
-                        alt="الصورة الجديدة"
-                        className="w-32 h-32 object-cover mx-auto rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setMainImageFile(null)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">اختر الصورة الرئيسية</p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setMainImageFile(e.target.files?.[0] || null)}
-                    className="mt-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  صور إضافية
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">اختر صور إضافية</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => setDetailedImageFiles(Array.from(e.target.files || []))}
-                    className="mt-4 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                </div>
-                
-                {/* Preview detailed images */}
-                {detailedImageFiles.length > 0 && (
-                  <div className="mt-4 grid grid-cols-3 gap-2">
-                    {detailedImageFiles.map((file, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`صورة ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newFiles = [...detailedImageFiles];
-                            newFiles.splice(index, 1);
-                            setDetailedImageFiles(newFiles);
-                          }}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-4 space-x-reverse">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/products')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          
+          <div>
+            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-2">
+              التصنيف
+            </label>
+            <select
+              id="categoryId"
+              name="categoryId"
+              value={formData.categoryId || ''}
+              onChange={handleInputChange}
+              disabled={loadingCategories}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              disabled={loading || uploading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {loading || uploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                  {uploading ? 'جاري رفع الصور...' : 'جاري الحفظ...'}
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 ml-2" />
-                  {isEdit ? 'حفظ التغييرات' : 'إضافة المنتج'}
-                </>
-              )}
-            </button>
+              <option value="">اختر التصنيف</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            {loadingCategories && (
+              <p className="text-sm text-gray-500 mt-1">جاري تحميل التصنيفات...</p>
+            )}
           </div>
-        </form>
-      </div>
+        </div>
+
+        {/* Main Image */}
+        <div>
+          <label htmlFor="mainImage" className="block text-sm font-medium text-gray-700 mb-2">
+            الصورة الرئيسية (URL)
+          </label>
+          <input
+            type="url"
+            id="mainImage"
+            name="mainImage"
+            value={formData.mainImage || ''}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="https://example.com/image.jpg"
+          />
+        </div>
+
+        {/* Product Type */}
+        <div>
+          <label htmlFor="productType" className="block text-sm font-medium text-gray-700 mb-2">
+            نوع المنتج
+          </label>
+          <input
+            type="text"
+            id="productType"
+            name="productType"
+            value={formData.productType || ''}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="أدخل نوع المنتج"
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/products')}
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            {loading ? 'جاري الحفظ...' : (isEdit ? 'تحديث المنتج' : 'إضافة المنتج')}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

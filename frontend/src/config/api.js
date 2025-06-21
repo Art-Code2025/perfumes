@@ -65,8 +65,32 @@ export const API_ENDPOINTS = {
   COUPONS: 'coupons',
   COUPON_BY_ID: (id) => `coupons/${id}`,
   
+  // Cart - NEW
+  CART: 'cart',
+  USER_CART: (userId) => `cart/user/${userId}`,
+  CART_ITEM: (itemId) => `cart/${itemId}`,
+  CLEAR_CART: (userId) => `cart/user/${userId}/clear`,
+  
+  // Wishlist - NEW
+  WISHLISTS: 'wishlists',
+  USER_WISHLIST: (userId) => `wishlists/user/${userId}`,
+  WISHLIST_ITEM: (itemId) => `wishlists/${itemId}`,
+  WISHLIST_CHECK: (userId, productId) => `wishlists/user/${userId}/check/${productId}`,
+  WISHLIST_REMOVE_PRODUCT: (userId, productId) => `wishlists/user/${userId}/product/${productId}`,
+  CLEAR_WISHLIST: (userId) => `wishlists/user/${userId}/clear`,
+  
+  // Reviews - NEW
+  REVIEWS: 'reviews',
+  PRODUCT_REVIEWS: (productId) => `reviews/product/${productId}`,
+  USER_REVIEWS: (userId) => `reviews/user/${userId}`,
+  REVIEW_BY_ID: (id) => `reviews/${id}`,
+  REVIEW_HELPFUL: (id) => `reviews/${id}/helpful`,
+  
   // Dashboard
   DASHBOARD: 'dashboard',
+  
+  // Initialize Collections
+  INIT_COLLECTIONS: 'init-collections',
   
   // Auth
   AUTH: 'auth/admin',

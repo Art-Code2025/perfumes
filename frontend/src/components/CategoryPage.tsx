@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Package, Grid, ArrowRight, Sparkles, Filter, Search } from 'lucide-react';
 import ProductCard from './ProductCard';
@@ -6,14 +6,13 @@ import { extractIdFromSlug, isValidSlug, createCategorySlug, createProductSlug }
 import { toast } from 'react-toastify';
 import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
 
-
 interface Product {
-  id: string | number; // Support both string and number IDs
+  id: string | number;
   name: string;
   description: string;
   price: number;
   stock: number;
-  categoryId: string | number | null; // Support both string and number IDs
+  categoryId: string | number | null;
   productType?: string;
   dynamicOptions?: any[];
   mainImage: string;
@@ -23,7 +22,7 @@ interface Product {
 }
 
 interface Category {
-  id: string | number; // Support both string and number IDs
+  id: string | number;
   name: string;
   description: string;
   image: string;
@@ -31,120 +30,191 @@ interface Category {
 
 const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  
+  // Separate loading states for better UX
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [category, setCategory] = useState<Category | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
 
   // Extract category ID from slug
-  const categoryId = slug ? extractIdFromSlug(slug) : null;
+  const categoryId = useMemo(() => {
+    return slug ? extractIdFromSlug(slug) : null;
+  }, [slug]);
 
+  // Memoize filtered products to prevent unnecessary recalculations
+  const categoryProducts = useMemo(() => {
+    if (!categoryId) return [];
+    return allProducts.filter((product: Product) => 
+      product.categoryId && product.categoryId.toString() === categoryId.toString()
+    );
+  }, [allProducts, categoryId]);
+
+  const filteredProducts = useMemo(() => {
+    let filtered = categoryProducts;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name, 'ar');
+      }
+    });
+  }, [categoryProducts, searchTerm, sortBy]);
+
+  // Fetch categories and products once on mount
   useEffect(() => {
-    console.log('🔍 CategoryPage: slug =', slug, 'categoryId =', categoryId);
-    
-    if (!slug) {
+    fetchInitialData();
+  }, []);
+
+  // Handle category change
+  useEffect(() => {
+    if (!slug || !categoryId) {
       setError('رابط التصنيف مفقود');
-      setLoading(false);
+      setCategoryLoading(false);
       return;
     }
 
-    // Extract and validate category ID
-    const extractedId = extractIdFromSlug(slug);
-    console.log('🔍 CategoryPage: extractedId =', extractedId);
-    
-    if (!extractedId || extractedId === '0') {
+    if (categoryId === '0') {
       setError('معرف التصنيف غير صحيح');
-      setLoading(false);
+      setCategoryLoading(false);
       return;
     }
 
-    fetchCategory();
-    fetchProducts();
+    // Reset search when category changes
+    setSearchTerm('');
+    setSortBy('name');
+    
+    findCategoryFromLoaded();
   }, [slug, categoryId]);
 
-  const fetchCategory = async () => {
+  const fetchInitialData = async () => {
     try {
-      setLoading(true);
+      setCategoryLoading(true);
+      setProductsLoading(true);
       setError(null);
-      console.log('🔄 Fetching category:', categoryId);
+
+      // Fetch both categories and products in parallel
+      const [categoriesData, productsData] = await Promise.all([
+        apiCall(API_ENDPOINTS.CATEGORIES),
+        apiCall(API_ENDPOINTS.PRODUCTS)
+      ]);
+
+      console.log('📂 Categories loaded:', categoriesData.length);
+      console.log('📦 Products loaded:', productsData.length);
+
+      // Store all data
+      setAllProducts(productsData);
       
-      if (!categoryId) {
-        throw new Error('معرف التصنيف غير صحيح');
+      // Find the current category if we have a categoryId
+      if (categoryId) {
+        const currentCategory = categoriesData.find((cat: Category) => 
+          cat.id.toString() === categoryId.toString()
+        );
+        
+        if (currentCategory) {
+          setCategory(currentCategory);
+          console.log('✅ Category found:', currentCategory.name);
+        } else {
+          console.error('❌ Category not found with ID:', categoryId);
+          setError('التصنيف غير موجود');
+        }
       }
-      
-      const categories = await apiCall(API_ENDPOINTS.CATEGORIES);
-      
-      console.log('📂 All categories:', categories);
-      
-      const category = categories.find((cat: Category) => cat.id.toString() === categoryId.toString());
-      
-      if (category) {
-        setCategory(category);
-        console.log('✅ Category loaded:', category.name);
-      } else {
-        console.error('❌ Category not found with ID:', categoryId);
-        console.log('📋 Available category IDs:', categories.map((cat: Category) => cat.id));
-        throw new Error('التصنيف غير موجود');
-      }
+
     } catch (error) {
-      console.error('❌ Error fetching category:', error);
-      setError('فشل في تحميل التصنيف');
-      toast.error('فشل في تحميل التصنيف');
+      console.error('❌ Error fetching initial data:', error);
+      setError('فشل في تحميل البيانات');
+      toast.error('فشل في تحميل البيانات');
     } finally {
-      setLoading(false);
+      setCategoryLoading(false);
+      setProductsLoading(false);
     }
   };
 
-  const fetchProducts = async () => {
+  const findCategoryFromLoaded = async () => {
     try {
-      console.log('🔄 Fetching products for category:', categoryId);
+      setCategoryLoading(true);
+      setError(null);
+
+      // If we don't have categories loaded yet, fetch them
+      const categoriesData = await apiCall(API_ENDPOINTS.CATEGORIES);
       
-      if (!categoryId) {
-        setProducts([]);
-        return;
-      }
-      
-      const allProducts = await apiCall(API_ENDPOINTS.PRODUCTS);
-      
-      console.log('📦 All products:', allProducts.length);
-      
-      const categoryProducts = allProducts.filter((product: Product) => 
-        product.categoryId && product.categoryId.toString() === categoryId.toString()
+      const currentCategory = categoriesData.find((cat: Category) => 
+        categoryId && cat.id.toString() === categoryId.toString()
       );
       
-      setProducts(categoryProducts);
-      console.log('✅ Products loaded for category:', categoryProducts.length);
+      if (currentCategory) {
+        setCategory(currentCategory);
+        console.log('✅ Category switched to:', currentCategory.name);
+      } else {
+        console.error('❌ Category not found with ID:', categoryId);
+        setError('التصنيف غير موجود');
+      }
     } catch (error) {
-      console.error('❌ Error fetching products:', error);
-      toast.error('فشل في تحميل المنتجات');
-      setProducts([]);
+      console.error('❌ Error finding category:', error);
+      setError('فشل في تحميل التصنيف');
+    } finally {
+      setCategoryLoading(false);
     }
   };
 
-  const filteredProducts = products.filter(product => {
-    if (!searchTerm) return true;
-    return product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           product.description.toLowerCase().includes(searchTerm.toLowerCase());
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.price - b.price;
-      case 'price-high':
-        return b.price - a.price;
-      case 'name':
-      default:
-        return a.name.localeCompare(b.name);
-    }
-  });
+  // Loading state - show skeleton while loading
+  const isLoading = categoryLoading || productsLoading;
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل التصنيف...</p>
+      <div className="min-h-screen bg-gray-50" dir="rtl">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Skeleton for breadcrumb */}
+          <div className="h-4 bg-gray-200 rounded w-48 mb-6 animate-pulse"></div>
+          
+          {/* Skeleton for category header */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="w-24 h-24 bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className="flex-1">
+                <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-96 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skeleton for filters */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+
+          {/* Skeleton for products grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="aspect-square bg-gray-200 rounded-lg mb-4 animate-pulse"></div>
+                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2 animate-pulse"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -199,7 +269,7 @@ const CategoryPage: React.FC = () => {
               <p className="text-gray-600 leading-relaxed">{category.description}</p>
               <div className="mt-4 flex items-center text-sm text-gray-500">
                 <Package className="w-4 h-4 ml-1" />
-                <span>{products.length} منتج</span>
+                <span>{categoryProducts.length} منتج</span>
               </div>
             </div>
           </div>
@@ -237,7 +307,7 @@ const CategoryPage: React.FC = () => {
           {/* Results count */}
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600">
-              عرض {filteredProducts.length} من {products.length} منتج
+              عرض {filteredProducts.length} من {categoryProducts.length} منتج
             </div>
           </div>
         </div>
@@ -246,7 +316,9 @@ const CategoryPage: React.FC = () => {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <div key={`${product.id}-${categoryId || 'unknown'}`} className="transform transition-all duration-200 hover:scale-105">
+                <ProductCard product={product} />
+              </div>
             ))}
           </div>
         ) : (

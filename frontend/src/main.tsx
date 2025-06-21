@@ -1,34 +1,46 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
 import App from './App';
-import ProductDetail from './components/ProductDetail';
-import ProductsByCategory from './components/ProductsByCategory';
-import ShoppingCart from './components/ShoppingCart';
-import CartDiagnostics from './components/CartDiagnostics';
-import Wishlist from './components/Wishlist';
-import Login from './Login';
-import Dashboard from './Dashboard';
-import ServiceForm from './ServiceForm';
-import ServiceDetails from './ServiceDetails';
-import ProductForm from './components/ProductForm';
-import CategoryAdd from './CategoryAdd';
-import CategoryEdit from './CategoryEdit';
-import CouponForm from './components/CouponForm';
-import AllProducts from './components/AllProducts';
-import Checkout from './components/Checkout';
-import ThankYou from './components/ThankYou';
-import About from './pages/About';
-import Contact from './pages/Contact';
-import Media from './pages/Media';
-import Partners from './pages/Partners';
-import CategoryPage from './components/CategoryPage';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import ReturnPolicy from './components/ReturnPolicy';
 import './index.css';
+
+// Lazy load components for better performance
+const ProductDetail = React.lazy(() => import('./components/ProductDetail'));
+const ProductsByCategory = React.lazy(() => import('./components/ProductsByCategory'));
+const ShoppingCart = React.lazy(() => import('./components/ShoppingCart'));
+const CartDiagnostics = React.lazy(() => import('./components/CartDiagnostics'));
+const Wishlist = React.lazy(() => import('./components/Wishlist'));
+const Login = React.lazy(() => import('./Login'));
+const Dashboard = React.lazy(() => import('./Dashboard'));
+const ServiceForm = React.lazy(() => import('./ServiceForm'));
+const ServiceDetails = React.lazy(() => import('./ServiceDetails'));
+const ProductForm = React.lazy(() => import('./components/ProductForm'));
+const CategoryAdd = React.lazy(() => import('./CategoryAdd'));
+const CategoryEdit = React.lazy(() => import('./CategoryEdit'));
+const CouponForm = React.lazy(() => import('./components/CouponForm'));
+const AllProducts = React.lazy(() => import('./components/AllProducts'));
+const Checkout = React.lazy(() => import('./components/Checkout'));
+const ThankYou = React.lazy(() => import('./components/ThankYou'));
+const About = React.lazy(() => import('./pages/About'));
+const Contact = React.lazy(() => import('./pages/Contact'));
+const Media = React.lazy(() => import('./pages/Media'));
+const Partners = React.lazy(() => import('./pages/Partners'));
+const CategoryPage = React.lazy(() => import('./components/CategoryPage'));
+const PrivacyPolicy = React.lazy(() => import('./components/PrivacyPolicy'));
+const ReturnPolicy = React.lazy(() => import('./components/ReturnPolicy'));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center min-h-screen bg-white">
+    <div className="text-center">
+      <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <div className="text-xl text-black font-medium">جاري التحميل...</div>
+    </div>
+  </div>
+);
 
 // تعريف Props لـ ProtectedRoute
 interface ProtectedRouteProps {
@@ -115,58 +127,60 @@ const LayoutWrapper: React.FC = () => {
     <>
       {!shouldHideNavbar && <Navbar />}
       <div className={contentClass}>
-        <Routes>
-          {/* E-commerce Routes */}
-          <Route path="/" element={<App />} />
-          <Route path="/products" element={<AllProducts />} />
-          {/* SEO-friendly product routes */}
-          <Route path="/product/:slug" element={<ProductDetail />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          {/* SEO-friendly category routes */}
-          <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/category/:id" element={<CategoryPage />} />
-          <Route path="/cart" element={<ShoppingCart />} />
-          <Route path="/cart/diagnostics" element={<CartDiagnostics />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/thank-you" element={<ThankYou />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          
-          {/* Services Management Routes (Legacy) */}
-          <Route path="/admin/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
-          <Route path="/admin/service/add" element={<ProtectedRoute><ServiceForm /></ProtectedRoute>} />
-          <Route path="/admin/service/edit/:id" element={<ProtectedRoute><ServiceForm /></ProtectedRoute>} />
-          
-          {/* New E-commerce Management Routes */}
-          <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
-          <Route path="/admin/products/edit/:id" element={<ProtectedRoute><ProductForm isEdit={true} /></ProtectedRoute>} />
-          
-          {/* Additional routes for Dashboard compatibility */}
-          <Route path="/admin/product/add" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
-          <Route path="/admin/product/edit/:id" element={<ProtectedRoute><ProductForm isEdit={true} /></ProtectedRoute>} />
-          
-          {/* Coupon Management Routes */}
-          <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
-          <Route path="/admin/coupon/edit/:id" element={<ProtectedRoute><CouponForm isEdit={true} /></ProtectedRoute>} />
-          
-          <Route path="/admin/category/add" element={<ProtectedRoute><CategoryAdd /></ProtectedRoute>} />
-          <Route path="/admin/category/edit/:id" element={<ProtectedRoute><CategoryEdit /></ProtectedRoute>} />
-          
-          {/* Other Routes */}
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/media" element={<Media />} />
-          <Route path="/partners" element={<Partners />} />
-          
-          {/* Policy Routes */}
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/return-policy" element={<ReturnPolicy />} />
-        </Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            {/* E-commerce Routes */}
+            <Route path="/" element={<App />} />
+            <Route path="/products" element={<AllProducts />} />
+            {/* SEO-friendly product routes */}
+            <Route path="/product/:slug" element={<ProductDetail />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            {/* SEO-friendly category routes */}
+            <Route path="/category/:slug" element={<CategoryPage />} />
+            <Route path="/category/:id" element={<CategoryPage />} />
+            <Route path="/cart" element={<ShoppingCart />} />
+            <Route path="/cart/diagnostics" element={<CartDiagnostics />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/thank-you" element={<ThankYou />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            
+            {/* Services Management Routes (Legacy) */}
+            <Route path="/admin/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+            <Route path="/admin/service/add" element={<ProtectedRoute><ServiceForm /></ProtectedRoute>} />
+            <Route path="/admin/service/edit/:id" element={<ProtectedRoute><ServiceForm /></ProtectedRoute>} />
+            
+            {/* New E-commerce Management Routes */}
+            <Route path="/admin/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+            <Route path="/admin/products/edit/:id" element={<ProtectedRoute><ProductForm isEdit={true} /></ProtectedRoute>} />
+            
+            {/* Additional routes for Dashboard compatibility */}
+            <Route path="/admin/product/add" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+            <Route path="/admin/product/edit/:id" element={<ProtectedRoute><ProductForm isEdit={true} /></ProtectedRoute>} />
+            
+            {/* Coupon Management Routes */}
+            <Route path="/admin/coupon/add" element={<ProtectedRoute><CouponForm /></ProtectedRoute>} />
+            <Route path="/admin/coupon/edit/:id" element={<ProtectedRoute><CouponForm isEdit={true} /></ProtectedRoute>} />
+            
+            <Route path="/admin/category/add" element={<ProtectedRoute><CategoryAdd /></ProtectedRoute>} />
+            <Route path="/admin/category/edit/:id" element={<ProtectedRoute><CategoryEdit /></ProtectedRoute>} />
+            
+            {/* Other Routes */}
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/media" element={<Media />} />
+            <Route path="/partners" element={<Partners />} />
+            
+            {/* Policy Routes */}
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/return-policy" element={<ReturnPolicy />} />
+          </Routes>
+        </Suspense>
       </div>
     </>
   );

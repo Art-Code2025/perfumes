@@ -96,7 +96,7 @@ export const addToCartUnified = async (
     console.log('💾 [CartUtils] Saving to localStorage');
     
     // الحصول على السلة الحالية من localStorage
-    const existingCart = localStorage.getItem('cart');
+    const existingCart = localStorage.getItem('cartItems');
     let cartItems = [];
     
     if (existingCart) {
@@ -139,7 +139,7 @@ export const addToCartUnified = async (
     }
 
     // حفظ السلة المحدثة
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
     console.log('💾 [CartUtils] Cart saved to localStorage:', cartItems.length, 'items');
 
     // إطلاق حدث لتحديث عداد السلة
@@ -168,7 +168,7 @@ export const updateLocalCartFromServer = async (userId: number): Promise<void> =
   try {
     const response = await apiCall(API_ENDPOINTS.USER_CART(userId));
     if (response.success) {
-      localStorage.setItem('cart', JSON.stringify(response.data));
+      localStorage.setItem('cartItems', JSON.stringify(response.data));
       console.log('✅ [CartUtils] Local cart updated from server:', response.data.length, 'items');
     }
   } catch (error) {
@@ -179,7 +179,7 @@ export const updateLocalCartFromServer = async (userId: number): Promise<void> =
 // دالة لدمج السلة المحلية مع سلة المستخدم عند تسجيل الدخول
 export const mergeCartOnLogin = async (userId: number): Promise<void> => {
   try {
-    const localCart = localStorage.getItem('cart');
+    const localCart = localStorage.getItem('cartItems');
     if (!localCart) {
       console.log('📭 [CartUtils] No local cart to merge');
       return;
@@ -247,7 +247,7 @@ export const getCartItemsCount = async (): Promise<number> => {
     }
     
     // المستخدم غير مسجل أو فشل الخادم - احصل من localStorage
-    const localCart = localStorage.getItem('cart');
+    const localCart = localStorage.getItem('cartItems');
     if (localCart) {
       try {
         const cartItems = JSON.parse(localCart);
@@ -287,7 +287,7 @@ export const clearCart = async (): Promise<void> => {
     }
     
     // امسح من localStorage أيضاً
-    localStorage.removeItem('cart');
+    localStorage.removeItem('cartItems');
     console.log('✅ [CartUtils] Local cart cleared');
     
     // إطلاق حدث لتحديث عداد السلة
@@ -311,7 +311,7 @@ export const getCart = async (): Promise<any[]> => {
           const response = await apiCall(API_ENDPOINTS.USER_CART(user.id));
           if (response.success) {
             // حدث localStorage أيضاً
-            localStorage.setItem('cart', JSON.stringify(response.data));
+            localStorage.setItem('cartItems', JSON.stringify(response.data));
             return response.data || [];
           }
         }
@@ -321,7 +321,7 @@ export const getCart = async (): Promise<any[]> => {
     }
     
     // المستخدم غير مسجل أو فشل الخادم - احصل من localStorage
-    const localCart = localStorage.getItem('cart');
+    const localCart = localStorage.getItem('cartItems');
     if (localCart) {
       try {
         const cartItems = JSON.parse(localCart);

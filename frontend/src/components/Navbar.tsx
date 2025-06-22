@@ -176,7 +176,7 @@ function Navbar() {
       
       if (!userData) {
         // المستخدم غير مسجل - تحميل من localStorage
-        const localCart = localStorage.getItem('cart');
+        const localCart = localStorage.getItem('cartItems');
         if (localCart) {
           try {
             const cartItems = JSON.parse(localCart);
@@ -219,7 +219,7 @@ function Navbar() {
       console.error('❌ [Navbar] Error fetching cart count:', error);
       
       // في حالة الخطأ، حاول تحميل من localStorage
-      const localCart = localStorage.getItem('cart');
+      const localCart = localStorage.getItem('cartItems');
       if (localCart) {
         try {
           const cartItems = JSON.parse(localCart);
@@ -338,7 +338,7 @@ function Navbar() {
     // دمج السلة المحلية مع سلة المستخدم
     const mergeLocalCartWithUserCart = async () => {
       try {
-        const localCart = localStorage.getItem('cart');
+        const localCart = localStorage.getItem('cartItems');
         if (localCart) {
           const localItems = JSON.parse(localCart);
           if (localItems.length > 0) {
@@ -357,7 +357,7 @@ function Navbar() {
                 // تحديث السلة من الخادم بعد الدمج
                 const serverCartResponse = await apiCall(API_ENDPOINTS.USER_CART(userData.id));
                 if (serverCartResponse.success) {
-                  localStorage.setItem('cart', JSON.stringify(serverCartResponse.data));
+                  localStorage.setItem('cartItems', JSON.stringify(serverCartResponse.data));
                   console.log('✅ [Navbar] Cart updated from server, new cart size:', serverCartResponse.data.length);
                 }
                 

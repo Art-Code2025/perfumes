@@ -75,7 +75,7 @@ const App: React.FC = () => {
       }
       
       // المستخدم غير مسجل - عد من localStorage
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const cart = JSON.parse(localStorage.getItem('cartItems') || '[]');
       if (Array.isArray(cart)) {
         const totalCount = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
         setCartCount(totalCount);

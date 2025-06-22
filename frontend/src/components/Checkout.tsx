@@ -1,264 +1,305 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ArrowLeft, ShoppingCart, User, Phone, Mail, MapPin, CreditCard, Tag, Package, Check, X } from 'lucide-react';
-import { apiCall, API_ENDPOINTS, buildImageUrl } from '../config/api';
+import { 
+  ShoppingCart, 
+  User, 
+  MapPin, 
+  CreditCard, 
+  CheckCircle, 
+  Gift, 
+  Truck, 
+  Clock, 
+  Star,
+  Plus,
+  Minus,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  Package,
+  Shield,
+  Heart,
+  Zap
+} from 'lucide-react';
 
 interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: number;
   quantity: number;
-  image: string;
-  selectedOptions?: Record<string, any>;
+  image?: string;
+  size?: string;
+  category?: string;
 }
 
-interface CustomerInfo {
+interface UserData {
   name: string;
-  phone: string;
   email: string;
+  phone: string;
   address: string;
   city: string;
-  notes: string;
+  region: string;
+  postalCode: string;
 }
 
-interface CouponInfo {
+interface ShippingZone {
+  id: string;
+  name: string;
+  price: number;
+  estimatedDays: string;
+  regions: string[];
+}
+
+interface Coupon {
   code: string;
   type: 'percentage' | 'fixed';
   value: number;
-  isValid: boolean;
-  discount: number;
+  minAmount: number;
+  description: string;
 }
 
 const Checkout: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  
+  const [currentStep, setCurrentStep] = useState(1);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+  const [userData, setUserData] = useState<UserData>({
     name: '',
-    phone: '',
     email: '',
+    phone: '',
     address: '',
     city: '',
-    notes: ''
+    region: '',
+    postalCode: ''
   });
-  
+  const [selectedShippingZone, setSelectedShippingZone] = useState<ShippingZone | null>(null);
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<CouponInfo | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [loading, setLoading] = useState(false);
-  const [validatingCoupon, setValidatingCoupon] = useState(false);
-  
-  const [subtotal, setSubtotal] = useState(0);
-  const [discount, setDiscount] = useState(0);
-  const [shippingCost, setShippingCost] = useState(50); // Default shipping cost
-  const [total, setTotal] = useState(0);
-  const [isGuest, setIsGuest] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load cart items and user data
-  useEffect(() => {
-    console.log('🛒 [Checkout] Loading cart items and user data');
-    
-    // Load cart items from location state or localStorage
-    const items = location.state?.cartItems || JSON.parse(localStorage.getItem('cartItems') || '[]');
-    if (items.length === 0) {
-      toast.error('السلة فارغة');
-      navigate('/');
-      return;
+  const steps = [
+    { id: 1, title: 'مراجعة الطلب', icon: ShoppingCart },
+    { id: 2, title: 'معلومات التوصيل', icon: MapPin },
+    { id: 3, title: 'الدفع', icon: CreditCard },
+    { id: 4, title: 'التأكيد', icon: CheckCircle }
+  ];
+
+  const shippingZones: ShippingZone[] = [
+    {
+      id: 'riyadh',
+      name: 'الرياض',
+      price: 15,
+      estimatedDays: '1-2 أيام',
+      regions: ['الرياض', 'الدرعية', 'الخرج']
+    },
+    {
+      id: 'jeddah',
+      name: 'جدة ومكة',
+      price: 20,
+      estimatedDays: '2-3 أيام',
+      regions: ['جدة', 'مكة', 'الطائف']
+    },
+    {
+      id: 'dammam',
+      name: 'الدمام والشرقية',
+      price: 25,
+      estimatedDays: '2-4 أيام',
+      regions: ['الدمام', 'الخبر', 'الظهران', 'الأحساء']
+    },
+    {
+      id: 'other',
+      name: 'باقي المناطق',
+      price: 30,
+      estimatedDays: '3-5 أيام',
+      regions: ['أخرى']
     }
-    setCartItems(items);
-    console.log('🛒 [Checkout] Loaded cart items:', items.length);
+  ];
 
-    // Load user data if logged in
-    const userData = localStorage.getItem('user');
-    if (userData) {
+  const availableCoupons: Coupon[] = [
+    {
+      code: 'WELCOME10',
+      type: 'percentage',
+      value: 10,
+      minAmount: 100,
+      description: 'خصم 10% للعملاء الجدد'
+    },
+    {
+      code: 'SAVE50',
+      type: 'fixed',
+      value: 50,
+      minAmount: 200,
+      description: 'خصم 50 ريال عند الشراء بـ 200 ريال أو أكثر'
+    },
+    {
+      code: 'FREESHIP',
+      type: 'percentage',
+      value: 100,
+      minAmount: 150,
+      description: 'شحن مجاني عند الشراء بـ 150 ريال أو أكثر'
+    }
+  ];
+
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cartItems');
+    if (savedCart) {
       try {
-        const user = JSON.parse(userData);
-        console.log('👤 [Checkout] Loading user data:', user);
-        
-        setCustomerInfo({
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || '',
-          phone: user.phone || '',
+        setCartItems(JSON.parse(savedCart));
+      } catch (error) {
+        console.error('Error parsing cart:', error);
+        setCartItems([]);
+      }
+    }
+
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        setUserData({
+          name: user.name || '',
           email: user.email || '',
+          phone: user.phone || '',
           address: user.address || '',
           city: user.city || '',
-          notes: ''
+          region: user.region || '',
+          postalCode: user.postalCode || ''
         });
-        setIsGuest(false);
       } catch (error) {
-        console.error('❌ [Checkout] Error parsing user data:', error);
-        setIsGuest(true);
-      }
-    } else {
-      console.log('👤 [Checkout] No user data found, continuing as guest');
-      setIsGuest(true);
-    }
-  }, [location.state, navigate]);
-
-  // Calculate totals
-  useEffect(() => {
-    const newSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    setSubtotal(newSubtotal);
-    
-    let newDiscount = 0;
-    if (appliedCoupon && appliedCoupon.isValid) {
-      if (appliedCoupon.type === 'percentage') {
-        newDiscount = (newSubtotal * appliedCoupon.value) / 100;
-      } else {
-        newDiscount = appliedCoupon.value;
+        console.error('Error parsing user data:', error);
       }
     }
-    setDiscount(newDiscount);
-    
-    const newTotal = newSubtotal - newDiscount + shippingCost;
-    setTotal(Math.max(0, newTotal));
-  }, [cartItems, appliedCoupon, shippingCost]);
+  }, []);
 
-  const validateCoupon = async () => {
-    if (!couponCode.trim()) {
-      toast.error('يرجى إدخال كود الكوبون');
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingCost = selectedShippingZone?.price || 0;
+  const couponDiscount = appliedCoupon ? 
+    (appliedCoupon.type === 'percentage' ? 
+      (subtotal * appliedCoupon.value / 100) : 
+      appliedCoupon.value) : 0;
+  const total = Math.max(0, subtotal + shippingCost - couponDiscount);
+
+  const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    const updatedItems = cartItems.map(item => 
+      item.id === itemId && item.size === size 
+        ? { ...item, quantity: newQuantity }
+        : item
+    );
+    
+    setCartItems(updatedItems);
+    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
+  };
+
+  const removeItem = (itemId: string, size: string | undefined) => {
+    const updatedItems = cartItems.filter(item => 
+      !(item.id === itemId && item.size === size)
+    );
+    
+    setCartItems(updatedItems);
+    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
+    
+    if (updatedItems.length === 0) {
+      toast.info('تم إزالة جميع المنتجات من السلة');
+    }
+  };
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (step === 2) {
+      if (!userData.name.trim()) newErrors.name = 'الاسم مطلوب';
+      if (!userData.email.trim()) newErrors.email = 'البريد الإلكتروني مطلوب';
+      if (!userData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
+      if (!userData.address.trim()) newErrors.address = 'العنوان مطلوب';
+      if (!userData.city.trim()) newErrors.city = 'المدينة مطلوبة';
+      if (!selectedShippingZone) newErrors.shipping = 'يرجى اختيار منطقة الشحن';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const applyCoupon = () => {
+    const coupon = availableCoupons.find(c => 
+      c.code.toLowerCase() === couponCode.toLowerCase()
+    );
+
+    if (!coupon) {
+      toast.error('كود الخصم غير صحيح');
       return;
     }
 
-    setValidatingCoupon(true);
-    try {
-      // Simple coupon validation - you can enhance this
-      const validCoupons = [
-        { code: 'WELCOME10', type: 'percentage', value: 10 },
-        { code: 'SAVE50', type: 'fixed', value: 50 }
-      ];
-      
-      const coupon = validCoupons.find(c => c.code === couponCode.toUpperCase());
-      
-      if (coupon) {
-        setAppliedCoupon({
-          code: couponCode,
-          type: coupon.type as 'percentage' | 'fixed',
-          value: coupon.value,
-          isValid: true,
-          discount: coupon.type === 'percentage' ? (subtotal * coupon.value) / 100 : coupon.value
-        });
-        toast.success('تم تطبيق الكوبون بنجاح');
-      } else {
-        toast.error('كوبون غير صالح');
-        setAppliedCoupon(null);
-      }
-    } catch (error: any) {
-      console.error('Error validating coupon:', error);
-      toast.error('خطأ في التحقق من الكوبون');
-      setAppliedCoupon(null);
-    } finally {
-      setValidatingCoupon(false);
+    if (subtotal < coupon.minAmount) {
+      toast.error(`الحد الأدنى للطلب ${coupon.minAmount} ريال`);
+      return;
     }
+
+    setAppliedCoupon(coupon);
+    toast.success('تم تطبيق كود الخصم بنجاح!');
   };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
-    toast.info('تم إلغاء الكوبون');
+    toast.info('تم إلغاء كود الخصم');
   };
 
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    console.log('📋 [Checkout] Starting order submission');
-
-    // Validation
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !customerInfo.city) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      toast.error('السلة فارغة');
+  const handleSubmit = async () => {
+    if (!validateStep(2)) {
+      setCurrentStep(2);
       return;
     }
 
     setLoading(true);
 
     try {
-      // Prepare order data
       const orderData = {
-        customerName: customerInfo.name,
-        customerPhone: customerInfo.phone,
-        customerEmail: customerInfo.email,
-        address: customerInfo.address,
-        city: customerInfo.city,
-        notes: customerInfo.notes,
-        items: cartItems.map(item => ({
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: item.price * item.quantity,
-          selectedOptions: item.selectedOptions || {},
-          productImage: item.image
-        })),
+        items: cartItems,
+        userData,
+        shippingZone: selectedShippingZone,
         subtotal,
-        deliveryFee: shippingCost,
-        couponDiscount: discount,
+        shippingCost,
+        couponDiscount,
         total,
-        couponCode: appliedCoupon?.code || null,
-        paymentMethod: 'cash_on_delivery',
-        paymentStatus: 'pending',
-        status: 'pending',
-        isGuestOrder: isGuest,
-        createdAt: new Date().toISOString()
+        appliedCoupon,
+        timestamp: new Date().toISOString()
       };
 
-      console.log('📋 [Checkout] Submitting order:', orderData);
-
-      const response = await apiCall(API_ENDPOINTS.ORDERS, {
+      const response = await fetch('/.netlify/functions/orders', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(orderData)
       });
 
-      console.log('✅ [Checkout] Order submitted successfully:', response);
-
-      if (response) {
-        // Clear cart from localStorage
+      if (response.ok) {
+        const result = await response.json();
+        
         localStorage.removeItem('cartItems');
-        
-        // Update cart count in navbar
-        const cartCountEvent = new CustomEvent('cartCountChanged', { detail: 0 });
-        window.dispatchEvent(cartCountEvent);
-        
-        toast.success('تم إرسال طلبك بنجاح! سنتواصل معك قريباً', {
-          position: "top-center",
-          autoClose: 3000,
-        });
-        
-        // Navigate to thank you page with order data
-        navigate('/thank-you', { 
-          state: { 
-            order: {
-              id: response.id,
-              customerName: orderData.customerName,
-              customerPhone: orderData.customerPhone,
-              customerEmail: orderData.customerEmail,
-              address: orderData.address,
-              city: orderData.city,
-              items: orderData.items,
-              totalAmount: subtotal,
-              couponDiscount: discount,
-              deliveryFee: shippingCost,
-              finalAmount: total,
-              paymentMethod: 'الدفع عند الاستلام',
-              status: 'pending',
-              isGuestOrder: isGuest,
-              createdAt: new Date().toISOString()
-            }
-          } 
-        });
+        localStorage.setItem('lastOrder', JSON.stringify({
+          ...orderData,
+          id: result.id || Date.now().toString()
+        }));
+
+        toast.success('تم إرسال طلبك بنجاح!');
+        navigate('/thank-you');
       } else {
-        throw new Error('لم يتم إرجاع بيانات الطلب');
+        throw new Error('فشل في إرسال الطلب');
       }
-    } catch (error: any) {
-      console.error('❌ [Checkout] Error submitting order:', error);
-      toast.error(error.message || 'خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى', {
-        position: "top-center",
-        autoClose: 5000,
-      });
+    } catch (error) {
+      console.error('Order submission error:', error);
+      toast.error('حدث خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -266,14 +307,14 @@ const Checkout: React.FC = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">السلة فارغة</h2>
-          <p className="text-gray-600 mb-4">لا توجد منتجات في السلة</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20">
+          <div className="text-8xl mb-6 animate-bounce">🛒</div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">السلة فارغة</h2>
+          <p className="text-gray-600 mb-8 text-lg">لا توجد منتجات في سلة التسوق</p>
           <button
             onClick={() => navigate('/')}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
           >
             العودة للتسوق
           </button>
@@ -282,280 +323,513 @@ const Checkout: React.FC = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8" dir="rtl">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center">
-            <button
-              onClick={() => navigate(-1)}
-              className="ml-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900">إتمام الطلب</h1>
-            {isGuest && (
-              <span className="mr-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                طلب ضيف
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmitOrder} className="space-y-8">
-              {/* Customer Information */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                  <User className="h-5 w-5 ml-2" />
-                  معلومات العميل
-                  {!isGuest && (
-                    <span className="mr-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
-                      تم تحميل البيانات تلقائياً
-                    </span>
-                  )}
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الاسم الكامل *
-                    </label>
-                    <input
-                      type="text"
-                      value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="أدخل اسمك الكامل"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      رقم الجوال *
-                    </label>
-                    <input
-                      type="tel"
-                      value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="05xxxxxxxx"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      البريد الإلكتروني
-                    </label>
-                    <input
-                      type="email"
-                      value={customerInfo.email}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="example@email.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      المدينة *
-                    </label>
-                    <select
-                      value={customerInfo.city}
-                      onChange={(e) => setCustomerInfo({ ...customerInfo, city: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    >
-                      <option value="">اختر المدينة</option>
-                      <option value="الرياض">الرياض</option>
-                      <option value="جدة">جدة</option>
-                      <option value="الدمام">الدمام</option>
-                      <option value="مكة المكرمة">مكة المكرمة</option>
-                      <option value="المدينة المنورة">المدينة المنورة</option>
-                      <option value="الطائف">الطائف</option>
-                      <option value="تبوك">تبوك</option>
-                      <option value="بريدة">بريدة</option>
-                      <option value="خميس مشيط">خميس مشيط</option>
-                      <option value="حائل">حائل</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    العنوان التفصيلي *
-                  </label>
-                  <textarea
-                    value={customerInfo.address}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
-                    rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أدخل عنوانك التفصيلي (الحي، الشارع، رقم المبنى)"
-                    required
-                  />
-                </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ملاحظات إضافية
-                  </label>
-                  <textarea
-                    value={customerInfo.notes}
-                    onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
-                    rows={2}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="أي ملاحظات إضافية للطلب (اختياري)"
-                  />
-                </div>
-              </div>
-
-              {/* Coupon Section */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                  <Tag className="h-5 w-5 ml-2" />
-                  كوبون الخصم
-                </h2>
-
-                {!appliedCoupon ? (
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="أدخل كود الكوبون"
-                    />
-                    <button
-                      type="button"
-                      onClick={validateCoupon}
-                      disabled={validatingCoupon || !couponCode.trim()}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {validatingCoupon ? 'جاري التحقق...' : 'تطبيق'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <Check className="h-5 w-5 text-green-600 ml-2" />
-                      <span className="text-green-800 font-medium">
-                        تم تطبيق الكوبون: {appliedCoupon.code}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeCoupon}
-                      className="text-red-600 hover:text-red-800 p-1"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-lg font-medium"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                    جاري إرسال الطلب...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-5 w-5 ml-2" />
-                    تأكيد الطلب
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <Package className="h-5 w-5 ml-2" />
-                ملخص الطلب
-              </h2>
-
-              {/* Cart Items */}
-              <div className="space-y-4 mb-6">
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <ShoppingCart className="text-blue-600" />
+                مراجعة طلبك ({cartItems.length} منتج)
+              </h3>
+              
+              <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={`${item.id}-${JSON.stringify(item.selectedOptions)}`} className="flex items-center space-x-4 space-x-reverse">
-                    <img
-                      src={buildImageUrl(item.image)}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 truncate">{item.name}</h3>
-                      {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                        <div className="mt-1">
-                          {Object.entries(item.selectedOptions).map(([key, value]) => (
-                            <span key={key} className="text-xs text-gray-500 block">
-                              {key}: {String(value)}
-                            </span>
-                          ))}
+                  <div key={`${item.id}-${item.size || 'default'}`} 
+                       className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-center gap-4">
+                      {item.image && (
+                        <div className="relative">
+                          <img 
+                            src={item.image} 
+                            alt={item.name} 
+                            className="w-20 h-20 object-cover rounded-xl shadow-md" 
+                          />
+                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                            {item.quantity}
+                          </div>
                         </div>
                       )}
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-sm text-gray-600">الكمية: {item.quantity}</span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {(item.price * item.quantity).toFixed(2)} ر.س
-                        </span>
+                      
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 text-lg">{item.name}</h4>
+                        {item.size && (
+                          <p className="text-sm text-gray-600 bg-gray-100 inline-block px-2 py-1 rounded-full mt-1">
+                            الحجم: {item.size}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
+                              className="w-8 h-8 rounded-full bg-white shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors flex items-center justify-center"
+                            >
+                              <Minus size={16} />
+                            </button>
+                            <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                              className="w-8 h-8 rounded-full bg-white shadow-sm hover:bg-green-50 hover:text-green-600 transition-colors flex items-center justify-center"
+                            >
+                              <Plus size={16} />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => removeItem(item.id, item.size)}
+                            className="text-red-500 hover:text-red-700 transition-colors p-2 hover:bg-red-50 rounded-full"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-gray-800">
+                          {(item.price * item.quantity).toFixed(2)} ريال
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {item.price.toFixed(2)} ريال × {item.quantity}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* Order Totals */}
-              <div className="border-t border-gray-200 pt-6 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">المجموع الفرعي:</span>
-                  <span className="text-gray-900">{subtotal.toFixed(2)} ر.س</span>
+            {/* Coupon Section */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Gift className="text-green-600" />
+                كود الخصم
+              </h3>
+              
+              {!appliedCoupon ? (
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="أدخل كود الخصم"
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
+                  />
+                  <button
+                    onClick={applyCoupon}
+                    disabled={!couponCode.trim()}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg"
+                  >
+                    تطبيق
+                  </button>
                 </div>
-
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600">الخصم:</span>
-                    <span className="text-green-600">-{discount.toFixed(2)} ر.س</span>
+              ) : (
+                <div className="bg-green-100 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-green-800">
+                      كود الخصم: {appliedCoupon.code}
+                    </p>
+                    <p className="text-sm text-green-600">
+                      {appliedCoupon.description}
+                    </p>
                   </div>
-                )}
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">رسوم الشحن:</span>
-                  <span className="text-gray-900">{shippingCost.toFixed(2)} ر.س</span>
+                  <button
+                    onClick={removeCoupon}
+                    className="text-red-500 hover:text-red-700 transition-colors p-2 hover:bg-red-50 rounded-full"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-
-                <div className="border-t border-gray-200 pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-medium text-gray-900">المجموع الإجمالي:</span>
-                    <span className="text-lg font-bold text-blue-600">{total.toFixed(2)} ر.س</span>
+              )}
+              
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                {availableCoupons.map((coupon) => (
+                  <div key={coupon.code} 
+                       className={`bg-white/70 backdrop-blur-sm rounded-xl p-3 border transition-all duration-300 cursor-pointer hover:shadow-md ${
+                         appliedCoupon?.code === coupon.code 
+                           ? 'border-green-500 bg-green-50' 
+                           : 'border-gray-200 hover:border-green-300'
+                       }`}
+                       onClick={() => {
+                         setCouponCode(coupon.code);
+                         if (subtotal >= coupon.minAmount) {
+                           setAppliedCoupon(coupon);
+                         }
+                       }}>
+                    <p className="font-semibold text-sm text-gray-800">{coupon.code}</p>
+                    <p className="text-xs text-gray-600 mt-1">{coupon.description}</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Payment Info */}
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center">
-                  <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
-                  <span className="text-sm font-medium text-blue-800">طريقة الدفع: الدفع عند الاستلام</span>
-                </div>
-                <p className="text-xs text-blue-600 mt-1">
-                  ستقوم بالدفع نقداً عند استلام طلبك
-                </p>
+                ))}
               </div>
             </div>
+
+            {/* Order Summary */}
+            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-6 border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">ملخص الطلب</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-gray-600">
+                  <span>المجموع الفرعي:</span>
+                  <span className="font-semibold">{subtotal.toFixed(2)} ريال</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>الشحن:</span>
+                  <span className="font-semibold">
+                    {selectedShippingZone ? `${shippingCost} ريال` : 'يحدد لاحقاً'}
+                  </span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>الخصم ({appliedCoupon.code}):</span>
+                    <span className="font-semibold">-{couponDiscount.toFixed(2)} ريال</span>
+                  </div>
+                )}
+                <div className="border-t pt-3 flex justify-between text-xl font-bold text-gray-800">
+                  <span>المجموع الكلي:</span>
+                  <span>{total.toFixed(2)} ريال</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            {/* Customer Information */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-100">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <User className="text-blue-600" />
+                معلومات العميل
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    الاسم الكامل *
+                  </label>
+                  <input
+                    type="text"
+                    value={userData.name}
+                    onChange={(e) => setUserData(prev => ({ ...prev, name: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 ${
+                      errors.name ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    placeholder="أدخل اسمك الكامل"
+                  />
+                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    البريد الإلكتروني *
+                  </label>
+                  <input
+                    type="email"
+                    value={userData.email}
+                    onChange={(e) => setUserData(prev => ({ ...prev, email: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 ${
+                      errors.email ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    placeholder="example@email.com"
+                  />
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    رقم الهاتف *
+                  </label>
+                  <input
+                    type="tel"
+                    value={userData.phone}
+                    onChange={(e) => setUserData(prev => ({ ...prev, phone: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 ${
+                      errors.phone ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    placeholder="05xxxxxxxx"
+                  />
+                  {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    المدينة *
+                  </label>
+                  <input
+                    type="text"
+                    value={userData.city}
+                    onChange={(e) => setUserData(prev => ({ ...prev, city: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 ${
+                      errors.city ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    placeholder="اسم المدينة"
+                  />
+                  {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    العنوان التفصيلي *
+                  </label>
+                  <textarea
+                    value={userData.address}
+                    onChange={(e) => setUserData(prev => ({ ...prev, address: e.target.value }))}
+                    rows={3}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 resize-none ${
+                      errors.address ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    placeholder="الحي، الشارع، رقم المبنى، رقم الشقة..."
+                  />
+                  {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping Zones */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <Truck className="text-green-600" />
+                اختر منطقة الشحن
+              </h3>
+              
+              {errors.shipping && <p className="text-red-500 text-sm mb-4">{errors.shipping}</p>}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {shippingZones.map((zone) => (
+                  <div
+                    key={zone.id}
+                    onClick={() => setSelectedShippingZone(zone)}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all duration-300 hover:shadow-lg ${
+                      selectedShippingZone?.id === zone.id
+                        ? 'border-green-500 bg-green-100 shadow-lg transform scale-105'
+                        : 'border-gray-200 bg-white/70 backdrop-blur-sm hover:border-green-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-bold text-lg text-gray-800">{zone.name}</h4>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">{zone.price} ريال</p>
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <Clock size={14} />
+                          {zone.estimatedDays}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      يشمل: {zone.regions.join('، ')}
+                    </p>
+                    {selectedShippingZone?.id === zone.id && (
+                      <div className="mt-3 flex items-center gap-2 text-green-600">
+                        <CheckCircle size={16} />
+                        <span className="text-sm font-semibold">تم الاختيار</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            {/* Payment Method */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100">
+              <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <CreditCard className="text-purple-600" />
+                طريقة الدفع
+              </h3>
+              
+              <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-purple-200">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <Package className="text-green-600" size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-lg text-gray-800">الدفع عند الاستلام</h4>
+                    <p className="text-gray-600">ادفع نقداً عند وصول الطلب</p>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="flex items-start gap-3">
+                    <Shield className="text-green-600 mt-1" size={20} />
+                    <div>
+                      <p className="font-semibold text-green-800 mb-1">دفع آمن ومضمون</p>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• لا حاجة لبطاقة ائتمان</li>
+                        <li>• افحص المنتج قبل الدفع</li>
+                        <li>• إمكانية الإرجاع فوري</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-6 border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">ملخص الطلب النهائي</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-gray-600">
+                  <span>المجموع الفرعي:</span>
+                  <span className="font-semibold">{subtotal.toFixed(2)} ريال</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>الشحن ({selectedShippingZone?.name}):</span>
+                  <span className="font-semibold">{shippingCost} ريال</span>
+                </div>
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>الخصم ({appliedCoupon.code}):</span>
+                    <span className="font-semibold">-{couponDiscount.toFixed(2)} ريال</span>
+                  </div>
+                )}
+                <div className="border-t pt-3 flex justify-between text-2xl font-bold text-gray-800">
+                  <span>المجموع الكلي:</span>
+                  <span className="text-green-600">{total.toFixed(2)} ريال</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="text-center space-y-6">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="text-green-600" size={40} />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">
+                جاهز لإتمام الطلب!
+              </h3>
+              
+              <p className="text-gray-600 mb-6 text-lg">
+                تأكد من صحة جميع البيانات قبل تأكيد الطلب
+              </p>
+              
+              <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 text-right">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-3">معلومات العميل:</h4>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p><span className="font-semibold">الاسم:</span> {userData.name}</p>
+                      <p><span className="font-semibold">الهاتف:</span> {userData.phone}</p>
+                      <p><span className="font-semibold">البريد:</span> {userData.email}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-3">عنوان التوصيل:</h4>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p><span className="font-semibold">المدينة:</span> {userData.city}</p>
+                      <p><span className="font-semibold">العنوان:</span> {userData.address}</p>
+                      <p><span className="font-semibold">الشحن:</span> {selectedShippingZone?.name} ({selectedShippingZone?.estimatedDays})</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-12 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-lg transform hover:scale-105 mt-6"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    جاري الإرسال...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Zap size={20} />
+                    تأكيد الطلب الآن
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">إتمام الطلب</h1>
+          <p className="text-gray-600 text-lg">اتبع الخطوات لإكمال طلبك بسهولة</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl p-6 mb-8 border border-white/20">
+          <div className="flex items-center justify-between">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                  currentStep >= step.id
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 border-blue-600 text-white shadow-lg'
+                    : 'bg-white border-gray-300 text-gray-400'
+                }`}>
+                  {currentStep > step.id ? (
+                    <CheckCircle size={20} />
+                  ) : (
+                    <step.icon size={20} />
+                  )}
+                </div>
+                <div className="mr-3 text-right">
+                  <p className={`font-semibold text-sm ${
+                    currentStep >= step.id ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    {step.title}
+                  </p>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-16 h-1 mx-4 rounded-full transition-all duration-300 ${
+                    currentStep > step.id ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+          <div className="p-8">
+            {renderStepContent()}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="bg-gray-50/80 backdrop-blur-sm px-8 py-6 flex justify-between items-center border-t border-gray-200/50">
+            <button
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              <ArrowLeft size={20} />
+              السابق
+            </button>
+
+            {currentStep < 4 ? (
+              <button
+                onClick={nextStep}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg transform hover:scale-105"
+              >
+                التالي
+                <ArrowRight size={20} />
+              </button>
+            ) : (
+              <div className="text-sm text-gray-500">
+                اضغط "تأكيد الطلب" أعلاه لإكمال الطلب
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -563,4 +837,4 @@ const Checkout: React.FC = () => {
   );
 };
 
-export default Checkout;
+export default Checkout; 

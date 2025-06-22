@@ -97,72 +97,35 @@ const ShoppingCart: React.FC = () => {
     return names[optionName] || optionName;
   };
 
-  // تحميل السلة من localStorage
+  // تحميل السلة من localStorage أو الخادم
   const fetchCart = useCallback(async () => {
+    setLoading(true);
+    setIsInitialLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      setError(null);
-      
-      // محاولة تحميل السلة من localStorage أولاً
-      const localCart = localStorage.getItem('cart');
+      console.log('🛒 [Cart] Starting to fetch cart...');
+
+      // أولاً، تحقق من وجود سلة محلية
+      const localCart = localStorage.getItem('cartItems'); // استخدام 'cartItems' بدلاً من 'cart'
       if (localCart) {
         try {
           const parsedCart = JSON.parse(localCart);
-          if (Array.isArray(parsedCart)) {
-            setCartItems(parsedCart);
-            console.log('✅ [Cart] Loaded from localStorage:', parsedCart.length, 'items');
-          } else {
-            setCartItems([]);
-          }
+          console.log('📦 [Cart] Found local cart:', parsedCart.length, 'items');
+          setCartItems(parsedCart);
+          setIsInitialLoading(false);
+          setLoading(false);
+          return;
         } catch (parseError) {
-          console.error('❌ [Cart] Error parsing localStorage cart:', parseError);
-          localStorage.removeItem('cart');
-          setCartItems([]);
+          console.error('❌ [Cart] Error parsing local cart:', parseError);
+          localStorage.removeItem('cartItems');
         }
-        setIsInitialLoading(false);
-        setLoading(false);
-        return;
       }
 
-      // إذا لم تكن هناك سلة محلية، تحقق من وجود مستخدم مسجل
-      const userData = localStorage.getItem('user');
-      if (!userData) {
-        console.log('📭 [Cart] No user data, empty cart');
-        setCartItems([]);
-        setIsInitialLoading(false);
-        setLoading(false);
-        return;
-      }
-
-      let user;
-      try {
-        user = JSON.parse(userData);
-      } catch (parseError) {
-        console.error('❌ [Cart] Error parsing user data:', parseError);
-        setCartItems([]);
-        setIsInitialLoading(false);
-        setLoading(false);
-        return;
-      }
-
-      if (!user || !user.id) {
-        console.log('📭 [Cart] Invalid user data, empty cart');
-        setCartItems([]);
-        setIsInitialLoading(false);
-        setLoading(false);
-        return;
-      }
-
-      // تحميل السلة من الخادم
-      try {
-        // For now, we'll use localStorage only since we don't have a user cart endpoint in serverless yet
-        // This can be implemented later with Firebase Auth user-specific cart storage
-        setCartItems([]);
-        console.log('📭 [Cart] Using localStorage only for serverless architecture');
-      } catch (serverError) {
-        console.error('❌ [Cart] Server error, using empty cart:', serverError);
-        setCartItems([]);
-      }
+      // إذا لم تكن هناك سلة محلية، ابدأ بسلة فارغة
+      console.log('📭 [Cart] No local cart found, starting with empty cart');
+      setCartItems([]);
+      
     } catch (error) {
       console.error('❌ [Cart] Error fetching cart:', error);
       setCartItems([]);
@@ -178,9 +141,9 @@ const ShoppingCart: React.FC = () => {
     fetchCart();
   }, [fetchCart]);
 
-  // حفظ السلة في localStorage
+  // حفظ السلة في localStorage - يعمل للضيوف والمستخدمين المسجلين
   const saveCartToLocalStorage = useCallback((items: CartItem[]) => {
-    console.log('💾 [ShoppingCart] SAVING TO LOCALSTORAGE:', {
+    console.log('💾 [ShoppingCart] SAVING CART TO LOCALSTORAGE:', {
       itemsCount: items.length,
       items: items.map(item => ({
         id: item.id,
@@ -194,10 +157,16 @@ const ShoppingCart: React.FC = () => {
       }))
     });
     
-    localStorage.setItem('cart', JSON.stringify(items));
+    // حفظ في localStorage باستخدام 'cartItems' للتوافق مع Checkout
+    localStorage.setItem('cartItems', JSON.stringify(items));
+    
+    // إرسال حدث لتحديث عداد السلة في Navbar
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    const cartCountEvent = new CustomEvent('cartCountChanged', { detail: totalItems });
+    window.dispatchEvent(cartCountEvent);
     
     // تحقق فوري من البيانات المحفوظة
-    const savedData = localStorage.getItem('cart');
+    const savedData = localStorage.getItem('cartItems');
     if (savedData) {
       try {
         const parsedData = JSON.parse(savedData);
@@ -333,15 +302,15 @@ const ShoppingCart: React.FC = () => {
   // إفراغ السلة
   const clearCart = async () => {
     setCartItems([]);
-    localStorage.removeItem('cart');
+    localStorage.removeItem('cartItems');
     
     // For serverless, we just clear localStorage for now
     toast.success('تم مسح السلة بالكامل');
   };
 
-  // دمج السلة المحلية مع سلة المستخدم عند تسجيل الدخول
+  // دمج السلة المحلية ع سلة المستخدم عند تسجيل الدخول
   const mergeCarts = async (userId: number) => {
-    const localCart = localStorage.getItem('cart');
+    const localCart = localStorage.getItem('cartItems');
     if (!localCart) return;
 
     try {
@@ -356,7 +325,7 @@ const ShoppingCart: React.FC = () => {
       // تحديث السلة من الخادم
       const serverCart = await apiCall(API_ENDPOINTS.USER_CART(userId));
       setCartItems(serverCart);
-      localStorage.setItem('cart', JSON.stringify(serverCart));
+      localStorage.setItem('cartItems', JSON.stringify(serverCart));
       
       console.log('✅ [Cart] Cart merged successfully with server');
     } catch (error) {
@@ -408,7 +377,7 @@ const ShoppingCart: React.FC = () => {
     
     // دمج السلة المحلية مع سلة المستخدم باستخدام النظام الجديد
     try {
-      const localCart = localStorage.getItem('cart');
+      const localCart = localStorage.getItem('cartItems');
       if (localCart) {
         const localItems = JSON.parse(localCart);
         if (Array.isArray(localItems) && localItems.length > 0) {
@@ -427,7 +396,7 @@ const ShoppingCart: React.FC = () => {
             const serverCartResponse = await apiCall(API_ENDPOINTS.USER_CART(user.id));
             if (serverCartResponse.success) {
               setCartItems(serverCartResponse.data);
-              localStorage.setItem('cart', JSON.stringify(serverCartResponse.data));
+              localStorage.setItem('cartItems', JSON.stringify(serverCartResponse.data));
               console.log('✅ [Cart] Cart updated from server, new cart size:', serverCartResponse.data.length);
             }
             

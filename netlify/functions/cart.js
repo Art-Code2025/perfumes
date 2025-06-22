@@ -8,12 +8,17 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where,
-  orderBy,
-  runTransaction 
+  where, 
+  orderBy 
 } from 'firebase/firestore';
 
 export const handler = async (event, context) => {
+  console.log('🛒 Cart API Called:', {
+    method: event.httpMethod,
+    path: event.path,
+    timestamp: new Date().toISOString()
+  });
+
   // Handle CORS preflight requests
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -39,230 +44,257 @@ export const handler = async (event, context) => {
     const path = event.path;
     const pathSegments = path.split('/').filter(Boolean);
     
-    console.log('🛒 Cart API - Method:', method, 'Path:', path);
+    console.log('🛒 Cart API - Method:', method, 'Path:', path, 'Segments:', pathSegments);
 
-    // GET /cart/user/{userId} - Get user's cart
-    if (method === 'GET' && pathSegments.includes('user')) {
-      const userId = pathSegments[pathSegments.indexOf('user') + 1];
-      console.log('🛒 Fetching cart for user:', userId);
-      
-      try {
-        const cartCollection = collection(db, 'carts');
-        const cartQuery = query(cartCollection, where('userId', '==', userId));
-        const cartSnapshot = await getDocs(cartQuery);
-        
-        const cartItems = [];
-        cartSnapshot.forEach((doc) => {
-          cartItems.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        
-        console.log(`✅ Found ${cartItems.length} cart items for user ${userId}`);
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(cartItems),
-        };
-      } catch (firestoreError) {
-        console.error('❌ Firestore error, returning empty cart:', firestoreError);
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify([]),
-        };
-      }
+    // Validate Firebase connection
+    if (!db) {
+      console.error('❌ Firebase DB not initialized!');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Database connection failed' }),
+      };
     }
 
-    // POST /cart - Add item to cart
+    // GET /cart - Get cart (guest or user)
+    if (method === 'GET' && pathSegments[pathSegments.length - 1] === 'cart') {
+      const { sessionId, userId } = event.queryStringParameters || {};
+      console.log('🛒 Fetching cart for:', { sessionId, userId });
+      
+      if (!sessionId && !userId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'sessionId أو userId مطلوب' }),
+        };
+      }
+
+      const cartsCollection = collection(db, 'carts');
+      let cartQuery;
+      
+      if (userId) {
+        cartQuery = query(cartsCollection, where('userId', '==', userId));
+      } else {
+        cartQuery = query(cartsCollection, where('sessionId', '==', sessionId));
+      }
+      
+      const cartSnapshot = await getDocs(cartQuery);
+      
+      if (cartSnapshot.empty) {
+        console.log('📭 No cart found, returning empty cart');
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ items: [] }),
+        };
+      }
+
+      const cartDoc = cartSnapshot.docs[0];
+      const cartData = {
+        id: cartDoc.id,
+        ...cartDoc.data()
+      };
+      
+      console.log(`✅ Found cart with ${cartData.items?.length || 0} items`);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(cartData),
+      };
+    }
+
+    // POST /cart - Save cart (guest or user)
     if (method === 'POST') {
       const body = event.body ? JSON.parse(event.body) : {};
-      console.log('➕ Adding item to cart:', body);
+      const { sessionId, userId, items } = body;
       
-      try {
-        const cartData = {
-          userId: body.userId,
-          productId: body.productId,
-          productName: body.productName,
-          productImage: body.productImage,
-          price: body.price,
-          quantity: body.quantity || 1,
-          selectedOptions: body.selectedOptions || {},
-          optionsPricing: body.optionsPricing || {},
-          totalPrice: (body.price || 0) * (body.quantity || 1),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        // Check if item already exists in cart
-        const cartCollection = collection(db, 'carts');
-        const existingQuery = query(
-          cartCollection, 
-          where('userId', '==', body.userId),
-          where('productId', '==', body.productId)
-        );
-        const existingSnapshot = await getDocs(existingQuery);
-        
-        if (!existingSnapshot.empty) {
-          // Update existing item
-          const existingDoc = existingSnapshot.docs[0];
-          const existingData = existingDoc.data();
-          const newQuantity = existingData.quantity + (body.quantity || 1);
-          
-          await updateDoc(doc(db, 'carts', existingDoc.id), {
-            quantity: newQuantity,
-            totalPrice: (body.price || 0) * newQuantity,
-            updatedAt: new Date().toISOString()
-          });
-          
-          console.log('✅ Updated existing cart item');
-          
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({
-              id: existingDoc.id,
-              ...existingData,
-              quantity: newQuantity,
-              totalPrice: (body.price || 0) * newQuantity
-            }),
-          };
-        } else {
-          // Add new item
-          const docRef = await addDoc(cartCollection, cartData);
-          
-          const newCartItem = {
-            id: docRef.id,
-            ...cartData
-          };
-          
-          console.log('✅ Cart item added with ID:', docRef.id);
-          
-          return {
-            statusCode: 201,
-            headers,
-            body: JSON.stringify(newCartItem),
-          };
-        }
-      } catch (error) {
-        console.error('❌ Error adding to cart:', error);
+      console.log('💾 Saving cart for:', { sessionId, userId, itemsCount: items?.length });
+      
+      if (!sessionId && !userId) {
         return {
-          statusCode: 500,
+          statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'خطأ في إضافة المنتج للعربة: ' + error.message }),
+          body: JSON.stringify({ error: 'sessionId أو userId مطلوب' }),
         };
       }
+
+      if (!Array.isArray(items)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'items يجب أن يكون array' }),
+        };
+      }
+
+      const cartsCollection = collection(db, 'carts');
+      
+      // Check if cart already exists
+      let cartQuery;
+      if (userId) {
+        cartQuery = query(cartsCollection, where('userId', '==', userId));
+      } else {
+        cartQuery = query(cartsCollection, where('sessionId', '==', sessionId));
+      }
+      
+      const existingCartSnapshot = await getDocs(cartQuery);
+      
+      const cartData = {
+        items,
+        updatedAt: new Date().toISOString(),
+        totalItems: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
+        ...(userId ? { userId } : { sessionId })
+      };
+
+      let cartId;
+      
+      if (!existingCartSnapshot.empty) {
+        // Update existing cart
+        const existingCartDoc = existingCartSnapshot.docs[0];
+        cartId = existingCartDoc.id;
+        await updateDoc(doc(db, 'carts', cartId), cartData);
+        console.log('✅ Updated existing cart:', cartId);
+      } else {
+        // Create new cart
+        cartData.createdAt = new Date().toISOString();
+        const docRef = await addDoc(cartsCollection, cartData);
+        cartId = docRef.id;
+        console.log('✅ Created new cart:', cartId);
+      }
+      
+      const savedCart = {
+        id: cartId,
+        ...cartData
+      };
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(savedCart),
+      };
     }
 
-    // PUT /cart/{id} - Update cart item
-    if (method === 'PUT' && pathSegments.length >= 2) {
-      const cartItemId = pathSegments[pathSegments.length - 1];
+    // DELETE /cart - Clear cart
+    if (method === 'DELETE' && pathSegments[pathSegments.length - 1] === 'cart') {
+      const { sessionId, userId } = event.queryStringParameters || {};
+      console.log('🗑️ Clearing cart for:', { sessionId, userId });
+      
+      if (!sessionId && !userId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'sessionId أو userId مطلوب' }),
+        };
+      }
+
+      const cartsCollection = collection(db, 'carts');
+      let cartQuery;
+      
+      if (userId) {
+        cartQuery = query(cartsCollection, where('userId', '==', userId));
+      } else {
+        cartQuery = query(cartsCollection, where('sessionId', '==', sessionId));
+      }
+      
+      const cartSnapshot = await getDocs(cartQuery);
+      
+      if (!cartSnapshot.empty) {
+        const cartDoc = cartSnapshot.docs[0];
+        await deleteDoc(doc(db, 'carts', cartDoc.id));
+        console.log('✅ Cart cleared successfully');
+      }
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ message: 'تم مسح السلة بنجاح' }),
+      };
+    }
+
+    // POST /cart/merge - Merge guest cart with user cart
+    if (method === 'POST' && pathSegments.includes('merge')) {
       const body = event.body ? JSON.parse(event.body) : {};
-      console.log('🔄 Updating cart item:', cartItemId);
+      const { sessionId, userId, guestItems } = body;
       
-      try {
-        const cartDoc = doc(db, 'carts', cartItemId);
-        const updateData = {
-          ...body,
-          updatedAt: new Date().toISOString()
-        };
-        
-        // Calculate total price if quantity or price changed
-        if (body.quantity && body.price) {
-          updateData.totalPrice = body.quantity * body.price;
-        }
-        
-        await updateDoc(cartDoc, updateData);
-        
-        const updatedDoc = await getDoc(cartDoc);
-        const updatedItem = {
-          id: updatedDoc.id,
-          ...updatedDoc.data()
-        };
-        
-        console.log('✅ Cart item updated');
-        
+      console.log('🔄 Merging carts:', { sessionId, userId, guestItemsCount: guestItems?.length });
+      
+      if (!sessionId || !userId || !Array.isArray(guestItems)) {
         return {
-          statusCode: 200,
+          statusCode: 400,
           headers,
-          body: JSON.stringify(updatedItem),
-        };
-      } catch (error) {
-        console.error('❌ Error updating cart item:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في تحديث المنتج: ' + error.message }),
+          body: JSON.stringify({ error: 'sessionId, userId, and guestItems are required' }),
         };
       }
-    }
 
-    // DELETE /cart/{id} - Remove item from cart
-    if (method === 'DELETE' && pathSegments.length >= 2) {
-      const cartItemId = pathSegments[pathSegments.length - 1];
-      console.log('🗑️ Removing cart item:', cartItemId);
+      const cartsCollection = collection(db, 'carts');
       
-      try {
-        await deleteDoc(doc(db, 'carts', cartItemId));
-        
-        console.log('✅ Cart item removed');
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({ message: 'تم حذف المنتج من العربة بنجاح' }),
-        };
-      } catch (error) {
-        console.error('❌ Error removing cart item:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في حذف المنتج: ' + error.message }),
-        };
-      }
-    }
-
-    // DELETE /cart/user/{userId}/clear - Clear user's cart
-    if (method === 'DELETE' && pathSegments.includes('clear')) {
-      const userId = pathSegments[pathSegments.indexOf('user') + 1];
-      console.log('🗑️ Clearing cart for user:', userId);
+      // Get user's existing cart
+      const userCartQuery = query(cartsCollection, where('userId', '==', userId));
+      const userCartSnapshot = await getDocs(userCartQuery);
       
-      try {
-        const cartCollection = collection(db, 'carts');
-        const cartQuery = query(cartCollection, where('userId', '==', userId));
-        const cartSnapshot = await getDocs(cartQuery);
+      let mergedItems = [...guestItems];
+      
+      if (!userCartSnapshot.empty) {
+        const userCartData = userCartSnapshot.docs[0].data();
+        const userItems = userCartData.items || [];
         
-        const batch = [];
-        cartSnapshot.forEach((doc) => {
-          batch.push(deleteDoc(doc.ref));
+        // Merge items (avoid duplicates based on productId and selectedOptions)
+        userItems.forEach(userItem => {
+          const existsInGuest = guestItems.find(guestItem => 
+            guestItem.productId === userItem.productId &&
+            JSON.stringify(guestItem.selectedOptions) === JSON.stringify(userItem.selectedOptions)
+          );
+          
+          if (!existsInGuest) {
+            mergedItems.push(userItem);
+          }
         });
-        
-        await Promise.all(batch);
-        
-        console.log(`✅ Cleared ${cartSnapshot.size} items from cart`);
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({ message: 'تم مسح العربة بنجاح' }),
-        };
-      } catch (error) {
-        console.error('❌ Error clearing cart:', error);
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'خطأ في مسح العربة: ' + error.message }),
-        };
       }
+      
+      // Save merged cart
+      const mergedCartData = {
+        userId,
+        items: mergedItems,
+        updatedAt: new Date().toISOString(),
+        totalItems: mergedItems.reduce((sum, item) => sum + (item.quantity || 0), 0)
+      };
+      
+      // Update or create user cart
+      if (!userCartSnapshot.empty) {
+        const userCartDoc = userCartSnapshot.docs[0];
+        await updateDoc(doc(db, 'carts', userCartDoc.id), mergedCartData);
+      } else {
+        mergedCartData.createdAt = new Date().toISOString();
+        await addDoc(cartsCollection, mergedCartData);
+      }
+      
+      // Remove guest cart
+      const guestCartQuery = query(cartsCollection, where('sessionId', '==', sessionId));
+      const guestCartSnapshot = await getDocs(guestCartQuery);
+      
+      if (!guestCartSnapshot.empty) {
+        const guestCartDoc = guestCartSnapshot.docs[0];
+        await deleteDoc(doc(db, 'carts', guestCartDoc.id));
+      }
+      
+      console.log(`✅ Carts merged successfully: ${mergedItems.length} items`);
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          message: 'تم دمج السلة بنجاح',
+          items: mergedItems,
+          totalItems: mergedCartData.totalItems
+        }),
+      };
     }
 
+    // If no route matches
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'المسار غير موجود' }),
+      body: JSON.stringify({ error: 'الطريق غير موجود' }),
     };
 
   } catch (error) {
@@ -270,7 +302,10 @@ export const handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'خطأ في الخادم: ' + error.message }),
+      body: JSON.stringify({ 
+        error: 'خطأ في الخادم', 
+        details: error.message 
+      }),
     };
   }
 }; 

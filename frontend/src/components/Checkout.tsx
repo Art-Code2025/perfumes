@@ -53,9 +53,13 @@ const Checkout: React.FC = () => {
   const [discount, setDiscount] = useState(0);
   const [shippingCost, setShippingCost] = useState(50); // Default shipping cost
   const [total, setTotal] = useState(0);
+  const [isGuest, setIsGuest] = useState(false);
 
-  // Load cart items from location state or localStorage
+  // Load cart items and user data
   useEffect(() => {
+    console.log('🛒 [Checkout] Loading cart items and user data');
+    
+    // Load cart items from location state or localStorage
     const items = location.state?.cartItems || JSON.parse(localStorage.getItem('cartItems') || '[]');
     if (items.length === 0) {
       toast.error('السلة فارغة');
@@ -63,6 +67,32 @@ const Checkout: React.FC = () => {
       return;
     }
     setCartItems(items);
+    console.log('🛒 [Checkout] Loaded cart items:', items.length);
+
+    // Load user data if logged in
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        console.log('👤 [Checkout] Loading user data:', user);
+        
+        setCustomerInfo({
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || '',
+          phone: user.phone || '',
+          email: user.email || '',
+          address: user.address || '',
+          city: user.city || '',
+          notes: ''
+        });
+        setIsGuest(false);
+      } catch (error) {
+        console.error('❌ [Checkout] Error parsing user data:', error);
+        setIsGuest(true);
+      }
+    } else {
+      console.log('👤 [Checkout] No user data found, continuing as guest');
+      setIsGuest(true);
+    }
   }, [location.state, navigate]);
 
   // Calculate totals
@@ -131,6 +161,8 @@ const Checkout: React.FC = () => {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log('📋 [Checkout] Starting order submission');
+
     // Validation
     if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !customerInfo.city) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
@@ -169,21 +201,32 @@ const Checkout: React.FC = () => {
         couponCode: appliedCoupon?.code || null,
         paymentMethod: 'cash_on_delivery',
         paymentStatus: 'pending',
-        status: 'pending'
+        status: 'pending',
+        isGuestOrder: isGuest,
+        createdAt: new Date().toISOString()
       };
 
-      console.log('📋 Submitting order:', orderData);
+      console.log('📋 [Checkout] Submitting order:', orderData);
 
       const response = await apiCall(API_ENDPOINTS.ORDERS, {
         method: 'POST',
         body: JSON.stringify(orderData)
       });
 
+      console.log('✅ [Checkout] Order submitted successfully:', response);
+
       if (response) {
-        // Clear cart
+        // Clear cart from localStorage
         localStorage.removeItem('cartItems');
         
-        toast.success('تم إرسال طلبك بنجاح! سنتواصل معك قريباً');
+        // Update cart count in navbar
+        const cartCountEvent = new CustomEvent('cartCountChanged', { detail: 0 });
+        window.dispatchEvent(cartCountEvent);
+        
+        toast.success('تم إرسال طلبك بنجاح! سنتواصل معك قريباً', {
+          position: "top-center",
+          autoClose: 3000,
+        });
         
         // Navigate to thank you page with order data
         navigate('/thank-you', { 
@@ -202,14 +245,20 @@ const Checkout: React.FC = () => {
               finalAmount: total,
               paymentMethod: 'الدفع عند الاستلام',
               status: 'pending',
+              isGuestOrder: isGuest,
               createdAt: new Date().toISOString()
             }
           } 
         });
+      } else {
+        throw new Error('لم يتم إرجاع بيانات الطلب');
       }
     } catch (error: any) {
-      console.error('Error submitting order:', error);
-      toast.error(error.message || 'خطأ في إرسال الطلب');
+      console.error('❌ [Checkout] Error submitting order:', error);
+      toast.error(error.message || 'خطأ في إرسال الطلب. يرجى المحاولة مرة أخرى', {
+        position: "top-center",
+        autoClose: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -246,6 +295,11 @@ const Checkout: React.FC = () => {
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-3xl font-bold text-gray-900">إتمام الطلب</h1>
+            {isGuest && (
+              <span className="mr-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                طلب ضيف
+              </span>
+            )}
           </div>
         </div>
 
@@ -258,6 +312,11 @@ const Checkout: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                   <User className="h-5 w-5 ml-2" />
                   معلومات العميل
+                  {!isGuest && (
+                    <span className="mr-2 text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
+                      تم تحميل البيانات تلقائياً
+                    </span>
+                  )}
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -291,7 +350,7 @@ const Checkout: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      البريد الإلكتروني (اختياري)
+                      البريد الإلكتروني
                     </label>
                     <input
                       type="email"
@@ -306,14 +365,24 @@ const Checkout: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       المدينة *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={customerInfo.city}
                       onChange={(e) => setCustomerInfo({ ...customerInfo, city: e.target.value })}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="اسم المدينة"
                       required
-                    />
+                    >
+                      <option value="">اختر المدينة</option>
+                      <option value="الرياض">الرياض</option>
+                      <option value="جدة">جدة</option>
+                      <option value="الدمام">الدمام</option>
+                      <option value="مكة المكرمة">مكة المكرمة</option>
+                      <option value="المدينة المنورة">المدينة المنورة</option>
+                      <option value="الطائف">الطائف</option>
+                      <option value="تبوك">تبوك</option>
+                      <option value="بريدة">بريدة</option>
+                      <option value="خميس مشيط">خميس مشيط</option>
+                      <option value="حائل">حائل</option>
+                    </select>
                   </div>
                 </div>
 
@@ -325,22 +394,22 @@ const Checkout: React.FC = () => {
                     value={customerInfo.address}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="العنوان التفصيلي للتوصيل"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="أدخل عنوانك التفصيلي (الحي، الشارع، رقم المبنى)"
                     required
                   />
                 </div>
 
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ملاحظات إضافية (اختياري)
+                    ملاحظات إضافية
                   </label>
                   <textarea
                     value={customerInfo.notes}
                     onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
                     rows={2}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="أي ملاحظات خاصة بالطلب"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="أي ملاحظات إضافية للطلب (اختياري)"
                   />
                 </div>
               </div>
@@ -478,9 +547,12 @@ const Checkout: React.FC = () => {
 
               {/* Payment Info */}
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">طريقة الدفع</h3>
-                <p className="text-sm text-blue-800">
-                  الدفع عند الاستلام - ستدفع عند وصول الطلب إليك
+                <div className="flex items-center">
+                  <CreditCard className="h-5 w-5 text-blue-600 ml-2" />
+                  <span className="text-sm font-medium text-blue-800">طريقة الدفع: الدفع عند الاستلام</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  ستقوم بالدفع نقداً عند استلام طلبك
                 </p>
               </div>
             </div>

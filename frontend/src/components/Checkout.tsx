@@ -305,15 +305,14 @@ const Checkout: React.FC = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shippingCost = selectedShippingZone ? selectedShippingZone.price : 0;
+  const shippingCost = 0;
   const couponDiscount = appliedCoupon ? (
     appliedCoupon.type === 'percentage' 
       ? Math.min(subtotal * (appliedCoupon.value / 100), appliedCoupon.maxDiscount || Infinity)
       : appliedCoupon.value
   ) : 0;
-  const freeShipping = appliedCoupon?.type === 'freeShipping' || 
-    (selectedShippingZone && subtotal >= selectedShippingZone.freeShippingThreshold!);
-  const finalShippingCost = freeShipping ? 0 : shippingCost;
+  const freeShipping = true;
+  const finalShippingCost = 0;
   const total = subtotal - couponDiscount + finalShippingCost;
 
   const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
@@ -357,7 +356,6 @@ const Checkout: React.FC = () => {
       if (!userData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
       if (!userData.address.trim()) newErrors.address = 'العنوان مطلوب';
       if (!userData.city.trim()) newErrors.city = 'المدينة مطلوبة';
-      if (!selectedShippingZone) newErrors.shipping = 'يرجى اختيار منطقة الشحن';
     }
     
     if (step === 4) {
@@ -630,13 +628,45 @@ const Checkout: React.FC = () => {
                     </div>
 
                     {/* زر الإتمام */}
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading || !agreeToTerms}
-                      className="w-full bg-black text-white py-4 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold text-lg"
-                    >
-                      {loading ? 'جاري الإرسال...' : 'إتمام الطلب'}
-                    </button>
+                    <div className="flex justify-between items-center mt-12 pt-6 border-t border-gray-100">
+                      {currentStep > 1 ? (
+                        <button
+                          onClick={prevStep}
+                          className="flex items-center gap-2 px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-all"
+                        >
+                          <ArrowRight className="w-5 h-5" />
+                          السابق
+                        </button>
+                      ) : <span />}
+
+                      {currentStep < 4 ? (
+                        <button
+                          onClick={nextStep}
+                          className="flex items-center gap-2 px-8 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-all font-bold"
+                        >
+                          التالي
+                          <ArrowLeft className="w-5 h-5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSubmit}
+                          disabled={loading || !agreeToTerms}
+                          className="flex items-center gap-2 px-8 py-3 bg-black text-white rounded-xl hover:bg-gray-800 transition-all font-bold disabled:opacity-50"
+                        >
+                          {loading ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              جاري الإرسال...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-5 h-5" />
+                              تأكيد الطلب
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -831,51 +861,6 @@ const Checkout: React.FC = () => {
                       />
                       {errors.address && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.address}</p>}
                     </div>
-                  </div>
-
-                  {/* Shipping Zones */}
-                  <div className="mt-12">
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-8">اختر منطقة الشحن</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {shippingZones.map((zone, index) => (
-                        <div
-                          key={zone.id}
-                          className={`relative p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
-                            selectedShippingZone?.id === zone.id
-                              ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 shadow-2xl scale-105'
-                              : 'border-gray-200/50 bg-white/70 hover:border-purple-300 hover:shadow-xl'
-                          }`}
-                          onClick={() => setSelectedShippingZone(zone)}
-                          style={{
-                            animation: `slideInUp 0.6s ease-out ${index * 0.1}s both`
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="text-3xl animate-bounce">{zone.icon}</div>
-                              <div>
-                                <h4 className="font-bold text-gray-800 text-lg">{zone.name}</h4>
-                                <p className="text-sm text-gray-600">{zone.estimatedDays}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{zone.price} ريال</p>
-                              {zone.freeShippingThreshold && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  شحن مجاني عند {zone.freeShippingThreshold} ريال
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {selectedShippingZone?.id === zone.id && (
-                            <div className="absolute top-4 left-4 animate-bounce">
-                              <CheckCircle className="text-purple-500" size={28} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {errors.shipping && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.shipping}</p>}
                   </div>
 
                   {/* Payment Method */}

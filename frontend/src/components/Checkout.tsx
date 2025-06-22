@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { 
@@ -28,73 +28,56 @@ import {
   Percent,
   Calculator,
   Edit3,
-  Trash2,
-  Sparkles,
-  AlertCircle,
-  Tag,
-  AlertTriangle
+  Trash2
 } from 'lucide-react';
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  stock: number;
-  categoryId?: number | null;
-  productType?: string;
-  dynamicOptions?: any[];
-  mainImage: string;
-  detailedImages?: string[];
-  specifications?: { name: string; value: string }[];
-  createdAt?: string;
-}
-
 interface CartItem {
-  id: number;
-  productId: number;
-  quantity: number;
-  product?: Product;
-  selectedOptions?: { [key: string]: string };
-  optionsPricing?: { [key: string]: number };
-  attachments?: {
-    images?: string[];
-    text?: string;
-  };
+  id: string;
   name: string;
   price: number;
-  originalPrice?: number;
+  quantity: number;
   image?: string;
   size?: string;
   category?: string;
+  originalPrice?: number;
   discount?: number;
 }
 
-interface CustomerInfo {
+interface UserData {
   name: string;
-  phone: string;
   email: string;
+  phone: string;
   address: string;
   city: string;
-  shippingZone?: string;
-  notes?: string;
-}
-
-interface PaymentMethod {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
+  region: string;
+  postalCode: string;
+  buildingNumber?: string;
+  floor?: string;
+  apartment?: string;
+  landmark?: string;
 }
 
 interface ShippingZone {
   id: string;
   name: string;
-  shippingCost: number;
+  price: number;
   estimatedDays: string;
-  isActive: boolean;
-  priority: number;
+  regions: string[];
   icon?: string;
+  color?: string;
+  freeShippingThreshold?: number;
+}
+
+interface Coupon {
+  code: string;
+  type: 'percentage' | 'fixed' | 'freeShipping';
+  value: number;
+  minAmount: number;
+  maxDiscount?: number;
+  description: string;
+  validUntil?: string;
+  category?: string;
+  isActive: boolean;
 }
 
 const Checkout: React.FC = () => {
@@ -108,19 +91,23 @@ const Checkout: React.FC = () => {
   // All state hooks
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+  const [userData, setUserData] = useState<UserData>({
     name: '',
-    phone: '',
     email: '',
+    phone: '',
     address: '',
     city: '',
-    shippingZone: '',
-    notes: ''
+    region: '',
+    postalCode: '',
+    buildingNumber: '',
+    floor: '',
+    apartment: '',
+    landmark: ''
   });
   const [selectedShippingZone, setSelectedShippingZone] = useState<ShippingZone | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cod' | 'bank'>('cod');
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -130,38 +117,89 @@ const Checkout: React.FC = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [preferredDeliveryTime, setPreferredDeliveryTime] = useState('');
-  const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
-  const [deliveryFee, setDeliveryFee] = useState<number>(0);
-  const [estimatedDelivery, setEstimatedDelivery] = useState<string>('2-5 أيام عمل');
 
-  // Available coupons data
-  const availableCoupons = [
+  // Static data
+  const shippingZones: ShippingZone[] = [
     {
-      code: 'WELCOME10',
+      id: 'riyadh-express',
+      name: 'الرياض - توصيل سريع',
+      price: 25,
+      estimatedDays: 'خلال 24 ساعة',
+      regions: ['الرياض', 'riyadh'],
+      icon: '🚀',
+      color: 'from-blue-500 to-purple-500',
+      freeShippingThreshold: 300
+    },
+    {
+      id: 'riyadh-standard',
+      name: 'الرياض - توصيل عادي',
+      price: 15,
+      estimatedDays: '2-3 أيام',
+      regions: ['الرياض', 'riyadh'],
+      icon: '🚚',
+      color: 'from-green-500 to-blue-500',
+      freeShippingThreshold: 200
+    },
+    {
+      id: 'jeddah',
+      name: 'جدة ومكة المكرمة',
+      price: 30,
+      estimatedDays: '3-4 أيام',
+      regions: ['جدة', 'مكة', 'jeddah', 'mecca'],
+      icon: '🕌',
+      color: 'from-purple-500 to-pink-500',
+      freeShippingThreshold: 350
+    },
+    {
+      id: 'dammam',
+      name: 'الدمام والخبر',
+      price: 35,
+      estimatedDays: '4-5 أيام',
+      regions: ['الدمام', 'الخبر', 'dammam', 'khobar'],
+      icon: '🏢',
+      color: 'from-orange-500 to-red-500',
+      freeShippingThreshold: 400
+    },
+    {
+      id: 'other',
+      name: 'باقي المناطق',
+      price: 45,
+      estimatedDays: '5-7 أيام',
+      regions: ['other'],
+      icon: '📦',
+      color: 'from-gray-500 to-gray-600',
+      freeShippingThreshold: 500
+    }
+  ];
+
+  const availableCoupons: Coupon[] = [
+    {
+      code: 'WELCOME15',
       type: 'percentage',
-      value: 10,
+      value: 15,
       minAmount: 100,
       maxDiscount: 50,
-      isActive: true,
-      description: 'خصم 10% للعملاء الجدد'
+      description: 'خصم 15% للعملاء الجدد (حتى 50 ريال)',
+      validUntil: '2024-12-31',
+      isActive: true
+    },
+    {
+      code: 'SAVE100',
+      type: 'fixed',
+      value: 100,
+      minAmount: 500,
+      description: 'خصم 100 ريال عند الشراء بـ 500 ريال أو أكثر',
+      validUntil: '2024-12-31',
+      isActive: true
     },
     {
       code: 'FREESHIP',
       type: 'freeShipping',
       value: 0,
       minAmount: 200,
-      isActive: true,
-      description: 'شحن مجاني'
-    }
-  ];
-
-  // Static data
-  const paymentMethods: PaymentMethod[] = [
-    {
-      id: 'cod',
-      name: 'الدفع عند الاستلام',
-      icon: '💵',
-      description: 'ادفع نقداً عند وصول طلبك إليك'
+      description: 'شحن مجاني للطلبات أكثر من 200 ريال',
+      validUntil: '2024-12-31',
+      isActive: true
     }
   ];
 
@@ -259,47 +297,6 @@ const Checkout: React.FC = () => {
     window.addEventListener('cartUpdated', handleCartUpdate);
     window.addEventListener('storage', handleStorageChange);
 
-    // Load shipping zones
-    const mockShippingZones: ShippingZone[] = [
-      {
-        id: '1',
-        name: 'الرياض',
-        shippingCost: 15,
-        estimatedDays: '1-2 أيام عمل',
-        isActive: true,
-        priority: 1,
-        icon: '🏢'
-      },
-      {
-        id: '2',
-        name: 'جدة',
-        shippingCost: 20,
-        estimatedDays: '2-3 أيام عمل',
-        isActive: true,
-        priority: 2,
-        icon: '🌊'
-      },
-      {
-        id: '3',
-        name: 'الدمام',
-        shippingCost: 25,
-        estimatedDays: '2-4 أيام عمل',
-        isActive: true,
-        priority: 3,
-        icon: '⚡'
-      },
-      {
-        id: '4',
-        name: 'باقي المدن',
-        shippingCost: 30,
-        estimatedDays: '3-5 أيام عمل',
-        isActive: true,
-        priority: 4,
-        icon: '🚚'
-      }
-    ];
-    setShippingZones(mockShippingZones);
-
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
       window.removeEventListener('storage', handleStorageChange);
@@ -308,18 +305,18 @@ const Checkout: React.FC = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const currentShippingCost = selectedShippingZone ? selectedShippingZone.shippingCost : 0;
+  const shippingCost = selectedShippingZone ? selectedShippingZone.price : 0;
   const couponDiscount = appliedCoupon ? (
     appliedCoupon.type === 'percentage' 
       ? Math.min(subtotal * (appliedCoupon.value / 100), appliedCoupon.maxDiscount || Infinity)
       : appliedCoupon.value
   ) : 0;
   const freeShipping = appliedCoupon?.type === 'freeShipping' || 
-    (selectedShippingZone && subtotal >= selectedShippingZone.shippingCost);
-  const finalShippingCost = freeShipping ? 0 : currentShippingCost;
+    (selectedShippingZone && subtotal >= selectedShippingZone.freeShippingThreshold!);
+  const finalShippingCost = freeShipping ? 0 : shippingCost;
   const total = subtotal - couponDiscount + finalShippingCost;
 
-  const updateQuantity = (itemId: number, size: string | undefined, newQuantity: number) => {
+  const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
     if (newQuantity < 1) return;
     
     setCartItems(prevItems => {
@@ -337,7 +334,7 @@ const Checkout: React.FC = () => {
     });
   };
 
-  const removeItem = (itemId: number, size: string | undefined) => {
+  const removeItem = (itemId: string, size: string | undefined) => {
     setCartItems(prevItems => {
       const updatedItems = prevItems.filter(item => 
         !(item.id === itemId && item.size === size)
@@ -356,10 +353,11 @@ const Checkout: React.FC = () => {
     const newErrors: Record<string, string> = {};
     
     if (step === 2) {
-      if (!customerInfo.name.trim()) newErrors.name = 'الاسم مطلوب';
-      if (!customerInfo.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-      if (!customerInfo.address.trim()) newErrors.address = 'العنوان مطلوب';
-      if (!customerInfo.city.trim()) newErrors.city = 'المدينة مطلوبة';
+      if (!userData.name.trim()) newErrors.name = 'الاسم مطلوب';
+      if (!userData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
+      if (!userData.address.trim()) newErrors.address = 'العنوان مطلوب';
+      if (!userData.city.trim()) newErrors.city = 'المدينة مطلوبة';
+      if (!selectedShippingZone) newErrors.shipping = 'يرجى اختيار منطقة الشحن';
     }
     
     if (step === 4) {
@@ -423,7 +421,7 @@ const Checkout: React.FC = () => {
     try {
       const orderData = {
         items: cartItems,
-        userData: customerInfo,
+        userData,
         shippingZone: selectedShippingZone,
         paymentMethod: selectedPaymentMethod,
         appliedCoupon,
@@ -680,8 +678,8 @@ const Checkout: React.FC = () => {
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">الاسم الكامل *</label>
                       <input
                         type="text"
-                        value={customerInfo.name}
-                        onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                        value={userData.name}
+                        onChange={(e) => setUserData({...userData, name: e.target.value})}
                         className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
                         placeholder="أدخل اسمك الكامل"
                       />
@@ -692,8 +690,8 @@ const Checkout: React.FC = () => {
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">رقم الهاتف *</label>
                       <input
                         type="tel"
-                        value={customerInfo.phone}
-                        onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                        value={userData.phone}
+                        onChange={(e) => setUserData({...userData, phone: e.target.value})}
                         className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
                         placeholder="05xxxxxxxx"
                       />
@@ -704,8 +702,8 @@ const Checkout: React.FC = () => {
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">البريد الإلكتروني</label>
                       <input
                         type="email"
-                        value={customerInfo.email}
-                        onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                        value={userData.email}
+                        onChange={(e) => setUserData({...userData, email: e.target.value})}
                         className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
                         placeholder="example@email.com"
                       />
@@ -713,21 +711,28 @@ const Checkout: React.FC = () => {
 
                     <div className="group">
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">المدينة *</label>
-                      <input
-                        type="text"
-                        value={customerInfo.city}
-                        onChange={(e) => setCustomerInfo({...customerInfo, city: e.target.value})}
+                      <select
+                        value={userData.city}
+                        onChange={(e) => setUserData({...userData, city: e.target.value})}
                         className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
-                        placeholder="اسم المدينة"
-                      />
+                      >
+                        <option value="">اختر المدينة</option>
+                        <option value="الرياض">الرياض</option>
+                        <option value="جدة">جدة</option>
+                        <option value="مكة">مكة المكرمة</option>
+                        <option value="الدمام">الدمام</option>
+                        <option value="الخبر">الخبر</option>
+                        <option value="المدينة">المدينة المنورة</option>
+                        <option value="أخرى">أخرى</option>
+                      </select>
                       {errors.city && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.city}</p>}
                     </div>
 
                     <div className="md:col-span-2 group">
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">العنوان التفصيلي *</label>
                       <textarea
-                        value={customerInfo.address}
-                        onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
+                        value={userData.address}
+                        onChange={(e) => setUserData({...userData, address: e.target.value})}
                         rows={3}
                         className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 resize-none hover:shadow-lg"
                         placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
@@ -762,10 +767,10 @@ const Checkout: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{zone.shippingCost} ريال</p>
-                              {zone.shippingCost === 0 && (
+                              <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{zone.price} ريال</p>
+                              {zone.freeShippingThreshold && (
                                 <p className="text-xs text-gray-500 mt-1">
-                                  شحن مجاني
+                                  شحن مجاني عند {zone.freeShippingThreshold} ريال
                                 </p>
                               )}
                             </div>
@@ -785,32 +790,53 @@ const Checkout: React.FC = () => {
                   <div className="mt-12">
                     <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-8">طريقة الدفع</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {paymentMethods.map((method) => (
-                        <div
-                          key={method.id}
-                          className={`p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
-                            selectedPaymentMethod === method.id
-                              ? 'border-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-2xl scale-105'
-                              : 'border-gray-200/50 bg-white/70 hover:border-emerald-300 hover:shadow-xl'
-                          }`}
-                          onClick={() => setSelectedPaymentMethod(method.id)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                              <span className="text-2xl">{method.icon}</span>
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-gray-800 text-lg">{method.name}</h4>
-                              <p className="text-sm text-gray-600">{method.description}</p>
-                            </div>
+                      <div
+                        className={`p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
+                          selectedPaymentMethod === 'cod'
+                            ? 'border-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-2xl scale-105'
+                            : 'border-gray-200/50 bg-white/70 hover:border-emerald-300 hover:shadow-xl'
+                        }`}
+                        onClick={() => setSelectedPaymentMethod('cod')}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <Truck className="text-white" size={28} />
                           </div>
-                          {selectedPaymentMethod === method.id && (
-                            <div className="absolute top-4 left-4 animate-bounce">
-                              <CheckCircle className="text-emerald-500" size={24} />
-                            </div>
-                          )}
+                          <div>
+                            <h4 className="font-bold text-gray-800 text-lg">الدفع عند الاستلام</h4>
+                            <p className="text-sm text-gray-600">ادفع نقداً عند وصول الطلب</p>
+                          </div>
                         </div>
-                      ))}
+                        {selectedPaymentMethod === 'cod' && (
+                          <div className="absolute top-4 left-4 animate-bounce">
+                            <CheckCircle className="text-emerald-500" size={24} />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div
+                        className={`p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
+                          selectedPaymentMethod === 'bank'
+                            ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-2xl scale-105'
+                            : 'border-gray-200/50 bg-white/70 hover:border-blue-300 hover:shadow-xl'
+                        }`}
+                        onClick={() => setSelectedPaymentMethod('bank')}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <CreditCard className="text-white" size={28} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-800 text-lg">تحويل بنكي</h4>
+                            <p className="text-sm text-gray-600">تحويل إلى الحساب البنكي</p>
+                          </div>
+                        </div>
+                        {selectedPaymentMethod === 'bank' && (
+                          <div className="absolute top-4 left-4 animate-bounce">
+                            <CheckCircle className="text-blue-500" size={24} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

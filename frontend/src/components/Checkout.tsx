@@ -276,17 +276,23 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
-    // Simple cart loading - don't override existing cart data
+    // Simple cart loading with better error handling
     try {
       const savedCartItems = localStorage.getItem('cartItems');
+      console.log('🔍 [Checkout] Raw cartItems from localStorage:', savedCartItems);
+      
       if (savedCartItems && savedCartItems !== 'null' && savedCartItems !== 'undefined') {
         const parsed = JSON.parse(savedCartItems);
+        console.log('📦 [Checkout] Parsed cart data:', parsed);
+        
         if (Array.isArray(parsed) && parsed.length > 0) {
           console.log('✅ [Checkout] Found cart items:', parsed.length, 'items');
           
           // Convert to checkout format WITHOUT overwriting localStorage
           const convertedCart = parsed.map((item: any, index: number) => {
-            // Extract ID
+            console.log(`🔄 [Checkout] Converting item ${index}:`, item);
+            
+            // Extract ID - handle both formats
             let id: string;
             if (item.id) {
               id = item.id.toString();
@@ -296,7 +302,7 @@ const Checkout: React.FC = () => {
               id = `item-${index}-${Date.now()}`;
             }
             
-            // Extract name
+            // Extract name - handle nested product structure
             let name: string;
             if (item.name) {
               name = item.name;
@@ -306,7 +312,7 @@ const Checkout: React.FC = () => {
               name = `منتج ${index + 1}`;
             }
             
-            // Extract price with options
+            // Extract price - handle product structure and options
             let basePrice = 0;
             if (item.price) {
               basePrice = parseFloat(item.price);
@@ -314,6 +320,7 @@ const Checkout: React.FC = () => {
               basePrice = parseFloat(item.product.price);
             }
             
+            // Add options pricing if exists
             let optionsPrice = 0;
             if (item.optionsPricing && typeof item.optionsPricing === 'object') {
               optionsPrice = Object.values(item.optionsPricing)
@@ -323,7 +330,7 @@ const Checkout: React.FC = () => {
             const finalPrice = basePrice + optionsPrice;
             const quantity = parseInt(item.quantity) || 1;
             
-            // Extract size
+            // Extract size from multiple possible locations
             let size = '';
             if (item.size) {
               size = item.size;
@@ -345,7 +352,7 @@ const Checkout: React.FC = () => {
               image = item.product.mainImage;
             }
             
-            return {
+            const convertedItem = {
               id,
               name,
               price: Math.max(0, finalPrice),
@@ -356,16 +363,19 @@ const Checkout: React.FC = () => {
               category: item.category || item.product?.category?.name || '',
               discount: parseInt(item.discount || 0)
             };
+            
+            console.log(`✅ [Checkout] Converted item ${index}:`, convertedItem);
+            return convertedItem;
           });
           
-          console.log('🎉 [Checkout] Cart converted successfully:', convertedCart.length, 'items');
+          console.log('🎉 [Checkout] All items converted successfully:', convertedCart);
           setCartItems(convertedCart);
         } else {
-          console.log('📭 [Checkout] Cart is empty');
+          console.log('📭 [Checkout] Cart exists but is empty array');
           setCartItems([]);
         }
       } else {
-        console.log('📭 [Checkout] No cart found');
+        console.log('📭 [Checkout] No cart found in localStorage');
         setCartItems([]);
       }
     } catch (error) {
@@ -427,8 +437,32 @@ const Checkout: React.FC = () => {
     const handleCartUpdate = (event: any) => {
       console.log('🔄 [Checkout] Cart update event received:', event.detail);
       if (event.detail && event.detail.items) {
-        setCartItems(event.detail.items);
-        console.log('✅ [Checkout] Cart updated with', event.detail.items.length, 'items');
+        console.log('📦 [Checkout] Updating cart from event:', event.detail.items.length, 'items');
+        
+        // Convert the received items to checkout format
+        const convertedItems = event.detail.items.map((item: any, index: number) => {
+          const id = item.id?.toString() || item.productId?.toString() || `item-${index}`;
+          const name = item.name || item.product?.name || `منتج ${index + 1}`;
+          const basePrice = parseFloat(item.price || item.product?.price || 0);
+          const optionsPrice = item.optionsPricing ? 
+            Object.values(item.optionsPricing).reduce((sum: number, p: any) => sum + (parseFloat(p) || 0), 0) : 0;
+          const finalPrice = basePrice + optionsPrice;
+          
+          return {
+            id,
+            name,
+            price: Math.max(0, finalPrice),
+            originalPrice: Math.max(0, finalPrice),
+            quantity: parseInt(item.quantity) || 1,
+            image: item.image || item.product?.mainImage || '',
+            size: item.size || item.selectedOptions?.size || item.selectedOptions?.الحجم || '',
+            category: item.category || item.product?.category?.name || '',
+            discount: parseInt(item.discount || 0)
+          };
+        });
+        
+        setCartItems(convertedItems);
+        console.log('✅ [Checkout] Cart updated from event with', convertedItems.length, 'items');
       }
     };
 
@@ -438,8 +472,32 @@ const Checkout: React.FC = () => {
         try {
           const newCart = event.newValue ? JSON.parse(event.newValue) : [];
           if (Array.isArray(newCart)) {
-            setCartItems(newCart);
-            console.log('🔄 [Checkout] Cart updated from storage with', newCart.length, 'items');
+            console.log('🔄 [Checkout] Reloading cart from storage:', newCart.length, 'items');
+            
+            // Convert and set the new cart
+            const convertedItems = newCart.map((item: any, index: number) => {
+              const id = item.id?.toString() || item.productId?.toString() || `item-${index}`;
+              const name = item.name || item.product?.name || `منتج ${index + 1}`;
+              const basePrice = parseFloat(item.price || item.product?.price || 0);
+              const optionsPrice = item.optionsPricing ? 
+                Object.values(item.optionsPricing).reduce((sum: number, p: any) => sum + (parseFloat(p) || 0), 0) : 0;
+              const finalPrice = basePrice + optionsPrice;
+              
+              return {
+                id,
+                name,
+                price: Math.max(0, finalPrice),
+                originalPrice: Math.max(0, finalPrice),
+                quantity: parseInt(item.quantity) || 1,
+                image: item.image || item.product?.mainImage || '',
+                size: item.size || item.selectedOptions?.size || item.selectedOptions?.الحجم || '',
+                category: item.category || item.product?.category?.name || '',
+                discount: parseInt(item.discount || 0)
+              };
+            });
+            
+            setCartItems(convertedItems);
+            console.log('✅ [Checkout] Cart updated from storage with', convertedItems.length, 'items');
           }
         } catch (error) {
           console.error('❌ [Checkout] Error parsing cart from storage:', error);

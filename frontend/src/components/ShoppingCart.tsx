@@ -217,28 +217,33 @@ const ShoppingCart: React.FC = () => {
     // حفظ في localStorage باستخدام 'cartItems' للتوافق مع Checkout
     localStorage.setItem('cartItems', JSON.stringify(items));
     
+    // Force immediate verification
+    const immediateCheck = localStorage.getItem('cartItems');
+    if (immediateCheck) {
+      try {
+        const parsed = JSON.parse(immediateCheck);
+        console.log('✅ [ShoppingCart] IMMEDIATE VERIFICATION SUCCESS:', {
+          saved: parsed.length,
+          original: items.length,
+          match: parsed.length === items.length
+        });
+      } catch (error) {
+        console.error('❌ [ShoppingCart] IMMEDIATE VERIFICATION FAILED:', error);
+      }
+    }
+    
     // إرسال حدث لتحديث عداد السلة في Navbar
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const cartCountEvent = new CustomEvent('cartCountChanged', { detail: totalItems });
     window.dispatchEvent(cartCountEvent);
     
-    // تحقق فوري من البيانات المحفوظة
-    const savedData = localStorage.getItem('cartItems');
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        console.log('✅ [ShoppingCart] LOCALSTORAGE VERIFICATION:', {
-          parsedItemsCount: parsedData.length,
-          sampleItem: parsedData[0] ? {
-            id: parsedData[0].id,
-            selectedOptions: parsedData[0].selectedOptions,
-            hasOptions: !!(parsedData[0].selectedOptions && Object.keys(parsedData[0].selectedOptions).length > 0)
-          } : null
-        });
-      } catch (error) {
-        console.error('❌ [ShoppingCart] Error parsing saved localStorage data:', error);
-      }
-    }
+    // إرسال حدث عام لتحديث السلة
+    const cartUpdateEvent = new CustomEvent('cartUpdated', { 
+      detail: { items: items, source: 'ShoppingCart' } 
+    });
+    window.dispatchEvent(cartUpdateEvent);
+    
+    console.log('📡 [ShoppingCart] Events dispatched for cart update');
   }, []);
 
   // تحديث الكمية

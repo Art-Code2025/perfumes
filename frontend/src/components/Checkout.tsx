@@ -276,144 +276,81 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
-    // Immediate logging for debugging
-    const debugCart = () => {
-      const cartData = localStorage.getItem('cartItems');
-      console.log('🔍 [Checkout] Debug - Raw localStorage cartItems:', cartData);
-      console.log('🔍 [Checkout] Debug - localStorage keys:', Object.keys(localStorage));
-      
-      // Try to parse what we have
-      if (cartData) {
-        try {
-          const parsed = JSON.parse(cartData);
-          console.log('🔍 [Checkout] Debug - Parsed cart data:', parsed);
-          console.log('🔍 [Checkout] Debug - Is array?', Array.isArray(parsed));
-          console.log('🔍 [Checkout] Debug - Length:', parsed?.length);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log('🔍 [Checkout] Debug - First item structure:', parsed[0]);
-          }
-        } catch (error) {
-          console.error('🔍 [Checkout] Debug - Parse error:', error);
-        }
-      }
-    };
-    
-    debugCart();
-    
     // Small delay to ensure localStorage is available
     setTimeout(() => {
       try {
-        // Load cart items with multiple attempts
-        const loadCartWithRetry = () => {
-          for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-              const savedCart = localStorage.getItem('cartItems');
-              console.log(`🔄 [Checkout] Attempt ${attempt + 1} - Saved cart:`, savedCart);
-              
-              if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
-                const parsedCart = JSON.parse(savedCart);
-                console.log(`✅ [Checkout] Attempt ${attempt + 1} - Parsed cart:`, parsedCart);
+        // Load cart items
+        const savedCart = localStorage.getItem('cartItems');
+        console.log('📦 [Checkout] Raw cart data:', savedCart);
+        
+        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
+          try {
+            const parsedCart = JSON.parse(savedCart);
+            console.log('✅ [Checkout] Parsed cart:', parsedCart);
+            
+            if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+              // تحويل بسيط وفعال من تنسيق ShoppingCart إلى تنسيق Checkout
+              const convertedCart = parsedCart.map((item: any, index: number) => {
+                console.log(`🔄 [Checkout] Converting item ${index}:`, item);
                 
-                if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-                  // Convert any cart format to Checkout format - SIMPLIFIED
-                  const convertedCart = parsedCart.map((item: any, index: number) => {
-                    console.log(`🔄 [Checkout] Converting item ${index}:`, item);
-                    
-                    try {
-                      // Handle different cart formats
-                      let convertedItem: CartItem;
-                      
-                      if (item.product) {
-                        // ShoppingCart format - Enhanced conversion
-                        const basePrice = parseFloat(item.product.price) || 0;
-                        const optionsPrice = item.optionsPricing ? 
-                          Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0) : 0;
-                        const totalPrice = basePrice + optionsPrice;
-                        
-                        // Get size from selectedOptions with fallback
-                        const getSize = () => {
-                          if (item.selectedOptions) {
-                            return item.selectedOptions.size || 
-                                   item.selectedOptions.الحجم || 
-                                   item.selectedOptions.المقاس || 
-                                   item.selectedOptions.Size || '';
-                          }
-                          return '';
-                        };
-                        
-                        convertedItem = {
-                          id: (item.id || item.productId || `item-${index}`).toString(),
-                          name: item.product.name || 'منتج غير معروف',
-                          price: totalPrice,
-                          originalPrice: parseFloat(item.product.originalPrice) || totalPrice,
-                          quantity: parseInt(item.quantity) || 1,
-                          image: item.product.mainImage || '',
-                          size: getSize(),
-                          category: item.product.productType || item.product.category?.name || '',
-                          discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
-                            Math.round(((parseFloat(item.product.originalPrice) - totalPrice) / parseFloat(item.product.originalPrice)) * 100) : 0
-                        };
-                      } else {
-                        // Simple format or already converted
-                        convertedItem = {
-                          id: (item.id || `item-${index}`).toString(),
-                          name: item.name || item.productName || 'منتج غير معروف',
-                          price: parseFloat(item.price) || 0,
-                          originalPrice: parseFloat(item.originalPrice || item.price) || 0,
-                          quantity: parseInt(item.quantity) || 1,
-                          image: item.image || '',
-                          size: item.size || '',
-                          category: item.category || '',
-                          discount: parseInt(item.discount) || 0
-                        };
-                      }
-                      
-                      console.log(`✅ [Checkout] Converted item ${index}:`, convertedItem);
-                      return convertedItem;
-                    } catch (itemError) {
-                      console.error(`❌ [Checkout] Error converting item ${index}:`, itemError);
-                      // Return a minimal valid item
-                      return {
-                        id: `item-${index}`,
-                        name: 'منتج غير معروف',
-                        price: 0,
-                        originalPrice: 0,
-                        quantity: 1,
-                        image: '',
-                        size: '',
-                        category: '',
-                        discount: 0
-                      };
-                    }
-                  });
+                // تحديد إذا كان هذا المنتج من تنسيق ShoppingCart (له product object)
+                if (item.product) {
+                  // تنسيق ShoppingCart - تحويل للتنسيق المطلوب
+                  const basePrice = parseFloat(item.product.price) || 0;
+                  const optionsPrice = item.optionsPricing ? 
+                    Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0) : 0;
+                  const totalPrice = basePrice + optionsPrice;
                   
-                  console.log(`🎯 [Checkout] Final converted cart:`, convertedCart);
-                  setCartItems(convertedCart);
-                  console.log(`🎯 [Checkout] Cart converted and loaded successfully with ${convertedCart.length} items`);
-                  return true; // Success
+                  // استخراج المقاس من selectedOptions
+                  let size = '';
+                  if (item.selectedOptions) {
+                    size = item.selectedOptions.size || 
+                           item.selectedOptions.الحجم || 
+                           item.selectedOptions.المقاس || 
+                           item.selectedOptions.Size || '';
+                  }
+                  
+                  return {
+                    id: (item.id || item.productId || `item-${index}`).toString(),
+                    name: item.product.name || 'منتج غير معروف',
+                    price: totalPrice,
+                    originalPrice: parseFloat(item.product.originalPrice) || totalPrice,
+                    quantity: parseInt(item.quantity) || 1,
+                    image: item.product.mainImage || '',
+                    size: size,
+                    category: item.product.productType || item.product.category?.name || '',
+                    discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
+                      Math.round(((parseFloat(item.product.originalPrice) - totalPrice) / parseFloat(item.product.originalPrice)) * 100) : 0
+                  };
                 } else {
-                  console.log(`⚠️ [Checkout] Attempt ${attempt + 1} - Cart is empty or invalid array`);
+                  // تنسيق بسيط أو محول بالفعل
+                  return {
+                    id: (item.id || `item-${index}`).toString(),
+                    name: item.name || item.productName || 'منتج غير معروف',
+                    price: parseFloat(item.price) || 0,
+                    originalPrice: parseFloat(item.originalPrice || item.price) || 0,
+                    quantity: parseInt(item.quantity) || 1,
+                    image: item.image || '',
+                    size: item.size || '',
+                    category: item.category || '',
+                    discount: parseInt(item.discount) || 0
+                  };
                 }
-              } else {
-                console.log(`ℹ️ [Checkout] Attempt ${attempt + 1} - No cart found in localStorage`);
-              }
-            } catch (parseError) {
-              console.error(`❌ [Checkout] Attempt ${attempt + 1} - Error parsing cart:`, parseError);
+              });
               
-              // Try to recover by clearing corrupted data
-              if (attempt === 2) { // Last attempt
-                console.log('🔧 [Checkout] Attempting to recover by clearing corrupted cart data');
-                localStorage.removeItem('cartItems');
-              }
+              console.log('🎯 [Checkout] Final converted cart:', convertedCart);
+              setCartItems(convertedCart);
+              console.log(`✅ [Checkout] Cart loaded successfully with ${convertedCart.length} items`);
+            } else {
+              console.log('⚠️ [Checkout] Cart is empty or invalid');
+              setCartItems([]);
             }
+          } catch (parseError) {
+            console.error('❌ [Checkout] Error parsing cart:', parseError);
+            setCartItems([]);
           }
-          return false; // All attempts failed
-        };
-        
-        const cartLoaded = loadCartWithRetry();
-        
-        if (!cartLoaded) {
-          console.log('⚠️ [Checkout] Failed to load cart after all attempts');
+        } else {
+          console.log('ℹ️ [Checkout] No cart found in localStorage');
           setCartItems([]);
         }
 
@@ -449,7 +386,7 @@ const Checkout: React.FC = () => {
         setIsLoadingCart(false);
         console.log('🏁 [Checkout] Loading completed');
       }
-    }, 500); // Increased timeout to 500ms for better reliability
+    }, 100); // تقليل الوقت إلى 100ms
   }, []);
 
   // Auto-select shipping zone based on city
@@ -880,15 +817,19 @@ const Checkout: React.FC = () => {
   if (!isLoadingCart && cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20 transform hover:scale-105 transition-all duration-500">
-          <div className="text-8xl mb-6 animate-bounce">🛒</div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            السلة فارغة
-          </h2>
-          <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-            يبدو أن سلة التسوق فارغة.<br/>
-            اكتشف مجموعتنا الرائعة من العطور!
-          </p>
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-2xl w-full border border-white/20">
+          <div className="mb-8">
+            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <ShoppingCart className="w-16 h-16 text-gray-400" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">
+              السلة فارغة
+            </h2>
+            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+              لا توجد منتجات في سلة التسوق حالياً. يرجى إضافة بعض المنتجات أولاً لإتمام الطلب.
+            </p>
+          </div>
+          
           <div className="space-y-4">
             <button
               onClick={() => navigate('/')}
@@ -904,25 +845,25 @@ const Checkout: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                // Try to reload cart from localStorage one more time
-                const savedCart = localStorage.getItem('cartItems');
-                console.log('🔄 [Checkout] Retry loading cart:', savedCart);
-                if (savedCart) {
-                  try {
-                    const parsedCart = JSON.parse(savedCart);
-                    if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-                      setCartItems(parsedCart);
-                      toast.success('تم تحديث السلة بنجاح!');
-                    }
-                  } catch (error) {
-                    console.error('❌ [Checkout] Retry parse error:', error);
-                  }
-                }
+                // إعادة تحميل الصفحة لمحاولة استرداد الكارت
+                console.log('🔄 [Checkout] Manual reload attempt');
+                window.location.reload();
               }}
               className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-orange-700 hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
             >
-              🔄 إعادة تحميل السلة
+              🔄 إعادة تحميل الصفحة
             </button>
+          </div>
+          
+          {/* Debug info for development */}
+          <div className="mt-8 p-4 bg-gray-100 rounded-xl text-left">
+            <p className="text-xs text-gray-600 mb-2">معلومات تشخيصية:</p>
+            <p className="text-xs text-gray-500">
+              localStorage cartItems: {localStorage.getItem('cartItems') ? 'موجود' : 'غير موجود'}
+            </p>
+            <p className="text-xs text-gray-500">
+              User: {localStorage.getItem('user') ? 'مسجل الدخول' : 'ضيف'}
+            </p>
           </div>
         </div>
       </div>

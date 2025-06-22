@@ -9,8 +9,7 @@ import {
   CheckCircle, 
   Gift, 
   Truck, 
-  Clock, 
-  Star,
+  Clock,
   Plus,
   Minus,
   X,
@@ -18,7 +17,6 @@ import {
   ArrowLeft,
   Package,
   Shield,
-  Heart,
   Zap
 } from 'lucide-react';
 
@@ -29,7 +27,6 @@ interface CartItem {
   quantity: number;
   image?: string;
   size?: string;
-  category?: string;
 }
 
 interface UserData {
@@ -38,8 +35,6 @@ interface UserData {
   phone: string;
   address: string;
   city: string;
-  region: string;
-  postalCode: string;
 }
 
 interface ShippingZone {
@@ -48,14 +43,6 @@ interface ShippingZone {
   price: number;
   estimatedDays: string;
   regions: string[];
-}
-
-interface Coupon {
-  code: string;
-  type: 'percentage' | 'fixed';
-  value: number;
-  minAmount: number;
-  description: string;
 }
 
 const Checkout: React.FC = () => {
@@ -67,13 +54,11 @@ const Checkout: React.FC = () => {
     email: '',
     phone: '',
     address: '',
-    city: '',
-    region: '',
-    postalCode: ''
+    city: ''
   });
   const [selectedShippingZone, setSelectedShippingZone] = useState<ShippingZone | null>(null);
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [discount, setDiscount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -115,35 +100,15 @@ const Checkout: React.FC = () => {
     }
   ];
 
-  const availableCoupons: Coupon[] = [
-    {
-      code: 'WELCOME10',
-      type: 'percentage',
-      value: 10,
-      minAmount: 100,
-      description: 'خصم 10% للعملاء الجدد'
-    },
-    {
-      code: 'SAVE50',
-      type: 'fixed',
-      value: 50,
-      minAmount: 200,
-      description: 'خصم 50 ريال عند الشراء بـ 200 ريال أو أكثر'
-    },
-    {
-      code: 'FREESHIP',
-      type: 'percentage',
-      value: 100,
-      minAmount: 150,
-      description: 'شحن مجاني عند الشراء بـ 150 ريال أو أكثر'
-    }
-  ];
-
   useEffect(() => {
     const savedCart = localStorage.getItem('cartItems');
+    console.log('Saved cart:', savedCart);
+    
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        console.log('Parsed cart:', parsedCart);
+        setCartItems(parsedCart);
       } catch (error) {
         console.error('Error parsing cart:', error);
         setCartItems([]);
@@ -159,9 +124,7 @@ const Checkout: React.FC = () => {
           email: user.email || '',
           phone: user.phone || '',
           address: user.address || '',
-          city: user.city || '',
-          region: user.region || '',
-          postalCode: user.postalCode || ''
+          city: user.city || ''
         });
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -171,11 +134,7 @@ const Checkout: React.FC = () => {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingCost = selectedShippingZone?.price || 0;
-  const couponDiscount = appliedCoupon ? 
-    (appliedCoupon.type === 'percentage' ? 
-      (subtotal * appliedCoupon.value / 100) : 
-      appliedCoupon.value) : 0;
-  const total = Math.max(0, subtotal + shippingCost - couponDiscount);
+  const total = Math.max(0, subtotal + shippingCost - discount);
 
   const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -230,28 +189,17 @@ const Checkout: React.FC = () => {
   };
 
   const applyCoupon = () => {
-    const coupon = availableCoupons.find(c => 
-      c.code.toLowerCase() === couponCode.toLowerCase()
-    );
+    if (!couponCode.trim()) {
+      toast.error('يرجى إدخال كود الخصم');
+      return;
+    }
 
-    if (!coupon) {
+    if (couponCode.toLowerCase() === 'welcome10') {
+      setDiscount(subtotal * 0.1);
+      toast.success('تم تطبيق كود الخصم بنجاح!');
+    } else {
       toast.error('كود الخصم غير صحيح');
-      return;
     }
-
-    if (subtotal < coupon.minAmount) {
-      toast.error(`الحد الأدنى للطلب ${coupon.minAmount} ريال`);
-      return;
-    }
-
-    setAppliedCoupon(coupon);
-    toast.success('تم تطبيق كود الخصم بنجاح!');
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode('');
-    toast.info('تم إلغاء كود الخصم');
   };
 
   const handleSubmit = async () => {
@@ -269,9 +217,8 @@ const Checkout: React.FC = () => {
         shippingZone: selectedShippingZone,
         subtotal,
         shippingCost,
-        couponDiscount,
+        discount,
         total,
-        appliedCoupon,
         timestamp: new Date().toISOString()
       };
 
@@ -305,13 +252,14 @@ const Checkout: React.FC = () => {
     }
   };
 
+  // Show empty cart message if no items
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
         <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20">
           <div className="text-8xl mb-6 animate-bounce">🛒</div>
           <h2 className="text-3xl font-bold text-gray-800 mb-4">السلة فارغة</h2>
-          <p className="text-gray-600 mb-8 text-lg">لا توجد منتجات في سلة التسوق</p>
+          <p className="text-gray-600 mb-8 text-lg">يرجى إضافة منتجات إلى السلة أولاً</p>
           <button
             onClick={() => navigate('/')}
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
@@ -405,60 +353,21 @@ const Checkout: React.FC = () => {
                 كود الخصم
               </h3>
               
-              {!appliedCoupon ? (
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="أدخل كود الخصم"
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
-                  />
-                  <button
-                    onClick={applyCoupon}
-                    disabled={!couponCode.trim()}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg"
-                  >
-                    تطبيق
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-green-100 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-green-800">
-                      كود الخصم: {appliedCoupon.code}
-                    </p>
-                    <p className="text-sm text-green-600">
-                      {appliedCoupon.description}
-                    </p>
-                  </div>
-                  <button
-                    onClick={removeCoupon}
-                    className="text-red-500 hover:text-red-700 transition-colors p-2 hover:bg-red-50 rounded-full"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-              )}
-              
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                {availableCoupons.map((coupon) => (
-                  <div key={coupon.code} 
-                       className={`bg-white/70 backdrop-blur-sm rounded-xl p-3 border transition-all duration-300 cursor-pointer hover:shadow-md ${
-                         appliedCoupon?.code === coupon.code 
-                           ? 'border-green-500 bg-green-50' 
-                           : 'border-gray-200 hover:border-green-300'
-                       }`}
-                       onClick={() => {
-                         setCouponCode(coupon.code);
-                         if (subtotal >= coupon.minAmount) {
-                           setAppliedCoupon(coupon);
-                         }
-                       }}>
-                    <p className="font-semibold text-sm text-gray-800">{coupon.code}</p>
-                    <p className="text-xs text-gray-600 mt-1">{coupon.description}</p>
-                  </div>
-                ))}
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  placeholder="أدخل كود الخصم (WELCOME10)"
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/70 backdrop-blur-sm"
+                />
+                <button
+                  onClick={applyCoupon}
+                  disabled={!couponCode.trim()}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg"
+                >
+                  تطبيق
+                </button>
               </div>
             </div>
 
@@ -476,10 +385,10 @@ const Checkout: React.FC = () => {
                     {selectedShippingZone ? `${shippingCost} ريال` : 'يحدد لاحقاً'}
                   </span>
                 </div>
-                {appliedCoupon && (
+                {discount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>الخصم ({appliedCoupon.code}):</span>
-                    <span className="font-semibold">-{couponDiscount.toFixed(2)} ريال</span>
+                    <span>الخصم:</span>
+                    <span className="font-semibold">-{discount.toFixed(2)} ريال</span>
                   </div>
                 )}
                 <div className="border-t pt-3 flex justify-between text-xl font-bold text-gray-800">
@@ -679,10 +588,10 @@ const Checkout: React.FC = () => {
                   <span>الشحن ({selectedShippingZone?.name}):</span>
                   <span className="font-semibold">{shippingCost} ريال</span>
                 </div>
-                {appliedCoupon && (
+                {discount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>الخصم ({appliedCoupon.code}):</span>
-                    <span className="font-semibold">-{couponDiscount.toFixed(2)} ريال</span>
+                    <span>الخصم:</span>
+                    <span className="font-semibold">-{discount.toFixed(2)} ريال</span>
                   </div>
                 )}
                 <div className="border-t pt-3 flex justify-between text-2xl font-bold text-gray-800">
@@ -837,4 +746,4 @@ const Checkout: React.FC = () => {
   );
 };
 
-export default Checkout; // Updated Sun Jun 22 15:43:16 EEST 2025
+export default Checkout;

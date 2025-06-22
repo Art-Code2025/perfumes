@@ -676,265 +676,345 @@ const Checkout: React.FC = () => {
             <div className="order-1 xl:order-2">
               <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                 
-                {/* Step 1: Order Review */}
-                <div className="p-8">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                      <ShoppingCart className="text-white" size={28} />
-                    </div>
-                    <div>
-                      <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">مراجعة طلبك</h2>
-                      <p className="text-gray-600 text-lg">{cartItems.length} منتج في السلة</p>
-                    </div>
-                  </div>
-
-                  {/* Cart Items */}
-                  <div className="space-y-6">
-                    {cartItems.map((item, index) => (
-                      <div 
-                        key={`${item.id}-${item.size || 'default'}`}
-                        className="group relative bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                        style={{
-                          animation: `slideInUp 0.6s ease-out ${index * 0.1}s both`
-                        }}
-                      >
-                        <div className="flex items-center gap-6">
-                          {/* Product Image */}
-                          {item.image && (
-                            <div className="relative">
-                              <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-xl ring-4 ring-white/50">
-                                <img 
-                                  src={item.image} 
-                                  alt={item.name} 
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                                />
-                              </div>
-                              <div className="absolute -top-3 -right-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-bold shadow-xl animate-bounce">
-                                {item.quantity}
-                              </div>
-                              {item.discount && (
-                                <div className="absolute -top-3 -left-3 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full px-3 py-1 text-xs font-bold shadow-xl animate-pulse">
-                                  -{item.discount}%
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Product Details */}
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-800 text-2xl mb-3 group-hover:text-purple-600 transition-colors duration-300">
-                              {item.name}
-                            </h4>
-                            {item.size && (
-                              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 rounded-full text-sm text-purple-700 mb-4 font-medium">
-                                <Package size={16} />
-                                الحجم: {item.size}
-                              </div>
-                            )}
-                            
-                            {/* Quantity Controls */}
-                            <div className="flex items-center gap-4 mt-4">
-                              <div className="flex items-center gap-2 bg-gradient-to-r from-gray-50 to-white rounded-2xl p-2 border border-gray-200/50 shadow-lg">
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
-                                  className="w-12 h-12 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 shadow-lg hover:from-red-600 hover:to-pink-600 text-white transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95 disabled:opacity-50"
-                                  disabled={item.quantity <= 1}
-                                >
-                                  <Minus size={20} />
-                                </button>
-                                <span className="w-16 text-center font-bold text-xl text-gray-800">{item.quantity}</span>
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
-                                  className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg hover:from-green-600 hover:to-emerald-600 text-white transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95"
-                                >
-                                  <Plus size={20} />
-                                </button>
-                              </div>
-                              
-                              <button
-                                onClick={() => removeItem(item.id, item.size)}
-                                className="p-3 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 shadow-lg"
-                                title="حذف المنتج"
-                              >
-                                <Trash2 size={22} />
-                              </button>
-                            </div>
+                {/* Step Indicator */}
+                <div className="bg-gray-50 px-8 py-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between max-w-2xl mx-auto">
+                    {[
+                      { step: 1, title: 'مراجعة الطلب', icon: ShoppingCart },
+                      { step: 2, title: 'بيانات التوصيل', icon: User },
+                      { step: 3, title: 'طريقة الدفع', icon: CreditCard },
+                      { step: 4, title: 'تأكيد الطلب', icon: CheckCircle }
+                    ].map(({ step, title, icon: Icon }, index) => (
+                      <div key={step} className="flex items-center">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                            currentStep === step 
+                              ? 'bg-black border-black text-white' 
+                              : currentStep > step 
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'bg-white border-gray-300 text-gray-400'
+                          }`}>
+                            <Icon size={20} />
                           </div>
-                          
-                          {/* Price */}
-                          <div className="text-right">
-                            <div className="space-y-2">
-                              {item.originalPrice && item.originalPrice > item.price && (
-                                <p className="text-lg text-gray-400 line-through">
-                                  {(item.originalPrice * item.quantity).toFixed(2)} ريال
-                                </p>
-                              )}
-                              <p className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                                {(item.price * item.quantity).toFixed(2)} ريال
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {item.price.toFixed(2)} ريال × {item.quantity}
-                              </p>
-                            </div>
-                          </div>
+                          <span className={`text-sm mt-2 font-medium ${
+                            currentStep === step ? 'text-black' : 'text-gray-500'
+                          }`}>
+                            {title}
+                          </span>
                         </div>
+                        {index < 3 && (
+                          <div className={`w-16 h-0.5 mx-4 ${
+                            currentStep > step ? 'bg-green-500' : 'bg-gray-300'
+                          }`} />
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Customer Information Form */}
-                <div className="border-t border-gray-100 p-8 bg-gray-50">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                      <User className="text-white" size={28} />
+                {/* Step 1: Order Review */}
+                {currentStep === 1 && (
+                  <div className="p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
+                        <ShoppingCart className="text-white" size={28} />
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900">مراجعة طلبك</h2>
+                        <p className="text-gray-600 text-lg">{cartItems.length} منتج في السلة</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">بيانات التوصيل</h2>
-                      <p className="text-gray-600 text-lg">أدخل بياناتك لإتمام التوصيل</p>
+
+                    {/* Cart Items */}
+                    <div className="space-y-6">
+                      {cartItems.map((item, index) => (
+                        <div 
+                          key={`${item.id}-${item.size || 'default'}`}
+                          className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300"
+                        >
+                          <div className="flex items-center gap-6">
+                            {/* Product Image */}
+                            {item.image && (
+                              <div className="relative">
+                                <div className="w-24 h-24 rounded-xl overflow-hidden">
+                                  <img 
+                                    src={item.image} 
+                                    alt={item.name} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                                <div className="absolute -top-2 -right-2 bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                                  {item.quantity}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Product Details */}
+                            <div className="flex-1">
+                              <h4 className="font-bold text-gray-900 text-xl mb-2">
+                                {item.name}
+                              </h4>
+                              {item.size && (
+                                <div className="inline-flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-lg text-sm text-gray-700 mb-3">
+                                  <Package size={14} />
+                                  الحجم: {item.size}
+                                </div>
+                              )}
+                              
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1">
+                                  <button
+                                    onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
+                                    className="w-8 h-8 rounded-md bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
+                                    disabled={item.quantity <= 1}
+                                  >
+                                    <Minus size={16} />
+                                  </button>
+                                  <span className="w-12 text-center font-bold text-gray-900">{item.quantity}</span>
+                                  <button
+                                    onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                                    className="w-8 h-8 rounded-md bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
+                                  >
+                                    <Plus size={16} />
+                                  </button>
+                                </div>
+                                
+                                <button
+                                  onClick={() => removeItem(item.id, item.size)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="حذف المنتج"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* Price */}
+                            <div className="text-right">
+                              <div className="space-y-1">
+                                {item.originalPrice && item.originalPrice > item.price && (
+                                  <p className="text-sm text-gray-400 line-through">
+                                    {(item.originalPrice * item.quantity).toFixed(2)} ر.س
+                                  </p>
+                                )}
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {(item.price * item.quantity).toFixed(2)} ر.س
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {item.price.toFixed(2)} ر.س × {item.quantity}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="group">
-                      <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">الاسم الكامل *</label>
-                      <input
-                        type="text"
-                        value={userData.name}
-                        onChange={(e) => setUserData({...userData, name: e.target.value})}
-                        className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
-                        placeholder="أدخل اسمك الكامل"
-                      />
-                      {errors.name && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.name}</p>}
-                    </div>
+                )}
 
-                    <div className="group">
-                      <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">رقم الهاتف *</label>
-                      <input
-                        type="tel"
-                        value={userData.phone}
-                        onChange={(e) => setUserData({...userData, phone: e.target.value})}
-                        className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
-                        placeholder="05xxxxxxxx"
-                      />
-                      {errors.phone && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.phone}</p>}
+                {/* Step 2: Customer Information */}
+                {currentStep === 2 && (
+                  <div className="p-8 bg-gray-50">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
+                        <User className="text-white" size={28} />
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900">بيانات التوصيل</h2>
+                        <p className="text-gray-600 text-lg">أدخل بياناتك لإتمام التوصيل</p>
+                      </div>
                     </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-3">الاسم الكامل *</label>
+                        <input
+                          type="text"
+                          value={userData.name}
+                          onChange={(e) => setUserData({...userData, name: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          placeholder="أدخل اسمك الكامل"
+                        />
+                        {errors.name && <p className="text-red-500 text-sm mt-2">{errors.name}</p>}
+                      </div>
 
-                    <div className="group">
-                      <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">البريد الإلكتروني</label>
-                      <input
-                        type="email"
-                        value={userData.email}
-                        onChange={(e) => setUserData({...userData, email: e.target.value})}
-                        className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
-                        placeholder="example@email.com"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-3">رقم الهاتف *</label>
+                        <input
+                          type="tel"
+                          value={userData.phone}
+                          onChange={(e) => setUserData({...userData, phone: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          placeholder="05xxxxxxxx"
+                        />
+                        {errors.phone && <p className="text-red-500 text-sm mt-2">{errors.phone}</p>}
+                      </div>
 
-                    <div className="group">
-                      <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">المدينة *</label>
-                      <select
-                        value={userData.city}
-                        onChange={(e) => setUserData({...userData, city: e.target.value})}
-                        className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 hover:shadow-lg"
-                      >
-                        <option value="">اختر المدينة</option>
-                        <option value="الرياض">الرياض</option>
-                        <option value="جدة">جدة</option>
-                        <option value="مكة">مكة المكرمة</option>
-                        <option value="الدمام">الدمام</option>
-                        <option value="الخبر">الخبر</option>
-                        <option value="المدينة">المدينة المنورة</option>
-                        <option value="أخرى">أخرى</option>
-                      </select>
-                      {errors.city && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.city}</p>}
-                    </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-3">البريد الإلكتروني</label>
+                        <input
+                          type="email"
+                          value={userData.email}
+                          onChange={(e) => setUserData({...userData, email: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          placeholder="example@email.com"
+                        />
+                      </div>
 
-                    <div className="md:col-span-2 group">
-                      <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">العنوان التفصيلي *</label>
-                      <textarea
-                        value={userData.address}
-                        onChange={(e) => setUserData({...userData, address: e.target.value})}
-                        rows={3}
-                        className="w-full px-6 py-4 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm text-lg transition-all duration-300 resize-none hover:shadow-lg"
-                        placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
-                      />
-                      {errors.address && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.address}</p>}
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-3">المدينة *</label>
+                        <select
+                          value={userData.city}
+                          onChange={(e) => setUserData({...userData, city: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                        >
+                          <option value="">اختر المدينة</option>
+                          <option value="الرياض">الرياض</option>
+                          <option value="جدة">جدة</option>
+                          <option value="مكة">مكة المكرمة</option>
+                          <option value="الدمام">الدمام</option>
+                          <option value="الخبر">الخبر</option>
+                          <option value="المدينة">المدينة المنورة</option>
+                          <option value="أخرى">أخرى</option>
+                        </select>
+                        {errors.city && <p className="text-red-500 text-sm mt-2">{errors.city}</p>}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-700 mb-3">العنوان التفصيلي *</label>
+                        <textarea
+                          value={userData.address}
+                          onChange={(e) => setUserData({...userData, address: e.target.value})}
+                          rows={3}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all resize-none"
+                          placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
+                        />
+                        {errors.address && <p className="text-red-500 text-sm mt-2">{errors.address}</p>}
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Payment Method */}
-                  <div className="mt-12">
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-8">طريقة الدفع</h3>
+                {/* Step 3: Payment Method */}
+                {currentStep === 3 && (
+                  <div className="p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
+                        <CreditCard className="text-white" size={28} />
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900">طريقة الدفع</h2>
+                        <p className="text-gray-600 text-lg">اختر الطريقة المناسبة لك</p>
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div
-                        className={`p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
+                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${
                           selectedPaymentMethod === 'cod'
-                            ? 'border-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-2xl scale-105'
-                            : 'border-gray-200/50 bg-white/70 hover:border-emerald-300 hover:shadow-xl'
+                            ? 'border-black bg-gray-50'
+                            : 'border-gray-300 hover:border-gray-400'
                         }`}
                         onClick={() => setSelectedPaymentMethod('cod')}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                            <Truck className="text-white" size={28} />
+                          <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                            <Truck className="text-white" size={24} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-800 text-lg">الدفع عند الاستلام</h4>
+                            <h4 className="font-bold text-gray-900 text-lg">الدفع عند الاستلام</h4>
                             <p className="text-sm text-gray-600">ادفع نقداً عند وصول الطلب</p>
                           </div>
                         </div>
                         {selectedPaymentMethod === 'cod' && (
-                          <div className="absolute top-4 left-4 animate-bounce">
-                            <CheckCircle className="text-emerald-500" size={24} />
+                          <div className="mt-4 flex justify-center">
+                            <CheckCircle className="text-green-500" size={24} />
                           </div>
                         )}
                       </div>
                       
                       <div
-                        className={`p-6 rounded-3xl border-2 cursor-pointer transition-all duration-500 hover:scale-105 ${
+                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${
                           selectedPaymentMethod === 'bank'
-                            ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-2xl scale-105'
-                            : 'border-gray-200/50 bg-white/70 hover:border-blue-300 hover:shadow-xl'
+                            ? 'border-black bg-gray-50'
+                            : 'border-gray-300 hover:border-gray-400'
                         }`}
                         onClick={() => setSelectedPaymentMethod('bank')}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
-                            <CreditCard className="text-white" size={28} />
+                          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                            <CreditCard className="text-white" size={24} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-800 text-lg">تحويل بنكي</h4>
+                            <h4 className="font-bold text-gray-900 text-lg">تحويل بنكي</h4>
                             <p className="text-sm text-gray-600">تحويل إلى الحساب البنكي</p>
                           </div>
                         </div>
                         {selectedPaymentMethod === 'bank' && (
-                          <div className="absolute top-4 left-4 animate-bounce">
+                          <div className="mt-4 flex justify-center">
                             <CheckCircle className="text-blue-500" size={24} />
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Terms Agreement */}
-                  <div className="mt-12">
-                    <div className="flex items-start gap-4 p-6 bg-gradient-to-r from-gray-50/50 to-white/50 rounded-3xl border border-gray-200/50 backdrop-blur-sm">
-                      <input
-                        type="checkbox"
-                        id="terms"
-                        checked={agreeToTerms}
-                        onChange={(e) => setAgreeToTerms(e.target.checked)}
-                        className="mt-1 w-6 h-6 text-purple-600 border-gray-300 rounded-lg focus:ring-purple-500 focus:ring-4"
-                      />
-                      <label htmlFor="terms" className="text-gray-700 leading-relaxed text-lg">
-                        أوافق على <Link to="/privacy-policy" className="text-purple-600 hover:text-purple-800 font-bold hover:underline transition-colors">الشروط والأحكام</Link> و
-                        <Link to="/return-policy" className="text-purple-600 hover:text-purple-800 font-bold hover:underline transition-colors"> سياسة الإرجاع</Link>
-                      </label>
+                {/* Step 4: Order Confirmation */}
+                {currentStep === 4 && (
+                  <div className="p-8">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
+                        <CheckCircle className="text-white" size={28} />
+                      </div>
+                      <div>
+                        <h2 className="text-3xl font-bold text-gray-900">تأكيد الطلب</h2>
+                        <p className="text-gray-600 text-lg">راجع بياناتك قبل إتمام الطلب</p>
+                      </div>
                     </div>
-                    {errors.terms && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.terms}</p>}
+
+                    {/* Order Summary */}
+                    <div className="space-y-6">
+                      {/* Customer Info */}
+                      <div className="bg-gray-50 rounded-2xl p-6">
+                        <h3 className="font-bold text-gray-900 mb-4 text-lg">بيانات التوصيل</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <p><span className="font-bold">الاسم:</span> {userData.name}</p>
+                          <p><span className="font-bold">الهاتف:</span> {userData.phone}</p>
+                          <p><span className="font-bold">المدينة:</span> {userData.city}</p>
+                          <p className="col-span-2"><span className="font-bold">العنوان:</span> {userData.address}</p>
+                        </div>
+                      </div>
+
+                      {/* Payment Method */}
+                      <div className="bg-gray-50 rounded-2xl p-6">
+                        <h3 className="font-bold text-gray-900 mb-4 text-lg">طريقة الدفع</h3>
+                        <p className="text-gray-700">
+                          {selectedPaymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
+                        </p>
+                      </div>
+
+                      {/* Terms Agreement */}
+                      <div className="bg-gray-50 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                          <input
+                            type="checkbox"
+                            id="terms"
+                            checked={agreeToTerms}
+                            onChange={(e) => setAgreeToTerms(e.target.checked)}
+                            className="mt-1 w-5 h-5 text-black border-gray-300 rounded focus:ring-black"
+                          />
+                          <label htmlFor="terms" className="text-gray-700 leading-relaxed">
+                            أوافق على <Link to="/privacy-policy" className="text-black font-bold hover:underline">الشروط والأحكام</Link> و
+                            <Link to="/return-policy" className="text-black font-bold hover:underline"> سياسة الإرجاع</Link>
+                          </label>
+                        </div>
+                        {errors.terms && <p className="text-red-500 text-sm mt-2">{errors.terms}</p>}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

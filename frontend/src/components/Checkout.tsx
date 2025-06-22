@@ -210,10 +210,19 @@ const Checkout: React.FC = () => {
       setIsLoadingCart(true);
       
       try {
-        const savedCart = localStorage.getItem('cart');
-        console.log('💾 [Checkout] Raw cart data:', savedCart);
+        // Try 'cartItems' first (new key), then 'cart' (old key) as fallback
+        let savedCart = localStorage.getItem('cartItems');
+        let keyUsed = 'cartItems';
         
-        if (savedCart) {
+        if (!savedCart || savedCart === 'null' || savedCart === 'undefined') {
+          savedCart = localStorage.getItem('cart');
+          keyUsed = 'cart';
+          console.log('💾 [Checkout] Fallback to old cart key');
+        }
+        
+        console.log('💾 [Checkout] Raw cart data from', keyUsed, ':', savedCart);
+        
+        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
           const parsedCart = JSON.parse(savedCart);
           console.log('📦 [Checkout] Parsed cart:', parsedCart);
           
@@ -236,10 +245,10 @@ const Checkout: React.FC = () => {
             const product = item.product || item;
             const name = product.name || product.title || item.name || item.title || 'منتج';
             const price = parseFloat(product.price || item.price || 0);
-            const image = product.image || product.images?.[0] || item.image || item.images?.[0];
+            const image = product.image || product.images?.[0] || item.image || item.images?.[0] || product.mainImage;
             
             return {
-              id: String(product.id || item.id || Math.random()),
+              id: String(product.id || item.id || item.productId || Math.random()),
               name,
               price,
               quantity: parseInt(item.quantity || 1),
@@ -249,29 +258,13 @@ const Checkout: React.FC = () => {
               originalPrice: product.originalPrice || item.originalPrice,
               discount: product.discount || item.discount
             };
-          }).filter(item => item.id && item.name && item.price > 0);
+          }).filter((item: CartItem) => item.id && item.name && item.price > 0);
           
           console.log('✅ [Checkout] Standardized cart:', standardizedCart);
           setCartItems(standardizedCart);
           
           if (standardizedCart.length === 0) {
             console.log('⚠️ [Checkout] Cart is empty after processing');
-            // Add test data for development
-            const testItems = [
-              {
-                id: 'test-1',
-                name: 'عطر فاخر - اختبار',
-                price: 299.99,
-                quantity: 1,
-                image: '/api/placeholder/300/300',
-                size: '50ml',
-                category: 'عطور',
-                originalPrice: 399.99,
-                discount: 25
-              }
-            ];
-            setCartItems(testItems);
-            console.log('🧪 [Checkout] Added test data:', testItems);
           }
         } else {
           console.log('❌ [Checkout] No cart data found in localStorage');
@@ -294,8 +287,8 @@ const Checkout: React.FC = () => {
     };
 
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'cart') {
-        console.log('💾 [Checkout] localStorage cart changed');
+      if (event.key === 'cartItems' || event.key === 'cart') {
+        console.log('💾 [Checkout] localStorage cart changed for key:', event.key);
         loadCartData();
       }
     };
@@ -335,7 +328,7 @@ const Checkout: React.FC = () => {
       });
       
       // Update localStorage
-      localStorage.setItem('cart', JSON.stringify(updatedItems));
+      localStorage.setItem('cartItems', JSON.stringify(updatedItems));
       
       return updatedItems;
     });
@@ -348,7 +341,7 @@ const Checkout: React.FC = () => {
       );
       
       // Update localStorage
-      localStorage.setItem('cart', JSON.stringify(updatedItems));
+      localStorage.setItem('cartItems', JSON.stringify(updatedItems));
       
       return updatedItems;
     });
@@ -462,7 +455,7 @@ const Checkout: React.FC = () => {
       console.log('✅ [Checkout] Order submitted successfully:', result);
 
       // Clear cart
-      localStorage.removeItem('cart');
+      localStorage.removeItem('cartItems');
       setCartItems([]);
 
       // Navigate to thank you page

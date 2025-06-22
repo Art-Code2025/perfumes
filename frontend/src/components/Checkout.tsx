@@ -61,6 +61,13 @@ interface CartItem {
     images?: string[];
     text?: string;
   };
+  name: string;
+  price: number;
+  originalPrice?: number;
+  image?: string;
+  size?: string;
+  category?: string;
+  discount?: number;
 }
 
 interface CustomerInfo {
@@ -87,6 +94,7 @@ interface ShippingZone {
   estimatedDays: string;
   isActive: boolean;
   priority: number;
+  icon?: string;
 }
 
 const Checkout: React.FC = () => {
@@ -123,8 +131,29 @@ const Checkout: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [preferredDeliveryTime, setPreferredDeliveryTime] = useState('');
   const [shippingZones, setShippingZones] = useState<ShippingZone[]>([]);
-  const [shippingCost, setShippingCost] = useState<number>(0);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [estimatedDelivery, setEstimatedDelivery] = useState<string>('2-5 أيام عمل');
+
+  // Available coupons data
+  const availableCoupons = [
+    {
+      code: 'WELCOME10',
+      type: 'percentage',
+      value: 10,
+      minAmount: 100,
+      maxDiscount: 50,
+      isActive: true,
+      description: 'خصم 10% للعملاء الجدد'
+    },
+    {
+      code: 'FREESHIP',
+      type: 'freeShipping',
+      value: 0,
+      minAmount: 200,
+      isActive: true,
+      description: 'شحن مجاني'
+    }
+  ];
 
   // Static data
   const paymentMethods: PaymentMethod[] = [
@@ -230,6 +259,47 @@ const Checkout: React.FC = () => {
     window.addEventListener('cartUpdated', handleCartUpdate);
     window.addEventListener('storage', handleStorageChange);
 
+    // Load shipping zones
+    const mockShippingZones: ShippingZone[] = [
+      {
+        id: '1',
+        name: 'الرياض',
+        shippingCost: 15,
+        estimatedDays: '1-2 أيام عمل',
+        isActive: true,
+        priority: 1,
+        icon: '🏢'
+      },
+      {
+        id: '2',
+        name: 'جدة',
+        shippingCost: 20,
+        estimatedDays: '2-3 أيام عمل',
+        isActive: true,
+        priority: 2,
+        icon: '🌊'
+      },
+      {
+        id: '3',
+        name: 'الدمام',
+        shippingCost: 25,
+        estimatedDays: '2-4 أيام عمل',
+        isActive: true,
+        priority: 3,
+        icon: '⚡'
+      },
+      {
+        id: '4',
+        name: 'باقي المدن',
+        shippingCost: 30,
+        estimatedDays: '3-5 أيام عمل',
+        isActive: true,
+        priority: 4,
+        icon: '🚚'
+      }
+    ];
+    setShippingZones(mockShippingZones);
+
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
       window.removeEventListener('storage', handleStorageChange);
@@ -238,7 +308,7 @@ const Checkout: React.FC = () => {
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shippingCost = selectedShippingZone ? selectedShippingZone.shippingCost : 0;
+  const currentShippingCost = selectedShippingZone ? selectedShippingZone.shippingCost : 0;
   const couponDiscount = appliedCoupon ? (
     appliedCoupon.type === 'percentage' 
       ? Math.min(subtotal * (appliedCoupon.value / 100), appliedCoupon.maxDiscount || Infinity)
@@ -246,10 +316,10 @@ const Checkout: React.FC = () => {
   ) : 0;
   const freeShipping = appliedCoupon?.type === 'freeShipping' || 
     (selectedShippingZone && subtotal >= selectedShippingZone.shippingCost);
-  const finalShippingCost = freeShipping ? 0 : shippingCost;
+  const finalShippingCost = freeShipping ? 0 : currentShippingCost;
   const total = subtotal - couponDiscount + finalShippingCost;
 
-  const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
+  const updateQuantity = (itemId: number, size: string | undefined, newQuantity: number) => {
     if (newQuantity < 1) return;
     
     setCartItems(prevItems => {
@@ -267,7 +337,7 @@ const Checkout: React.FC = () => {
     });
   };
 
-  const removeItem = (itemId: string, size: string | undefined) => {
+  const removeItem = (itemId: number, size: string | undefined) => {
     setCartItems(prevItems => {
       const updatedItems = prevItems.filter(item => 
         !(item.id === itemId && item.size === size)
@@ -655,8 +725,7 @@ const Checkout: React.FC = () => {
 
                     <div className="md:col-span-2 group">
                       <label className="block text-sm font-bold text-gray-700 mb-3 group-hover:text-purple-600 transition-colors">العنوان التفصيلي *</label>
-                      <input
-                        type="text"
+                      <textarea
                         value={customerInfo.address}
                         onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
                         rows={3}

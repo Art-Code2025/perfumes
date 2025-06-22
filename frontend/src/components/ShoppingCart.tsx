@@ -105,26 +105,60 @@ const ShoppingCart: React.FC = () => {
     
     try {
       console.log('🛒 [Cart] Starting to fetch cart...');
+      console.log('🔍 [Cart] All localStorage keys:', Object.keys(localStorage));
+      console.log('🔍 [Cart] cartItems content:', localStorage.getItem('cartItems'));
+      console.log('🔍 [Cart] cart content:', localStorage.getItem('cart'));
 
-      // أولاً، تحقق من وجود سلة محلية
-      const localCart = localStorage.getItem('cartItems'); // استخدام 'cartItems' بدلاً من 'cart'
-      if (localCart) {
+      // Strategy 1: Try cartItems key
+      let cartData = null;
+      const localCart = localStorage.getItem('cartItems');
+      
+      if (localCart && localCart !== 'null' && localCart !== 'undefined') {
         try {
           const parsedCart = JSON.parse(localCart);
-          console.log('📦 [Cart] Found local cart:', parsedCart.length, 'items');
-          setCartItems(parsedCart);
-          setIsInitialLoading(false);
-          setLoading(false);
-          return;
+          if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+            console.log('✅ [Cart] Found cart in cartItems:', parsedCart.length, 'items');
+            cartData = parsedCart;
+          } else {
+            console.log('📭 [Cart] cartItems exists but is empty array');
+          }
         } catch (parseError) {
-          console.error('❌ [Cart] Error parsing local cart:', parseError);
+          console.error('❌ [Cart] Error parsing cartItems:', parseError);
           localStorage.removeItem('cartItems');
+        }
+      } else {
+        console.log('📭 [Cart] No cartItems found in localStorage');
+      }
+
+      // Strategy 2: Try old 'cart' key as fallback
+      if (!cartData) {
+        const oldCart = localStorage.getItem('cart');
+        if (oldCart && oldCart !== 'null' && oldCart !== 'undefined') {
+          try {
+            const parsedOldCart = JSON.parse(oldCart);
+            if (Array.isArray(parsedOldCart) && parsedOldCart.length > 0) {
+              console.log('✅ [Cart] Found cart in old cart key:', parsedOldCart.length, 'items');
+              console.log('🔄 [Cart] Migrating from old cart key to cartItems');
+              cartData = parsedOldCart;
+              // Migrate to new key
+              localStorage.setItem('cartItems', JSON.stringify(parsedOldCart));
+              localStorage.removeItem('cart');
+            }
+          } catch (parseError) {
+            console.error('❌ [Cart] Error parsing old cart:', parseError);
+            localStorage.removeItem('cart');
+          }
         }
       }
 
-      // إذا لم تكن هناك سلة محلية، ابدأ بسلة فارغة
-      console.log('📭 [Cart] No local cart found, starting with empty cart');
-      setCartItems([]);
+      // Set the cart data
+      if (cartData && cartData.length > 0) {
+        console.log('🎯 [Cart] Setting cart items:', cartData.length, 'items');
+        setCartItems(cartData);
+      } else {
+        console.log('📭 [Cart] No cart data found, starting with empty cart');
+        setCartItems([]);
+      }
       
     } catch (error) {
       console.error('❌ [Cart] Error fetching cart:', error);
@@ -139,6 +173,29 @@ const ShoppingCart: React.FC = () => {
   // تحميل السلة عند بداية التشغيل فقط
   useEffect(() => {
     fetchCart();
+    
+    // إضافة مستمع للتحديثات من مكونات أخرى
+    const handleCartUpdate = (event: any) => {
+      console.log('🔄 [Cart] Received cart update event:', event.detail);
+      if (event.detail && event.detail.items) {
+        setCartItems(event.detail.items);
+      }
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'cartItems') {
+        console.log('💾 [Cart] Storage change detected, refetching cart');
+        fetchCart();
+      }
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [fetchCart]);
 
   // حفظ السلة في localStorage - يعمل للضيوف والمستخدمين المسجلين

@@ -1585,8 +1585,25 @@ const ShoppingCart: React.FC = () => {
         onContinueAsGuest={() => {
           console.log('🚶 [Cart] Continuing as guest, navigating to checkout');
           setIsCheckoutAuthModalOpen(false);
-          // Small delay to ensure state updates
+          
+          // ENSURE CART IS SAVED BEFORE NAVIGATION
+          console.log('💾 [Cart] Ensuring cart is saved before navigation...');
+          saveCartToLocalStorage(cartItems);
+          
+          // Verify cart was saved
+          const savedCart = localStorage.getItem('cartItems');
+          if (savedCart) {
+            try {
+              const parsedCart = JSON.parse(savedCart);
+              console.log('✅ [Cart] Cart verification successful:', parsedCart.length, 'items');
+            } catch (error) {
+              console.error('❌ [Cart] Cart verification failed:', error);
+            }
+          }
+          
+          // Small delay to ensure all state updates are complete
           setTimeout(() => {
+            console.log('🚀 [Cart] Navigating to checkout as guest');
             navigate('/checkout');
           }, 100);
         }}
@@ -1595,10 +1612,27 @@ const ShoppingCart: React.FC = () => {
           setIsCheckoutAuthModalOpen(false);
           
           try {
+            // ENSURE CART IS SAVED BEFORE PROCESSING
+            console.log('💾 [Cart] Ensuring cart is saved before user processing...');
+            saveCartToLocalStorage(cartItems);
+            
             // Wait for login success to complete
             await handleLoginSuccess(user);
-            console.log('✅ [Cart] User data processed, navigating to checkout');
+            console.log('✅ [Cart] User data processed successfully');
+            
+            // Verify cart is still available after login processing
+            const savedCart = localStorage.getItem('cartItems');
+            if (savedCart) {
+              try {
+                const parsedCart = JSON.parse(savedCart);
+                console.log('✅ [Cart] Cart still available after login:', parsedCart.length, 'items');
+              } catch (error) {
+                console.error('❌ [Cart] Cart verification after login failed:', error);
+              }
+            }
+            
             // Navigate after successful login processing
+            console.log('🚀 [Cart] Navigating to checkout after login');
             navigate('/checkout');
           } catch (error) {
             console.error('❌ [Cart] Error processing login:', error);

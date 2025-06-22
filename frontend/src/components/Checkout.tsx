@@ -276,147 +276,100 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
-    // DEBUGGING - Let's see EVERYTHING in localStorage
-    console.log('🔍 [DEBUG] All localStorage keys:', Object.keys(localStorage));
-    console.log('🔍 [DEBUG] cartItems raw:', localStorage.getItem('cartItems'));
-    console.log('🔍 [DEBUG] cart raw:', localStorage.getItem('cart'));
-    console.log('🔍 [DEBUG] shoppingCart raw:', localStorage.getItem('shoppingCart'));
-    
-    let foundCartItems: any[] = [];
-    
-    // Strategy 1: Try cartItems key
+    // Simple cart loading - don't override existing cart data
     try {
       const savedCartItems = localStorage.getItem('cartItems');
       if (savedCartItems && savedCartItems !== 'null' && savedCartItems !== 'undefined') {
         const parsed = JSON.parse(savedCartItems);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          foundCartItems = parsed;
-          console.log('✅ [Strategy 1] Found cart in cartItems:', foundCartItems);
+          console.log('✅ [Checkout] Found cart items:', parsed.length, 'items');
+          
+          // Convert to checkout format WITHOUT overwriting localStorage
+          const convertedCart = parsed.map((item: any, index: number) => {
+            // Extract ID
+            let id: string;
+            if (item.id) {
+              id = item.id.toString();
+            } else if (item.productId) {
+              id = item.productId.toString();
+            } else {
+              id = `item-${index}-${Date.now()}`;
+            }
+            
+            // Extract name
+            let name: string;
+            if (item.name) {
+              name = item.name;
+            } else if (item.product?.name) {
+              name = item.product.name;
+            } else {
+              name = `منتج ${index + 1}`;
+            }
+            
+            // Extract price with options
+            let basePrice = 0;
+            if (item.price) {
+              basePrice = parseFloat(item.price);
+            } else if (item.product?.price) {
+              basePrice = parseFloat(item.product.price);
+            }
+            
+            let optionsPrice = 0;
+            if (item.optionsPricing && typeof item.optionsPricing === 'object') {
+              optionsPrice = Object.values(item.optionsPricing)
+                .reduce((sum: number, p: any) => sum + (parseFloat(p) || 0), 0);
+            }
+            
+            const finalPrice = basePrice + optionsPrice;
+            const quantity = parseInt(item.quantity) || 1;
+            
+            // Extract size
+            let size = '';
+            if (item.size) {
+              size = item.size;
+            } else if (item.selectedOptions) {
+              const sizeKeys = ['size', 'Size', 'الحجم', 'المقاس'];
+              for (const key of sizeKeys) {
+                if (item.selectedOptions[key]) {
+                  size = item.selectedOptions[key];
+                  break;
+                }
+              }
+            }
+            
+            // Extract image
+            let image = '';
+            if (item.image) {
+              image = item.image;
+            } else if (item.product?.mainImage) {
+              image = item.product.mainImage;
+            }
+            
+            return {
+              id,
+              name,
+              price: Math.max(0, finalPrice),
+              originalPrice: Math.max(0, finalPrice),
+              quantity,
+              image,
+              size,
+              category: item.category || item.product?.category?.name || '',
+              discount: parseInt(item.discount || 0)
+            };
+          });
+          
+          console.log('🎉 [Checkout] Cart converted successfully:', convertedCart.length, 'items');
+          setCartItems(convertedCart);
+        } else {
+          console.log('📭 [Checkout] Cart is empty');
+          setCartItems([]);
         }
+      } else {
+        console.log('📭 [Checkout] No cart found');
+        setCartItems([]);
       }
-    } catch (e) {
-      console.log('❌ [Strategy 1] Failed to parse cartItems');
-    }
-    
-    // Strategy 2: Try cart key if cartItems failed
-    if (foundCartItems.length === 0) {
-      try {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
-          const parsed = JSON.parse(savedCart);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            foundCartItems = parsed;
-            console.log('✅ [Strategy 2] Found cart in cart:', foundCartItems);
-          }
-        }
-      } catch (e) {
-        console.log('❌ [Strategy 2] Failed to parse cart');
-      }
-    }
-    
-    // Strategy 3: Try shoppingCart key if others failed
-    if (foundCartItems.length === 0) {
-      try {
-        const savedShoppingCart = localStorage.getItem('shoppingCart');
-        if (savedShoppingCart && savedShoppingCart !== 'null' && savedShoppingCart !== 'undefined') {
-          const parsed = JSON.parse(savedShoppingCart);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            foundCartItems = parsed;
-            console.log('✅ [Strategy 3] Found cart in shoppingCart:', foundCartItems);
-          }
-        }
-      } catch (e) {
-        console.log('❌ [Strategy 3] Failed to parse shoppingCart');
-      }
-    }
-    
-    // Strategy 4: Create test data if nothing found (for debugging)
-    if (foundCartItems.length === 0) {
-      console.log('⚠️ [Strategy 4] No cart found anywhere in localStorage');
-      console.log('🔍 [DEBUG] Checking if we came from cart page...');
-      
-      // Check if we have referrer information
-      const referrer = document.referrer;
-      console.log('🔍 [DEBUG] Referrer:', referrer);
-      
-      // Don't create test data - let the user know cart is empty
-      console.log('❌ [FINAL] No cart data found - showing empty cart message');
-    }
-    
-    console.log('🎯 [FINAL] Cart items to process:', foundCartItems);
-    
-    // UNIVERSAL CONVERTER - يحول أي صيغة لصيغة موحدة
-    try {
-      const convertedCart = foundCartItems.map((item: any, index: number) => {
-        console.log(`🔄 [Convert ${index}] Processing:`, item);
-        
-        // Extract all possible name variations
-        const name = item.name || 
-                    item.product?.name || 
-                    item.productName || 
-                    item.title ||
-                    `منتج ${index + 1}`;
-        
-        // Extract all possible price variations
-        let price = 0;
-        if (item.price) price = parseFloat(item.price);
-        else if (item.product?.price) price = parseFloat(item.product.price);
-        else if (item.cost) price = parseFloat(item.cost);
-        else if (item.amount) price = parseFloat(item.amount);
-        
-        // Add options pricing if exists
-        if (item.optionsPricing && typeof item.optionsPricing === 'object') {
-          const optionsPrice = Object.values(item.optionsPricing)
-            .reduce((sum: number, p: any) => sum + (parseFloat(p) || 0), 0);
-          price += optionsPrice;
-        }
-        
-        // Extract quantity
-        const quantity = parseInt(item.quantity) || 1;
-        
-        // Extract size/options
-        let size = '';
-        if (item.size) size = item.size;
-        else if (item.selectedOptions?.size) size = item.selectedOptions.size;
-        else if (item.selectedOptions?.الحجم) size = item.selectedOptions.الحجم;
-        else if (item.selectedOptions?.المقاس) size = item.selectedOptions.المقاس;
-        
-        // Extract image
-        const image = item.image || 
-                     item.product?.mainImage || 
-                     item.product?.image ||
-                     item.photo ||
-                     '';
-        
-        // Extract ID
-        const id = (item.id || item.productId || `item-${index}`).toString();
-        
-        const result = {
-          id,
-          name,
-          price: Math.max(0, price), // Ensure positive price
-          originalPrice: parseFloat(item.originalPrice || item.product?.originalPrice || price),
-          quantity,
-          image,
-          size,
-          category: item.category || item.product?.category?.name || item.product?.productType || '',
-          discount: parseInt(item.discount || 0)
-        };
-        
-        console.log(`✅ [Convert ${index}] Result:`, result);
-        return result;
-      });
-      
-      console.log('🎉 [SUCCESS] Final converted cart:', convertedCart);
-      setCartItems(convertedCart);
-      
-      // Force update localStorage with clean format
-      localStorage.setItem('cartItems', JSON.stringify(convertedCart));
-      console.log('💾 [SAVE] Updated localStorage with clean cart');
-      
     } catch (error) {
-      console.error('❌ [ERROR] Cart conversion failed:', error);
-      // Even if conversion fails, try to set something
+      console.error('❌ [Checkout] Error loading cart:', error);
       setCartItems([]);
     }
 
@@ -445,7 +398,7 @@ const Checkout: React.FC = () => {
     }
     
     setIsLoadingCart(false);
-    console.log('🏁 [COMPLETE] Checkout loading finished');
+    console.log('🏁 [Checkout] Loading finished');
   }, []);
 
   // Auto-select shipping zone based on city

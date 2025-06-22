@@ -4,8 +4,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
-import App from './App';
+import App from './App.tsx';
 import './index.css';
+import { initCartStorageFix } from './utils/cartStorageFix.ts';
 
 // Lazy load components for better performance
 const ProductDetail = React.lazy(() => import('./components/ProductDetail'));
@@ -191,6 +192,9 @@ const LayoutWrapper: React.FC = () => {
     </>
   );
 };
+
+// إصلاح localStorage للسلة قبل بدء التطبيق
+initCartStorageFix();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

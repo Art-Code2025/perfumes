@@ -5,6 +5,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/Navbar';
 import App from './App.tsx';
+// Direct import for debugging
+import Checkout from './components/Checkout';
 import './index.css';
 import { initCartStorageFix } from './utils/cartStorageFix.ts';
 
@@ -24,7 +26,6 @@ const CategoryAdd = React.lazy(() => import('./CategoryAdd'));
 const CategoryEdit = React.lazy(() => import('./CategoryEdit'));
 const CouponForm = React.lazy(() => import('./components/CouponForm'));
 const AllProducts = React.lazy(() => import('./components/AllProducts'));
-const Checkout = React.lazy(() => import('./components/Checkout'));
 const ThankYou = React.lazy(() => import('./components/ThankYou'));
 const About = React.lazy(() => import('./pages/About'));
 const Contact = React.lazy(() => import('./pages/Contact'));

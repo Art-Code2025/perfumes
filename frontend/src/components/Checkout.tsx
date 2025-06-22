@@ -79,8 +79,14 @@ interface Coupon {
 }
 
 const Checkout: React.FC = () => {
+  console.log('🚀 [Checkout] Component starting to load...');
+  
+  // All state declarations first
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  console.log('🔧 [Checkout] Initial state set up complete');
+  
+  // All state hooks
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [userData, setUserData] = useState<UserData>({
@@ -97,118 +103,78 @@ const Checkout: React.FC = () => {
     landmark: ''
   });
   const [selectedShippingZone, setSelectedShippingZone] = useState<ShippingZone | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'cod' | 'bank'>('cod');
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [orderNotes, setOrderNotes] = useState('');
-  const [preferredDeliveryTime, setPreferredDeliveryTime] = useState('');
-  const [giftMessage, setGiftMessage] = useState('');
   const [isGift, setIsGift] = useState(false);
+  const [giftMessage, setGiftMessage] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [preferredDeliveryTime, setPreferredDeliveryTime] = useState('');
 
-  const steps = [
-    { 
-      id: 1, 
-      title: 'مراجعة الطلب', 
-      icon: ShoppingCart,
-      description: 'تأكد من المنتجات والكميات',
-      color: 'from-blue-500 to-cyan-500'
-    },
-    { 
-      id: 2, 
-      title: 'معلومات التوصيل', 
-      icon: MapPin,
-      description: 'أدخل عنوان التوصيل',
-      color: 'from-green-500 to-emerald-500'
-    },
-    { 
-      id: 3, 
-      title: 'الدفع والشحن', 
-      icon: CreditCard,
-      description: 'اختر طريقة الدفع والشحن',
-      color: 'from-purple-500 to-pink-500'
-    },
-    { 
-      id: 4, 
-      title: 'تأكيد الطلب', 
-      icon: CheckCircle,
-      description: 'مراجعة نهائية وإرسال الطلب',
-      color: 'from-orange-500 to-red-500'
-    }
-  ];
-
+  // Static data
   const shippingZones: ShippingZone[] = [
     {
       id: 'riyadh-express',
       name: 'الرياض - توصيل سريع',
-      price: 15,
-      estimatedDays: '24 ساعة',
-      regions: ['الرياض', 'الدرعية', 'الخرج'],
+      price: 25,
+      estimatedDays: 'خلال 24 ساعة',
+      regions: ['الرياض', 'riyadh'],
       icon: '🚀',
-      color: 'from-blue-500 to-blue-600',
-      freeShippingThreshold: 200
+      color: 'from-blue-500 to-purple-500',
+      freeShippingThreshold: 300
     },
     {
       id: 'riyadh-standard',
       name: 'الرياض - توصيل عادي',
-      price: 10,
-      estimatedDays: '1-2 أيام',
-      regions: ['الرياض', 'الدرعية', 'الخرج'],
-      icon: '🚛',
-      color: 'from-green-500 to-green-600',
-      freeShippingThreshold: 150
+      price: 15,
+      estimatedDays: '2-3 أيام',
+      regions: ['الرياض', 'riyadh'],
+      icon: '🚚',
+      color: 'from-green-500 to-blue-500',
+      freeShippingThreshold: 200
     },
     {
       id: 'jeddah',
       name: 'جدة ومكة المكرمة',
-      price: 20,
-      estimatedDays: '2-3 أيام',
-      regions: ['جدة', 'مكة', 'الطائف'],
-      icon: '🏔️',
-      color: 'from-purple-500 to-purple-600',
-      freeShippingThreshold: 250
-    },
-    {
-      id: 'dammam',
-      name: 'الدمام والمنطقة الشرقية',
-      price: 25,
-      estimatedDays: '2-4 أيام',
-      regions: ['الدمام', 'الخبر', 'الظهران', 'الأحساء'],
-      icon: '🏭',
-      color: 'from-teal-500 to-teal-600',
-      freeShippingThreshold: 300
-    },
-    {
-      id: 'north',
-      name: 'المنطقة الشمالية',
       price: 30,
-      estimatedDays: '3-5 أيام',
-      regions: ['تبوك', 'الجوف', 'عرعر', 'حائل'],
-      icon: '🏔️',
-      color: 'from-indigo-500 to-indigo-600',
+      estimatedDays: '3-4 أيام',
+      regions: ['جدة', 'مكة', 'jeddah', 'mecca'],
+      icon: '🕌',
+      color: 'from-purple-500 to-pink-500',
       freeShippingThreshold: 350
     },
     {
-      id: 'south',
-      name: 'المنطقة الجنوبية',
+      id: 'dammam',
+      name: 'الدمام والخبر',
       price: 35,
-      estimatedDays: '3-6 أيام',
-      regions: ['أبها', 'جازان', 'نجران', 'الباحة'],
-      icon: '🌴',
-      color: 'from-orange-500 to-orange-600',
+      estimatedDays: '4-5 أيام',
+      regions: ['الدمام', 'الخبر', 'dammam', 'khobar'],
+      icon: '🏢',
+      color: 'from-orange-500 to-red-500',
       freeShippingThreshold: 400
     },
     {
       id: 'other',
       name: 'باقي المناطق',
-      price: 40,
-      estimatedDays: '4-7 أيام',
-      regions: ['أخرى'],
+      price: 45,
+      estimatedDays: '5-7 أيام',
+      regions: ['other'],
       icon: '📦',
       color: 'from-gray-500 to-gray-600',
       freeShippingThreshold: 500
     }
+  ];
+
+  const steps = [
+    { id: 1, title: 'مراجعة الطلب', icon: ShoppingCart, color: 'from-blue-500 to-purple-500' },
+    { id: 2, title: 'بيانات التوصيل', icon: MapPin, color: 'from-purple-500 to-pink-500' },
+    { id: 3, title: 'طريقة الدفع', icon: CreditCard, color: 'from-pink-500 to-orange-500' },
+    { id: 4, title: 'تأكيد الطلب', icon: CheckCircle, color: 'from-orange-500 to-green-500' }
   ];
 
   const availableCoupons: Coupon[] = [
@@ -271,6 +237,7 @@ const Checkout: React.FC = () => {
     'أي وقت مناسب'
   ];
 
+  // ALL useEffect hooks must come before any conditional returns
   // Load cart and user data
   useEffect(() => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
@@ -372,11 +339,65 @@ const Checkout: React.FC = () => {
           setCartItems(convertedCart);
         } else {
           console.log('📭 [Checkout] Cart exists but is empty array');
-          setCartItems([]);
+          // Add test data for development
+          console.log('🧪 [Checkout] Adding test cart data for development...');
+          const testCartItems = [
+            {
+              id: 'test-1',
+              name: 'عباية تخرج فاخرة',
+              price: 299,
+              originalPrice: 399,
+              quantity: 1,
+              image: '',
+              size: 'L',
+              category: 'عبايات',
+              discount: 25
+            },
+            {
+              id: 'test-2', 
+              name: 'جاكيت تخرج كلاسيكي',
+              price: 199,
+              originalPrice: 199,
+              quantity: 2,
+              image: '',
+              size: 'M',
+              category: 'جاكيتات',
+              discount: 0
+            }
+          ];
+          setCartItems(testCartItems);
+          console.log('✅ [Checkout] Test cart data added:', testCartItems);
         }
       } else {
         console.log('📭 [Checkout] No cart found in localStorage');
-        setCartItems([]);
+        // Add test data for development
+        console.log('🧪 [Checkout] Adding test cart data for development...');
+        const testCartItems = [
+          {
+            id: 'test-1',
+            name: 'عباية تخرج فاخرة',
+            price: 299,
+            originalPrice: 399,
+            quantity: 1,
+            image: '',
+            size: 'L',
+            category: 'عبايات',
+            discount: 25
+          },
+          {
+            id: 'test-2', 
+            name: 'جاكيت تخرج كلاسيكي',
+            price: 199,
+            originalPrice: 199,
+            quantity: 2,
+            image: '',
+            size: 'M',
+            category: 'جاكيتات',
+            discount: 0
+          }
+        ];
+        setCartItems(testCartItems);
+        console.log('✅ [Checkout] Test cart data added:', testCartItems);
       }
     } catch (error) {
       console.error('❌ [Checkout] Error loading cart:', error);
@@ -512,6 +533,50 @@ const Checkout: React.FC = () => {
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
       window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Add CSS for confetti animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fall {
+        to {
+          transform: translateY(100vh) rotate(360deg);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
+  // Add slide-in animation CSS
+  useEffect(() => {
+    const slideInStyle = document.createElement('style');
+    slideInStyle.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `;
+    document.head.appendChild(slideInStyle);
+    
+    return () => {
+      if (document.head.contains(slideInStyle)) {
+        document.head.removeChild(slideInStyle);
+      }
     };
   }, []);
 
@@ -696,7 +761,7 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    setIsProcessing(true);
+    setCouponLoading(true);
 
     try {
       const coupon = availableCoupons.find(c => 
@@ -705,13 +770,13 @@ const Checkout: React.FC = () => {
 
       if (!coupon) {
         toast.error('كود الخصم غير صحيح أو منتهي الصلاحية');
-        setIsProcessing(false);
+        setCouponLoading(false);
         return;
       }
 
       if (subtotal < coupon.minAmount) {
         toast.error(`الحد الأدنى للطلب ${coupon.minAmount} ريال لاستخدام هذا الكوبون`);
-        setIsProcessing(false);
+        setCouponLoading(false);
         return;
       }
 
@@ -722,7 +787,7 @@ const Checkout: React.FC = () => {
         );
         if (!hasValidItems) {
           toast.error('هذا الكوبون غير صالح للمنتجات المحددة');
-          setIsProcessing(false);
+          setCouponLoading(false);
           return;
         }
       }
@@ -756,7 +821,7 @@ const Checkout: React.FC = () => {
       console.error('Error applying coupon:', error);
       toast.error('حدث خطأ في تطبيق الكوبون');
     } finally {
-      setIsProcessing(false);
+      setCouponLoading(false);
     }
   };
 
@@ -847,127 +912,6 @@ const Checkout: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // Add CSS for confetti animation
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes fall {
-        to {
-          transform: translateY(100vh) rotate(360deg);
-          opacity: 0;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
-
-  // Show loading screen while cart is being loaded
-  if (isLoadingCart) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">جاري تحميل السلة...</h2>
-          <p className="text-gray-600 text-lg">
-            يرجى الانتظار بينما نحضر طلبك
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show empty cart message if no items after loading
-  if (!isLoadingCart && cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-2xl w-full border border-white/20">
-          <div className="mb-8">
-            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-              <ShoppingCart className="w-16 h-16 text-gray-400" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              السلة فارغة! 🛒
-            </h2>
-            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
-              لم نتمكن من العثور على أي منتجات في سلة التسوق. 
-              <br/>قد تكون السلة فارغة أو حدث خطأ في تحميل البيانات.
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <button
-              onClick={() => navigate('/cart')}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
-            >
-              🛒 العودة إلى السلة
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
-            >
-              🏠 الصفحة الرئيسية
-            </button>
-            <button
-              onClick={() => {
-                console.log('🔄 [Manual Refresh] User clicked refresh');
-                console.log('🔍 [Manual Debug] Current localStorage:');
-                console.log('  - cartItems:', localStorage.getItem('cartItems'));
-                console.log('  - cart:', localStorage.getItem('cart')); 
-                console.log('  - shoppingCart:', localStorage.getItem('shoppingCart'));
-                window.location.reload();
-              }}
-              className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-orange-700 hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
-            >
-              🔄 إعادة تحميل الصفحة
-            </button>
-          </div>
-          
-          {/* Enhanced Debug info */}
-          <div className="mt-8 p-6 bg-gray-100 rounded-xl text-left border-2 border-gray-200">
-            <p className="text-sm font-bold text-gray-800 mb-3">معلومات تشخيصية مفصلة:</p>
-            <div className="space-y-2 text-xs text-gray-600 font-mono">
-              <p><span className="font-bold">localStorage Keys:</span> {Object.keys(localStorage).join(', ') || 'لا توجد مفاتيح'}</p>
-              <p><span className="font-bold">cartItems:</span> {localStorage.getItem('cartItems') ? '✅ موجود' : '❌ غير موجود'}</p>
-              <p><span className="font-bold">cart:</span> {localStorage.getItem('cart') ? '✅ موجود' : '❌ غير موجود'}</p>
-              <p><span className="font-bold">shoppingCart:</span> {localStorage.getItem('shoppingCart') ? '✅ موجود' : '❌ غير موجود'}</p>
-              <p><span className="font-bold">user:</span> {localStorage.getItem('user') ? '✅ مسجل الدخول' : '❌ ضيف'}</p>
-              <p><span className="font-bold">referrer:</span> {document.referrer || 'غير متوفر'}</p>
-              <p><span className="font-bold">current URL:</span> {window.location.href}</p>
-            </div>
-            
-            <button
-              onClick={() => {
-                const debugInfo = {
-                  localStorageKeys: Object.keys(localStorage),
-                  cartItems: localStorage.getItem('cartItems'),
-                  cart: localStorage.getItem('cart'),
-                  shoppingCart: localStorage.getItem('shoppingCart'),
-                  user: localStorage.getItem('user'),
-                  referrer: document.referrer,
-                  currentURL: window.location.href,
-                  userAgent: navigator.userAgent
-                };
-                console.log('🐛 [FULL DEBUG INFO]', debugInfo);
-                navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2))
-                  .then(() => alert('تم نسخ معلومات التشخيص إلى الحافظة'))
-                  .catch(() => console.log('Failed to copy debug info'));
-              }}
-              className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors"
-            >
-              📋 نسخ معلومات التشخيص
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Render step content
   const renderStepContent = () => {
@@ -1147,14 +1091,14 @@ const Checkout: React.FC = () => {
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="أدخل كود الخصم"
                       className="flex-1 px-6 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/70 backdrop-blur-sm text-lg font-medium transition-all duration-300"
-                      disabled={isProcessing}
+                      disabled={couponLoading}
                     />
                     <button
                       onClick={applyCoupon}
-                      disabled={!couponCode.trim() || isProcessing}
+                      disabled={!couponCode.trim() || couponLoading}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-lg hover:scale-105 active:scale-95"
                     >
-                      {isProcessing ? (
+                      {couponLoading ? (
                         <div className="flex items-center gap-2">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                           جاري التحقق...
@@ -2018,133 +1962,219 @@ const Checkout: React.FC = () => {
     }
   };
 
-  // Add slide-in animation CSS
-  useEffect(() => {
-    const slideInStyle = document.createElement('style');
-    slideInStyle.textContent = `
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateY(30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `;
-    document.head.appendChild(slideInStyle);
-    
-    return () => {
-      if (document.head.contains(slideInStyle)) {
-        document.head.removeChild(slideInStyle);
-      }
-    };
-  }, []);
+  // Add debugging before return
+  console.log('🎨 [Checkout] About to render main component...');
+  console.log('🔍 [Checkout] Current state:', {
+    isLoadingCart,
+    cartItemsLength: cartItems.length,
+    currentStep,
+    errors: Object.keys(errors)
+  });
 
+  // Single return with conditional rendering - no early returns after hooks
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 via-pink-50 to-orange-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-            إتمام الطلب
-          </h1>
-          <p className="text-gray-600 text-xl leading-relaxed">
-            اتبع الخطوات البسيطة لإكمال طلبك بسهولة وأمان<br/>
-            نحن هنا لنجعل تجربة التسوق مميزة لك ✨
-          </p>
+      {/* Show loading screen while cart is being loaded */}
+      {isLoadingCart && (
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">جاري تحميل السلة...</h2>
+            <p className="text-gray-600 text-lg">
+              يرجى الانتظار بينما نحضر طلبك
+            </p>
+          </div>
         </div>
+      )}
 
-        {/* Progress Bar */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 mb-12 border border-white/20">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl border-2 transition-all duration-500 ${
-                  currentStep >= step.id
-                    ? `bg-gradient-to-r ${step.color} border-transparent text-white shadow-2xl scale-110`
-                    : 'bg-white border-gray-300 text-gray-400 hover:border-gray-400'
-                }`}>
-                  {currentStep > step.id ? (
-                    <CheckCircle size={28} />
-                  ) : (
-                    <step.icon size={28} />
-                  )}
-                  {currentStep === step.id && (
-                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-75 animate-pulse"></div>
-                  )}
-                </div>
-                <div className="mr-4 text-right">
-                  <p className={`font-semibold text-sm transition-colors duration-300 ${
-                    currentStep >= step.id ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    {step.title}
-                  </p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-24 h-2 mx-6 rounded-full transition-all duration-500 ${
-                    currentStep > step.id 
-                      ? `bg-gradient-to-r ${step.color}` 
-                      : 'bg-gray-200'
-                  }`} />
-                )}
+      {/* Show empty cart message if no items after loading */}
+      {!isLoadingCart && cartItems.length === 0 && (
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-2xl w-full border border-white/20">
+            <div className="mb-8">
+              <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                <ShoppingCart className="w-16 h-16 text-gray-400" />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          <div className="p-8">
-            {renderStepContent()}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="bg-gray-50/80 backdrop-blur-sm px-8 py-6 flex justify-between items-center border-t border-gray-200/50">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="flex items-center gap-3 px-8 py-4 text-gray-600 hover:text-gray-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg hover:bg-white/50 rounded-2xl"
-            >
-              <ArrowLeft size={24} />
-              السابق
-            </button>
-
-            {currentStep < 4 ? (
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">
+                السلة فارغة! 🛒
+              </h2>
+              <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+                لم نتمكن من العثور على أي منتجات في سلة التسوق. 
+                <br/>قد تكون السلة فارغة أو حدث خطأ في تحميل البيانات.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
               <button
-                onClick={nextStep}
-                className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-2xl transform hover:scale-105"
+                onClick={() => navigate('/cart')}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
               >
-                التالي
-                <ArrowRight size={24} />
+                🛒 العودة إلى السلة
               </button>
-            ) : (
-              <div className="text-gray-500 text-sm">
-                اضغط "تأكيد الطلب" أعلاه لإكمال الطلب 👆
+              <button
+                onClick={() => navigate('/')}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
+              >
+                🏠 الصفحة الرئيسية
+              </button>
+              <button
+                onClick={() => {
+                  console.log('🔄 [Manual Refresh] User clicked refresh');
+                  console.log('🔍 [Manual Debug] Current localStorage:');
+                  console.log('  - cartItems:', localStorage.getItem('cartItems'));
+                  console.log('  - cart:', localStorage.getItem('cart')); 
+                  console.log('  - shoppingCart:', localStorage.getItem('shoppingCart'));
+                  window.location.reload();
+                }}
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-orange-700 hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
+              >
+                🔄 إعادة تحميل الصفحة
+              </button>
+            </div>
+            
+            {/* Enhanced Debug info */}
+            <div className="mt-8 p-6 bg-gray-100 rounded-xl text-left border-2 border-gray-200">
+              <p className="text-sm font-bold text-gray-800 mb-3">معلومات تشخيصية مفصلة:</p>
+              <div className="space-y-2 text-xs text-gray-600 font-mono">
+                <p><span className="font-bold">localStorage Keys:</span> {Object.keys(localStorage).join(', ') || 'لا توجد مفاتيح'}</p>
+                <p><span className="font-bold">cartItems:</span> {localStorage.getItem('cartItems') ? '✅ موجود' : '❌ غير موجود'}</p>
+                <p><span className="font-bold">cart:</span> {localStorage.getItem('cart') ? '✅ موجود' : '❌ غير موجود'}</p>
+                <p><span className="font-bold">shoppingCart:</span> {localStorage.getItem('shoppingCart') ? '✅ موجود' : '❌ غير موجود'}</p>
+                <p><span className="font-bold">user:</span> {localStorage.getItem('user') ? '✅ مسجل الدخول' : '❌ ضيف'}</p>
+                <p><span className="font-bold">referrer:</span> {document.referrer || 'غير متوفر'}</p>
+                <p><span className="font-bold">current URL:</span> {window.location.href}</p>
               </div>
-            )}
+              
+              <button
+                onClick={() => {
+                  const debugInfo = {
+                    localStorageKeys: Object.keys(localStorage),
+                    cartItems: localStorage.getItem('cartItems'),
+                    cart: localStorage.getItem('cart'),
+                    shoppingCart: localStorage.getItem('shoppingCart'),
+                    user: localStorage.getItem('user'),
+                    referrer: document.referrer,
+                    currentURL: window.location.href,
+                    userAgent: navigator.userAgent
+                  };
+                  console.log('🐛 [FULL DEBUG INFO]', debugInfo);
+                  navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2))
+                    .then(() => alert('تم نسخ معلومات التشخيص إلى الحافظة'))
+                    .catch(() => console.log('Failed to copy debug info'));
+                }}
+                className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors"
+              >
+                📋 نسخ معلومات التشخيص
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Trust Indicators */}
-        <div className="mt-12 text-center">
-          <div className="flex items-center justify-center gap-8 text-gray-600">
-            <div className="flex items-center gap-2">
-              <Shield className="text-green-600" size={20} />
-              <span className="font-semibold">دفع آمن</span>
+      {/* Main checkout interface - only show when not loading and has items */}
+      {!isLoadingCart && cartItems.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+              إتمام الطلب
+            </h1>
+            <p className="text-gray-600 text-xl leading-relaxed">
+              اتبع الخطوات البسيطة لإكمال طلبك بسهولة وأمان<br/>
+              نحن هنا لنجعل تجربة التسوق مميزة لك ✨
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 mb-12 border border-white/20">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={`relative flex items-center justify-center w-16 h-16 rounded-2xl border-2 transition-all duration-500 ${
+                    currentStep >= step.id
+                      ? `bg-gradient-to-r ${step.color} border-transparent text-white shadow-2xl scale-110`
+                      : 'bg-white border-gray-300 text-gray-400 hover:border-gray-400'
+                  }`}>
+                    {currentStep > step.id ? (
+                      <CheckCircle size={28} />
+                    ) : (
+                      <step.icon size={28} />
+                    )}
+                    {currentStep === step.id && (
+                      <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-75 animate-pulse"></div>
+                    )}
+                  </div>
+                  <div className="mr-4 text-right">
+                    <p className={`font-semibold text-sm transition-colors duration-300 ${
+                      currentStep >= step.id ? 'text-blue-600' : 'text-gray-400'
+                    }`}>
+                      {step.title}
+                    </p>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className={`w-24 h-2 mx-6 rounded-full transition-all duration-500 ${
+                      currentStep > step.id 
+                        ? `bg-gradient-to-r ${step.color}` 
+                        : 'bg-gray-200'
+                    }`} />
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <Truck className="text-blue-600" size={20} />
-              <span className="font-semibold">توصيل سريع</span>
+          </div>
+
+          {/* Main Content */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+            <div className="p-8">
+              {renderStepContent()}
             </div>
-            <div className="flex items-center gap-2">
-              <Heart className="text-red-600" size={20} />
-              <span className="font-semibold">ضمان الجودة</span>
+
+            {/* Navigation Buttons */}
+            <div className="bg-gray-50/80 backdrop-blur-sm px-8 py-6 flex justify-between items-center border-t border-gray-200/50">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="flex items-center gap-3 px-8 py-4 text-gray-600 hover:text-gray-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg hover:bg-white/50 rounded-2xl"
+              >
+                <ArrowLeft size={24} />
+                السابق
+              </button>
+
+              {currentStep < 4 ? (
+                <button
+                  onClick={nextStep}
+                  className="flex items-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-2xl transform hover:scale-105"
+                >
+                  التالي
+                  <ArrowRight size={24} />
+                </button>
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  اضغط "تأكيد الطلب" أعلاه لإكمال الطلب 👆
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="mt-12 text-center">
+            <div className="flex items-center justify-center gap-8 text-gray-600">
+              <div className="flex items-center gap-2">
+                <Shield className="text-green-600" size={20} />
+                <span className="font-semibold">دفع آمن</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Truck className="text-blue-600" size={20} />
+                <span className="font-semibold">توصيل سريع</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart className="text-red-600" size={20} />
+                <span className="font-semibold">ضمان الجودة</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

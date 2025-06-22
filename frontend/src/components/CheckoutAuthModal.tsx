@@ -95,6 +95,10 @@ const CheckoutAuthModal: React.FC<CheckoutAuthModalProps> = ({
       console.log('✅ [CheckoutAuthModal] Login successful:', response);
       
       if (response.user) {
+        // حفظ بيانات المستخدم فوراً
+        localStorage.setItem('user', JSON.stringify(response.user));
+        console.log('💾 [CheckoutAuthModal] User data saved to localStorage');
+        
         onLoginSuccess(response.user);
         toast.success('مرحباً بك! تم تسجيل الدخول بنجاح', {
           position: "top-center",
@@ -158,6 +162,10 @@ const CheckoutAuthModal: React.FC<CheckoutAuthModalProps> = ({
       console.log('✅ [CheckoutAuthModal] Registration successful:', response);
       
       if (response.user) {
+        // حفظ بيانات المستخدم فوراً
+        localStorage.setItem('user', JSON.stringify(response.user));
+        console.log('💾 [CheckoutAuthModal] User data saved to localStorage');
+        
         onLoginSuccess(response.user);
         toast.success('مرحباً بك! تم إنشاء حسابك بنجاح', {
           position: "top-center",

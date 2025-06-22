@@ -371,7 +371,7 @@ const ShoppingCart: React.FC = () => {
   };
 
   // دالة لمعالجة نجاح تسجيل الدخول
-  const handleLoginSuccess = async (user: any) => {
+  const handleLoginSuccess = async (user: any): Promise<void> => {
     // حفظ بيانات المستخدم
     localStorage.setItem('user', JSON.stringify(user));
     
@@ -1583,13 +1583,28 @@ const ShoppingCart: React.FC = () => {
         isOpen={isCheckoutAuthModalOpen}
         onClose={() => setIsCheckoutAuthModalOpen(false)}
         onContinueAsGuest={() => {
+          console.log('🚶 [Cart] Continuing as guest, navigating to checkout');
           setIsCheckoutAuthModalOpen(false);
-          navigate('/checkout');
+          // Small delay to ensure state updates
+          setTimeout(() => {
+            navigate('/checkout');
+          }, 100);
         }}
-        onLoginSuccess={(user) => {
+        onLoginSuccess={async (user) => {
+          console.log('👤 [Cart] Login success, processing user data...');
           setIsCheckoutAuthModalOpen(false);
-          handleLoginSuccess(user);
-          navigate('/checkout');
+          
+          try {
+            // Wait for login success to complete
+            await handleLoginSuccess(user);
+            console.log('✅ [Cart] User data processed, navigating to checkout');
+            // Navigate after successful login processing
+            navigate('/checkout');
+          } catch (error) {
+            console.error('❌ [Cart] Error processing login:', error);
+            // Still navigate to checkout even if there's an error
+            navigate('/checkout');
+          }
         }}
       />
 

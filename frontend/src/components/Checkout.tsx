@@ -276,6 +276,30 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
+    // Immediate logging for debugging
+    const debugCart = () => {
+      const cartData = localStorage.getItem('cartItems');
+      console.log('🔍 [Checkout] Debug - Raw localStorage cartItems:', cartData);
+      console.log('🔍 [Checkout] Debug - localStorage keys:', Object.keys(localStorage));
+      
+      // Try to parse what we have
+      if (cartData) {
+        try {
+          const parsed = JSON.parse(cartData);
+          console.log('🔍 [Checkout] Debug - Parsed cart data:', parsed);
+          console.log('🔍 [Checkout] Debug - Is array?', Array.isArray(parsed));
+          console.log('🔍 [Checkout] Debug - Length:', parsed?.length);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log('🔍 [Checkout] Debug - First item structure:', parsed[0]);
+          }
+        } catch (error) {
+          console.error('🔍 [Checkout] Debug - Parse error:', error);
+        }
+      }
+    };
+    
+    debugCart();
+    
     // Small delay to ensure localStorage is available
     setTimeout(() => {
       try {
@@ -291,62 +315,79 @@ const Checkout: React.FC = () => {
                 console.log(`✅ [Checkout] Attempt ${attempt + 1} - Parsed cart:`, parsedCart);
                 
                 if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-                  // Convert any cart format to Checkout format
+                  // Convert any cart format to Checkout format - SIMPLIFIED
                   const convertedCart = parsedCart.map((item: any, index: number) => {
                     console.log(`🔄 [Checkout] Converting item ${index}:`, item);
                     
-                    // Handle different cart formats
-                    let convertedItem: CartItem;
-                    
-                    if (item.product) {
-                      // ShoppingCart format - Enhanced conversion
-                      const basePrice = item.product.price || 0;
-                      const optionsPrice = item.optionsPricing ? 
-                        Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
-                      const totalPrice = basePrice + optionsPrice;
+                    try {
+                      // Handle different cart formats
+                      let convertedItem: CartItem;
                       
-                      // Get size from selectedOptions with fallback
-                      const getSize = () => {
-                        if (item.selectedOptions) {
-                          return item.selectedOptions.size || 
-                                 item.selectedOptions.الحجم || 
-                                 item.selectedOptions.المقاس || 
-                                 item.selectedOptions.Size || '';
-                        }
-                        return '';
-                      };
+                      if (item.product) {
+                        // ShoppingCart format - Enhanced conversion
+                        const basePrice = parseFloat(item.product.price) || 0;
+                        const optionsPrice = item.optionsPricing ? 
+                          Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0) : 0;
+                        const totalPrice = basePrice + optionsPrice;
+                        
+                        // Get size from selectedOptions with fallback
+                        const getSize = () => {
+                          if (item.selectedOptions) {
+                            return item.selectedOptions.size || 
+                                   item.selectedOptions.الحجم || 
+                                   item.selectedOptions.المقاس || 
+                                   item.selectedOptions.Size || '';
+                          }
+                          return '';
+                        };
+                        
+                        convertedItem = {
+                          id: (item.id || item.productId || `item-${index}`).toString(),
+                          name: item.product.name || 'منتج غير معروف',
+                          price: totalPrice,
+                          originalPrice: parseFloat(item.product.originalPrice) || totalPrice,
+                          quantity: parseInt(item.quantity) || 1,
+                          image: item.product.mainImage || '',
+                          size: getSize(),
+                          category: item.product.productType || item.product.category?.name || '',
+                          discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
+                            Math.round(((parseFloat(item.product.originalPrice) - totalPrice) / parseFloat(item.product.originalPrice)) * 100) : 0
+                        };
+                      } else {
+                        // Simple format or already converted
+                        convertedItem = {
+                          id: (item.id || `item-${index}`).toString(),
+                          name: item.name || item.productName || 'منتج غير معروف',
+                          price: parseFloat(item.price) || 0,
+                          originalPrice: parseFloat(item.originalPrice || item.price) || 0,
+                          quantity: parseInt(item.quantity) || 1,
+                          image: item.image || '',
+                          size: item.size || '',
+                          category: item.category || '',
+                          discount: parseInt(item.discount) || 0
+                        };
+                      }
                       
-                      convertedItem = {
-                        id: item.id?.toString() || item.productId?.toString() || `item-${index}`,
-                        name: item.product.name || 'منتج غير معروف',
-                        price: totalPrice,
-                        originalPrice: item.product.originalPrice || totalPrice,
-                        quantity: item.quantity || 1,
-                        image: item.product.mainImage || '',
-                        size: getSize(),
-                        category: item.product.productType || item.product.category?.name || '',
-                        discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
-                          Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
-                      };
-                    } else {
-                      // Simple format or already converted
-                      convertedItem = {
-                        id: item.id?.toString() || `item-${index}`,
-                        name: item.name || item.productName || 'منتج غير معروف',
-                        price: item.price || 0,
-                        originalPrice: item.originalPrice || item.price || 0,
-                        quantity: item.quantity || 1,
-                        image: item.image || '',
-                        size: item.size || '',
-                        category: item.category || '',
-                        discount: item.discount || 0
+                      console.log(`✅ [Checkout] Converted item ${index}:`, convertedItem);
+                      return convertedItem;
+                    } catch (itemError) {
+                      console.error(`❌ [Checkout] Error converting item ${index}:`, itemError);
+                      // Return a minimal valid item
+                      return {
+                        id: `item-${index}`,
+                        name: 'منتج غير معروف',
+                        price: 0,
+                        originalPrice: 0,
+                        quantity: 1,
+                        image: '',
+                        size: '',
+                        category: '',
+                        discount: 0
                       };
                     }
-                    
-                    console.log(`✅ [Checkout] Converted item ${index}:`, convertedItem);
-                    return convertedItem;
                   });
                   
+                  console.log(`🎯 [Checkout] Final converted cart:`, convertedCart);
                   setCartItems(convertedCart);
                   console.log(`🎯 [Checkout] Cart converted and loaded successfully with ${convertedCart.length} items`);
                   return true; // Success
@@ -406,8 +447,9 @@ const Checkout: React.FC = () => {
         setCartItems([]);
       } finally {
         setIsLoadingCart(false);
+        console.log('🏁 [Checkout] Loading completed');
       }
-    }, 100);
+    }, 500); // Increased timeout to 500ms for better reliability
   }, []);
 
   // Auto-select shipping zone based on city

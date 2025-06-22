@@ -271,10 +271,18 @@ const ShoppingCart: React.FC = () => {
   // حساب المجموع الكلي مع الشحن
   const orderCalculation = useMemo(() => {
     const subtotal = cartItems.reduce((total, item) => {
+      // Add safety checks to prevent undefined errors
+      if (!item || !item.product || typeof item.product.price !== 'number') {
+        console.warn('⚠️ [ShoppingCart] Invalid item found in cart:', item);
+        return total;
+      }
+      
       const basePrice = item.product.price;
-      const optionsPrice = item.optionsPricing ? 
-        Object.values(item.optionsPricing).reduce((sum, price) => sum + price, 0) : 0;
-      return total + ((basePrice + optionsPrice) * item.quantity);
+      const optionsPrice = item.optionsPricing && typeof item.optionsPricing === 'object' ? 
+        Object.values(item.optionsPricing).reduce((sum, price) => sum + (price || 0), 0) : 0;
+      const quantity = item.quantity || 1;
+      
+      return total + ((basePrice + optionsPrice) * quantity);
     }, 0);
     
     return calculateTotalWithShipping(subtotal);

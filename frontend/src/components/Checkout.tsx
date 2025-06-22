@@ -82,6 +82,7 @@ const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [userData, setUserData] = useState<UserData>({
     name: '',
     email: '',
@@ -270,52 +271,76 @@ const Checkout: React.FC = () => {
     'أي وقت مناسب'
   ];
 
+  // Load cart and user data
   useEffect(() => {
     console.log('🛒 [Checkout] Loading cart and user data...');
+    setIsLoadingCart(true);
     
-    // Load cart items
-    const savedCart = localStorage.getItem('cartItems');
-    console.log('📦 [Checkout] Saved cart:', savedCart);
-    
-    if (savedCart) {
+    // Small delay to ensure localStorage is available
+    setTimeout(() => {
       try {
-        const parsedCart = JSON.parse(savedCart);
-        console.log('✅ [Checkout] Parsed cart:', parsedCart);
-        setCartItems(Array.isArray(parsedCart) ? parsedCart : []);
+        // Load cart items
+        const savedCart = localStorage.getItem('cartItems');
+        console.log('📦 [Checkout] Saved cart:', savedCart);
+        
+        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
+          try {
+            const parsedCart = JSON.parse(savedCart);
+            console.log('✅ [Checkout] Parsed cart:', parsedCart);
+            
+            if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+              setCartItems(parsedCart);
+              console.log('🎯 [Checkout] Cart loaded successfully with', parsedCart.length, 'items');
+            } else {
+              console.log('⚠️ [Checkout] Cart is empty or invalid array');
+              setCartItems([]);
+            }
+          } catch (error) {
+            console.error('❌ [Checkout] Error parsing cart:', error);
+            setCartItems([]);
+          }
+        } else {
+          console.log('ℹ️ [Checkout] No cart found in localStorage');
+          setCartItems([]);
+        }
+
+        // Load user data if logged in
+        const savedUser = localStorage.getItem('user');
+        if (savedUser && savedUser !== 'null' && savedUser !== 'undefined') {
+          try {
+            const user = JSON.parse(savedUser);
+            console.log('👤 [Checkout] Loading user data:', user);
+            setUserData({
+              name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : ''),
+              email: user.email || '',
+              phone: user.phone || '',
+              address: user.address || '',
+              city: user.city || '',
+              region: user.region || '',
+              postalCode: user.postalCode || '',
+              buildingNumber: user.buildingNumber || '',
+              floor: user.floor || '',
+              apartment: user.apartment || '',
+              landmark: user.landmark || ''
+            });
+          } catch (error) {
+            console.error('❌ [Checkout] Error parsing user data:', error);
+          }
+        } else {
+          console.log('ℹ️ [Checkout] No user data found - continuing as guest');
+        }
       } catch (error) {
-        console.error('❌ [Checkout] Error parsing cart:', error);
+        console.error('❌ [Checkout] Error in useEffect:', error);
         setCartItems([]);
+      } finally {
+        setIsLoadingCart(false);
       }
-    } else {
-      console.log('ℹ️ [Checkout] No cart found in localStorage');
-    }
+    }, 100);
+  }, []);
 
-    // Load user data if logged in
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        console.log('👤 [Checkout] Loading user data:', user);
-        setUserData({
-          name: user.name || user.firstName + ' ' + user.lastName || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          address: user.address || '',
-          city: user.city || '',
-          region: user.region || '',
-          postalCode: user.postalCode || '',
-          buildingNumber: user.buildingNumber || '',
-          floor: user.floor || '',
-          apartment: user.apartment || '',
-          landmark: user.landmark || ''
-        });
-      } catch (error) {
-        console.error('❌ [Checkout] Error parsing user data:', error);
-      }
-    }
-
-    // Auto-select shipping zone based on city
-    const autoSelectShipping = () => {
+  // Auto-select shipping zone based on city
+  useEffect(() => {
+    if (userData.city) {
       const city = userData.city.toLowerCase();
       let selectedZone = null;
       
@@ -327,14 +352,46 @@ const Checkout: React.FC = () => {
         selectedZone = shippingZones.find(z => z.id === 'dammam');
       }
       
-      if (selectedZone) {
+      if (selectedZone && !selectedShippingZone) {
         setSelectedShippingZone(selectedZone);
+        console.log('🚚 [Checkout] Auto-selected shipping zone:', selectedZone.name);
+      }
+    }
+  }, [userData.city, selectedShippingZone]);
+
+  // Listen for cart updates from other components
+  useEffect(() => {
+    const handleCartUpdate = (event: any) => {
+      console.log('🔄 [Checkout] Cart update event received:', event.detail);
+      if (event.detail && event.detail.items) {
+        setCartItems(event.detail.items);
+        console.log('✅ [Checkout] Cart updated with', event.detail.items.length, 'items');
       }
     };
 
-    if (userData.city) {
-      autoSelectShipping();
-    }
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'cartItems') {
+        console.log('💾 [Checkout] Storage change detected for cartItems');
+        try {
+          const newCart = event.newValue ? JSON.parse(event.newValue) : [];
+          if (Array.isArray(newCart)) {
+            setCartItems(newCart);
+            console.log('🔄 [Checkout] Cart updated from storage with', newCart.length, 'items');
+          }
+        } catch (error) {
+          console.error('❌ [Checkout] Error parsing cart from storage:', error);
+        }
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Calculate totals
@@ -639,8 +696,23 @@ const Checkout: React.FC = () => {
     };
   }, []);
 
-  // Show empty cart message if no items
-  if (cartItems.length === 0) {
+  // Show loading screen while cart is being loaded
+  if (isLoadingCart) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">جاري تحميل السلة...</h2>
+          <p className="text-gray-600 text-lg">
+            يرجى الانتظار بينما نحضر طلبك
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty cart message if no items after loading
+  if (!isLoadingCart && cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center max-w-md w-full border border-white/20 transform hover:scale-105 transition-all duration-500">
@@ -664,6 +736,27 @@ const Checkout: React.FC = () => {
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
             >
               🛍️ تصفح المنتجات
+            </button>
+            <button
+              onClick={() => {
+                // Try to reload cart from localStorage one more time
+                const savedCart = localStorage.getItem('cartItems');
+                console.log('🔄 [Checkout] Retry loading cart:', savedCart);
+                if (savedCart) {
+                  try {
+                    const parsedCart = JSON.parse(savedCart);
+                    if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+                      setCartItems(parsedCart);
+                      toast.success('تم تحديث السلة بنجاح!');
+                    }
+                  } catch (error) {
+                    console.error('❌ [Checkout] Retry parse error:', error);
+                  }
+                }
+              }}
+              className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-orange-700 hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
+            >
+              🔄 إعادة تحميل السلة
             </button>
           </div>
         </div>

@@ -735,7 +735,7 @@ const ShoppingCart: React.FC = () => {
                         </div>
 
                         {/* Mobile: Product Options - Clean and simple */}
-                        {item.product.dynamicOptions && item.product.dynamicOptions.length > 0 && (
+                        {item.product && item.product.dynamicOptions && Array.isArray(item.product.dynamicOptions) && item.product.dynamicOptions.length > 0 && (
                           <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-2xl border-2 border-gray-700 shadow-lg">
                             <h5 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                               <Package className="w-6 h-6 text-blue-400" />
@@ -743,7 +743,7 @@ const ShoppingCart: React.FC = () => {
                             </h5>
                             
                             <div className="space-y-4">
-                              {item.product.dynamicOptions.map((option) => (
+                              {item.product.dynamicOptions.filter(option => option && option.optionName).map((option) => (
                                 <div key={option.optionName} className="space-y-2">
                                   <label className="block text-base font-semibold text-white">
                                     {getOptionDisplayName(option.optionName)}
@@ -1050,7 +1050,7 @@ const ShoppingCart: React.FC = () => {
                         <div className="lg:col-span-2 order-2 lg:order-2">
                           <div className="space-y-6">
                             {/* Product Options - Always visible */}
-                            {item.product.dynamicOptions && item.product.dynamicOptions.length > 0 && (
+                            {item.product && item.product.dynamicOptions && Array.isArray(item.product.dynamicOptions) && item.product.dynamicOptions.length > 0 && (
                               <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-2xl border-2 border-gray-700 shadow-lg">
                                 <h5 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                                   <Package className="w-7 h-7 text-blue-400" />
@@ -1058,204 +1058,206 @@ const ShoppingCart: React.FC = () => {
                                 </h5>
                                 
                                 <div className="space-y-6">
-                                  {item.product.dynamicOptions.map((option) => (
-                                    <div key={option.optionName} className="space-y-3">
-                                      <label className="block text-lg font-semibold text-white">
-                                        {getOptionDisplayName(option.optionName)}
-                                        {option.required && <span className="text-red-400 mr-2">*</span>}
-                                      </label>
-                                      
-                                      {option.optionType === 'select' && option.options ? (
-                                        <select
-                                          value={item.selectedOptions?.[option.optionName] || ''}
-                                          onChange={async (e) => {
-                                            const newValue = e.target.value;
-                                            
-                                            console.log('🎯 [Cart] BEFORE UPDATE:', {
-                                              itemId: item.id,
-                                              optionName: option.optionName,
-                                              oldValue: item.selectedOptions?.[option.optionName],
-                                              newValue: newValue,
-                                              currentSelectedOptions: item.selectedOptions
-                                            });
-                                            
-                                            // تحضير البيانات المحدثة
-                                            const newOptions = { 
-                                              ...item.selectedOptions, 
-                                              [option.optionName]: newValue 
-                                            };
-                                            
-                                            console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
-                                            
-                                            // حفظ البيانات - سيحدث الـ state تلقائياً
-                                            const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
-                                            console.log('🎯 [Cart] SAVE RESULT:', saved);
-                                            
-                                            if (saved) {
-                                              toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
-                                                position: "top-center",
-                                                autoClose: 2000,
-                                                hideProgressBar: true,
-                                                style: {
-                                                  background: '#10B981',
-                                                  color: 'white',
-                                                  fontSize: '16px',
-                                                  fontWeight: 'bold'
-                                                }
+                                  {item.product.dynamicOptions.filter(option => option && option.optionName).map((option) => {
+                                    return (
+                                      <div key={option.optionName} className="space-y-3">
+                                        <label className="block text-lg font-semibold text-white">
+                                          {getOptionDisplayName(option.optionName)}
+                                          {option.required && <span className="text-red-400 mr-2">*</span>}
+                                        </label>
+                                        
+                                        {option.optionType === 'select' && option.options ? (
+                                          <select
+                                            value={item.selectedOptions?.[option.optionName] || ''}
+                                            onChange={async (e) => {
+                                              const newValue = e.target.value;
+                                              
+                                              console.log('🎯 [Cart] BEFORE UPDATE:', {
+                                                itemId: item.id,
+                                                optionName: option.optionName,
+                                                oldValue: item.selectedOptions?.[option.optionName],
+                                                newValue: newValue,
+                                                currentSelectedOptions: item.selectedOptions
                                               });
-                                            }
-                                          }}
-                                          className={`w-full px-4 py-3 border rounded-xl bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 ${
-                                            formErrors[option.optionName] ? 'border-red-500' : 'border-gray-600'
-                                          }`}
-                                          required={option.required}
-                                        >
-                                          <option value="">اختر {getOptionDisplayName(option.optionName)}</option>
-                                          {option.options.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>
-                                              {opt.value}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      ) : option.optionType === 'radio' && option.options ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                          {option.options.map((opt) => (
-                                            <label key={opt.value} className="flex items-center p-4 border-2 border-gray-600 bg-gray-700 rounded-xl hover:bg-gray-600 hover:border-gray-500 cursor-pointer transition-all shadow-sm">
-                                              <input
-                                                type="radio"
-                                                name={`${item.id}-${option.optionName}`}
-                                                value={opt.value}
-                                                checked={item.selectedOptions?.[option.optionName] === opt.value}
-                                                onChange={async (e) => {
-                                                  const newValue = e.target.value;
-                                                  
-                                                  console.log('🎯 [Cart] BEFORE UPDATE:', {
-                                                    itemId: item.id,
-                                                    optionName: option.optionName,
-                                                    oldValue: item.selectedOptions?.[option.optionName],
-                                                    newValue: newValue,
-                                                    currentSelectedOptions: item.selectedOptions
-                                                  });
-                                                  
-                                                  // تحضير البيانات المحدثة
-                                                  const newOptions = { 
-                                                    ...item.selectedOptions, 
-                                                    [option.optionName]: newValue 
-                                                  };
-                                                  
-                                                  console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
-                                                  
-                                                  // حفظ البيانات - سيحدث الـ state تلقائياً
-                                                  const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
-                                                  console.log('🎯 [Cart] SAVE RESULT:', saved);
-                                                  
-                                                  if (saved) {
-                                                    toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
-                                                      position: "top-center",
-                                                      autoClose: 2000,
-                                                      hideProgressBar: true,
-                                                      style: {
-                                                        background: '#10B981',
-                                                        color: 'white',
-                                                        fontSize: '16px',
-                                                        fontWeight: 'bold'
-                                                      }
-                                                    });
+                                              
+                                              // تحضير البيانات المحدثة
+                                              const newOptions = { 
+                                                ...item.selectedOptions, 
+                                                [option.optionName]: newValue 
+                                              };
+                                              
+                                              console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
+                                              
+                                              // حفظ البيانات - سيحدث الـ state تلقائياً
+                                              const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
+                                              console.log('🎯 [Cart] SAVE RESULT:', saved);
+                                              
+                                              if (saved) {
+                                                toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
+                                                  position: "top-center",
+                                                  autoClose: 2000,
+                                                  hideProgressBar: true,
+                                                  style: {
+                                                    background: '#10B981',
+                                                    color: 'white',
+                                                    fontSize: '16px',
+                                                    fontWeight: 'bold'
                                                   }
-                                                }}
-                                                className="ml-3 text-blue-400 scale-125"
-                                              />
-                                              <span className="font-medium text-white">{opt.value}</span>
-                                            </label>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <input
-                                          type={option.optionType === 'number' ? 'number' : 'text'}
-                                          value={item.selectedOptions?.[option.optionName] || ''}
-                                          onChange={async (e) => {
-                                            const newValue = e.target.value;
-                                            
-                                            console.log('🎯 [Cart] BEFORE UPDATE:', {
-                                              itemId: item.id,
-                                              optionName: option.optionName,
-                                              oldValue: item.selectedOptions?.[option.optionName],
-                                              newValue: newValue,
-                                              currentSelectedOptions: item.selectedOptions
-                                            });
-                                            
-                                            // تحضير البيانات المحدثة
-                                            const newOptions = { 
-                                              ...item.selectedOptions, 
-                                              [option.optionName]: newValue 
-                                            };
-                                            
-                                            console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
-                                            
-                                            // حفظ البيانات - سيحدث الـ state تلقائياً
-                                            const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
-                                            console.log('🎯 [Cart] SAVE RESULT:', saved);
-                                            
-                                            if (saved) {
-                                              toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
-                                                position: "top-center",
-                                                autoClose: 2000,
-                                                hideProgressBar: true,
-                                                style: {
-                                                  background: '#10B981',
-                                                  color: 'white',
-                                                  fontSize: '16px',
-                                                  fontWeight: 'bold'
-                                                }
-                                              });
-                                            }
-                                          }}
-                                          placeholder={option.placeholder}
-                                          className={`w-full px-4 py-3 border rounded-xl bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 ${
-                                            formErrors[option.optionName] ? 'border-red-500' : 'border-gray-600'
-                                          }`}
-                                          required={option.required}
-                                        />
-                                      )}
-                                      
-                                      {/* Size Guide - Only for size option */}
-                                      {option.optionName === 'size' && 
-                                       item.product.productType && 
-                                       (item.product.productType === 'جاكيت' || item.product.productType === 'عباية تخرج' || item.product.productType === 'مريول مدرسي') && (
-                                        <div className="mt-3">
-                                          <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-2 border-gray-700 rounded-xl p-4">
-                                            <div className="flex items-center justify-between">
-                                              <h6 className="font-bold text-white flex items-center gap-2">
-                                                <ImageIcon className="w-5 h-5 text-blue-400" />
-                                                دليل المقاسات
-                                              </h6>
-                                              <button
-                                                type="button"
-                                                onClick={() => setShowSizeGuide({show: true, productType: item.product.productType || ''})}
-                                                className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 shadow-lg border border-blue-500"
-                                              >
-                                                <span className="flex items-center gap-2">
-                                                  <span>👁️</span>
-                                                  <span>عرض دليل المقاسات</span>
-                                                </span>
-                                              </button>
-                                            </div>
-                                            <p className="text-gray-400 text-sm mt-2">اضغط على الزر لعرض جدول المقاسات</p>
+                                                });
+                                              }
+                                            }}
+                                            className={`w-full px-4 py-3 border rounded-xl bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 ${
+                                              formErrors[option.optionName] ? 'border-red-500' : 'border-gray-600'
+                                            }`}
+                                            required={option.required}
+                                          >
+                                            <option value="">اختر {getOptionDisplayName(option.optionName)}</option>
+                                            {option.options.map((opt) => (
+                                              <option key={opt.value} value={opt.value}>
+                                                {opt.value}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        ) : option.optionType === 'radio' && option.options ? (
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {option.options.map((opt) => (
+                                              <label key={opt.value} className="flex items-center p-4 border-2 border-gray-600 bg-gray-700 rounded-xl hover:bg-gray-600 hover:border-gray-500 cursor-pointer transition-all shadow-sm">
+                                                <input
+                                                  type="radio"
+                                                  name={`${item.id}-${option.optionName}`}
+                                                  value={opt.value}
+                                                  checked={item.selectedOptions?.[option.optionName] === opt.value}
+                                                  onChange={async (e) => {
+                                                    const newValue = e.target.value;
+                                                    
+                                                    console.log('🎯 [Cart] BEFORE UPDATE:', {
+                                                      itemId: item.id,
+                                                      optionName: option.optionName,
+                                                      oldValue: item.selectedOptions?.[option.optionName],
+                                                      newValue: newValue,
+                                                      currentSelectedOptions: item.selectedOptions
+                                                    });
+                                                    
+                                                    // تحضير البيانات المحدثة
+                                                    const newOptions = { 
+                                                      ...item.selectedOptions, 
+                                                      [option.optionName]: newValue 
+                                                    };
+                                                    
+                                                    console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
+                                                    
+                                                    // حفظ البيانات - سيحدث الـ state تلقائياً
+                                                    const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
+                                                    console.log('🎯 [Cart] SAVE RESULT:', saved);
+                                                    
+                                                    if (saved) {
+                                                      toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
+                                                        position: "top-center",
+                                                        autoClose: 2000,
+                                                        hideProgressBar: true,
+                                                        style: {
+                                                          background: '#10B981',
+                                                          color: 'white',
+                                                          fontSize: '16px',
+                                                          fontWeight: 'bold'
+                                                        }
+                                                      });
+                                                    }
+                                                  }}
+                                                  className="ml-3 text-blue-400 scale-125"
+                                                />
+                                                <span className="font-medium text-white">{opt.value}</span>
+                                              </label>
+                                            ))}
                                           </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Validation Error */}
-                                      {option.required && !item.selectedOptions?.[option.optionName] && (
-                                        <div className="bg-red-900 bg-opacity-50 border border-red-600 rounded-lg p-3">
-                                          <p className="text-red-300 text-sm font-medium flex items-center gap-2">
-                                            <span>⚠️</span>
-                                            هذا الحقل مطلوب
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
+                                        ) : (
+                                          <input
+                                            type={option.optionType === 'number' ? 'number' : 'text'}
+                                            value={item.selectedOptions?.[option.optionName] || ''}
+                                            onChange={async (e) => {
+                                              const newValue = e.target.value;
+                                              
+                                              console.log('🎯 [Cart] BEFORE UPDATE:', {
+                                                itemId: item.id,
+                                                optionName: option.optionName,
+                                                oldValue: item.selectedOptions?.[option.optionName],
+                                                newValue: newValue,
+                                                currentSelectedOptions: item.selectedOptions
+                                              });
+                                              
+                                              // تحضير البيانات المحدثة
+                                              const newOptions = { 
+                                                ...item.selectedOptions, 
+                                                [option.optionName]: newValue 
+                                              };
+                                              
+                                              console.log('🎯 [Cart] NEW OPTIONS OBJECT:', newOptions);
+                                              
+                                              // حفظ البيانات - سيحدث الـ state تلقائياً
+                                              const saved = await saveOptionsToBackend(item.id, 'selectedOptions', newOptions);
+                                              console.log('🎯 [Cart] SAVE RESULT:', saved);
+                                              
+                                              if (saved) {
+                                                toast.success(`✅ تم حفظ ${getOptionDisplayName(option.optionName)}: ${newValue}`, {
+                                                  position: "top-center",
+                                                  autoClose: 2000,
+                                                  hideProgressBar: true,
+                                                  style: {
+                                                    background: '#10B981',
+                                                    color: 'white',
+                                                    fontSize: '16px',
+                                                    fontWeight: 'bold'
+                                                  }
+                                                });
+                                              }
+                                            }}
+                                            placeholder={option.placeholder}
+                                            className={`w-full px-4 py-3 border rounded-xl bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200 ${
+                                              formErrors[option.optionName] ? 'border-red-500' : 'border-gray-600'
+                                            }`}
+                                            required={option.required}
+                                          />
+                                        )}
+                                        
+                                        {/* Size Guide - Only for size option */}
+                                        {option.optionName === 'size' && 
+                                         item.product.productType && 
+                                         (item.product.productType === 'جاكيت' || item.product.productType === 'عباية تخرج' || item.product.productType === 'مريول مدرسي') && (
+                                          <div className="mt-3">
+                                            <div className="bg-gradient-to-r from-gray-800 to-gray-900 border-2 border-gray-700 rounded-xl p-4">
+                                              <div className="flex items-center justify-between">
+                                                <h6 className="font-bold text-white flex items-center gap-2">
+                                                  <ImageIcon className="w-5 h-5 text-blue-400" />
+                                                  دليل المقاسات
+                                                </h6>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setShowSizeGuide({show: true, productType: item.product.productType || ''})}
+                                                  className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 shadow-lg border border-blue-500"
+                                                >
+                                                  <span className="flex items-center gap-2">
+                                                    <span>👁️</span>
+                                                    <span>عرض دليل المقاسات</span>
+                                                  </span>
+                                                </button>
+                                              </div>
+                                              <p className="text-gray-400 text-sm mt-2">اضغط على الزر لعرض جدول المقاسات</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Validation Error */}
+                                        {option.required && !item.selectedOptions?.[option.optionName] && (
+                                          <div className="bg-red-900 bg-opacity-50 border border-red-600 rounded-lg p-3">
+                                            <p className="text-red-300 text-sm font-medium flex items-center gap-2">
+                                              <span>⚠️</span>
+                                              هذا الحقل مطلوب
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
@@ -1295,8 +1297,8 @@ const ShoppingCart: React.FC = () => {
 
                             {/* رسالة تحذيرية إذا لم يتم اختيار مواصفات مطلوبة */}
                             {(!item.selectedOptions || Object.keys(item.selectedOptions).length === 0) && 
-                             item.product.dynamicOptions && 
-                             item.product.dynamicOptions.some(option => option.required) && (
+                             item.product && item.product.dynamicOptions && Array.isArray(item.product.dynamicOptions) && 
+                             item.product.dynamicOptions.some(option => option && option.required) && (
                               <div className="bg-gradient-to-br from-red-800 to-red-900 p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-red-700 shadow-lg mb-4">
                                 <h5 className="text-lg sm:text-xl font-bold text-white mb-3 flex items-center gap-2">
                                   <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />

@@ -129,71 +129,106 @@ const ProductDetail: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Fetching product:', productId);
+      console.log('🔄 [ProductDetail] Fetching product:', productId);
       
       if (!productId) {
         throw new Error('معرف المنتج غير صحيح');
       }
       
-      // Try multiple approaches to get product data
+      // Try multiple approaches to get product data with better error handling
       let product = null;
+      let lastError = null;
       
-      // First, try to get all products
+      // Approach 1: Try to get all products first
       try {
+        console.log('🔄 [ProductDetail] Approach 1: Fetching all products...');
         const products = await apiCall(API_ENDPOINTS.PRODUCTS);
-        console.log('📦 All products loaded:', products.length);
+        console.log('📦 [ProductDetail] All products loaded:', products?.length || 0);
         
         if (products && Array.isArray(products) && products.length > 0) {
+          // Try different ID matching strategies
           product = products.find((p: Product) => {
-            // Try both string and number comparison
-            const pId = p.id.toString();
+            const pId = p.id?.toString();
             const searchId = productId.toString();
+            
+            console.log(`🔍 [ProductDetail] Comparing: "${pId}" === "${searchId}"`);
             return pId === searchId;
           });
           
           if (product) {
-            console.log('✅ Product found via products list:', product.name);
+            console.log('✅ [ProductDetail] Product found via products list:', product.name);
           } else {
-            console.warn('⚠️ Product not found in products list. Available IDs:', 
-              products.map((p: Product) => p.id).slice(0, 10)
+            console.warn('⚠️ [ProductDetail] Product not found in products list');
+            console.log('🔍 [ProductDetail] Available product IDs:', 
+              products.map((p: Product) => ({ id: p.id, name: p.name })).slice(0, 10)
             );
+            
+            // Try fuzzy matching as fallback
+            const fuzzyMatch = products.find((p: Product) => {
+              const pId = p.id?.toString().toLowerCase();
+              const searchId = productId.toString().toLowerCase();
+              return pId.includes(searchId) || searchId.includes(pId);
+            });
+            
+            if (fuzzyMatch) {
+              console.log('✅ [ProductDetail] Product found via fuzzy matching:', fuzzyMatch.name);
+              product = fuzzyMatch;
+            }
           }
         } else {
-          console.warn('⚠️ No products returned or invalid format');
+          console.warn('⚠️ [ProductDetail] No products returned from API or invalid format');
         }
       } catch (error) {
-        console.error('❌ Error fetching products list:', error);
+        console.error('❌ [ProductDetail] Approach 1 failed:', error);
+        lastError = error;
       }
       
-      // If not found, try direct product fetch
+      // Approach 2: Try direct product fetch if first approach failed
       if (!product) {
         try {
-          console.log('🔄 Trying direct product fetch...');
+          console.log('🔄 [ProductDetail] Approach 2: Direct product fetch...');
           product = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(productId));
           
           if (product) {
-            console.log('✅ Product found via direct fetch:', product.name);
+            console.log('✅ [ProductDetail] Product found via direct fetch:', product.name);
           }
         } catch (error) {
-          console.error('❌ Error with direct product fetch:', error);
+          console.error('❌ [ProductDetail] Approach 2 failed:', error);
+          lastError = error;
         }
       }
       
-      // If still not found, throw error
+      // Final check - if still not found, throw comprehensive error
       if (!product) {
-        console.error('❌ Product not found with ID:', productId);
-        throw new Error('المنتج غير موجود أو تم حذفه');
+        console.error('❌ [ProductDetail] Product not found with ID:', productId);
+        console.error('❌ [ProductDetail] Last error:', lastError);
+        
+        const errorMessage = lastError instanceof Error ? 
+          `المنتج غير موجود: ${lastError.message}` : 
+          'المنتج غير موجود أو تم حذفه';
+        throw new Error(errorMessage);
       }
       
-      // Validate product data
-      if (!product.name || !product.price) {
-        console.error('❌ Invalid product data:', product);
-        throw new Error('بيانات المنتج غير مكتملة');
+      // Validate product data more thoroughly
+      const validationIssues = [];
+      if (!product.name) validationIssues.push('اسم المنتج مفقود');
+      if (!product.price && product.price !== 0) validationIssues.push('سعر المنتج مفقود');
+      if (!product.id) validationIssues.push('معرف المنتج مفقود');
+      
+      if (validationIssues.length > 0) {
+        console.error('❌ [ProductDetail] Product validation failed:', validationIssues);
+        throw new Error(`بيانات المنتج غير مكتملة: ${validationIssues.join(', ')}`);
       }
       
+      // Set product data - now we know product is not null
       setProduct(product);
       setSelectedImage(product.mainImage || '');
-      console.log('✅ Product loaded successfully:', product.name);
+      console.log('✅ [ProductDetail] Product loaded successfully:', {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        hasImage: !!product.mainImage
+      });
       
       // Initialize default options
       if (product.dynamicOptions && product.dynamicOptions.length > 0) {
@@ -204,7 +239,7 @@ const ProductDetail: React.FC = () => {
           }
         });
         setSelectedOptions(initialOptions);
-        console.log('🎛️ Initialized options:', initialOptions);
+        console.log('🎛️ [ProductDetail] Initialized options:', initialOptions);
       }
       
       // Fetch category info if available
@@ -213,7 +248,7 @@ const ProductDetail: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('❌ Error fetching product:', error);
+      console.error('❌ [ProductDetail] Error fetching product:', error);
       const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل المنتج';
       setError(errorMessage);
       

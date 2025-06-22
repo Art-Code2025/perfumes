@@ -273,87 +273,106 @@ const Checkout: React.FC = () => {
 
   // Load cart and user data
   useEffect(() => {
-    console.log('🛒 [Checkout] Loading cart and user data...');
+    console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
     // Small delay to ensure localStorage is available
     setTimeout(() => {
       try {
-        // Load cart items
-        const savedCart = localStorage.getItem('cartItems');
-        console.log('📦 [Checkout] Saved cart:', savedCart);
-        
-        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
-          try {
-            const parsedCart = JSON.parse(savedCart);
-            console.log('✅ [Checkout] Parsed cart:', parsedCart);
-            
-            if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-              // Convert any cart format to Checkout format
-              const convertedCart = parsedCart.map((item: any, index: number) => {
-                // Handle different cart formats
-                let convertedItem: CartItem;
-                
-                if (item.product) {
-                  // ShoppingCart format - Enhanced conversion
-                  const basePrice = item.product.price || 0;
-                  const optionsPrice = item.optionsPricing ? 
-                    Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
-                  const totalPrice = basePrice + optionsPrice;
-                  
-                  // Get size from selectedOptions with fallback
-                  const getSize = () => {
-                    if (item.selectedOptions) {
-                      return item.selectedOptions.size || 
-                             item.selectedOptions.الحجم || 
-                             item.selectedOptions.المقاس || 
-                             item.selectedOptions.Size || '';
-                    }
-                    return '';
-                  };
-                  
-                  convertedItem = {
-                    id: item.id?.toString() || item.productId?.toString() || `item-${index}`,
-                    name: item.product.name || 'منتج غير معروف',
-                    price: totalPrice,
-                    originalPrice: item.product.originalPrice || totalPrice,
-                    quantity: item.quantity || 1,
-                    image: item.product.mainImage || '',
-                    size: getSize(),
-                    category: item.product.productType || item.product.category?.name || '',
-                    discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
-                      Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
-                  };
-                } else {
-                  // Simple format or already converted
-                  convertedItem = {
-                    id: item.id?.toString() || `item-${index}`,
-                    name: item.name || item.productName || 'منتج غير معروف',
-                    price: item.price || 0,
-                    originalPrice: item.originalPrice || item.price || 0,
-                    quantity: item.quantity || 1,
-                    image: item.image || '',
-                    size: item.size || '',
-                    category: item.category || '',
-                    discount: item.discount || 0
-                  };
-                }
-                
-                return convertedItem;
-              });
+        // Load cart items with multiple attempts
+        const loadCartWithRetry = () => {
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              const savedCart = localStorage.getItem('cartItems');
+              console.log(`🔄 [Checkout] Attempt ${attempt + 1} - Saved cart:`, savedCart);
               
-              setCartItems(convertedCart);
-              console.log('🎯 [Checkout] Cart converted and loaded successfully with', convertedCart.length, 'items');
-            } else {
-              console.log('⚠️ [Checkout] Cart is empty or invalid array');
-              setCartItems([]);
+              if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
+                const parsedCart = JSON.parse(savedCart);
+                console.log(`✅ [Checkout] Attempt ${attempt + 1} - Parsed cart:`, parsedCart);
+                
+                if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+                  // Convert any cart format to Checkout format
+                  const convertedCart = parsedCart.map((item: any, index: number) => {
+                    console.log(`🔄 [Checkout] Converting item ${index}:`, item);
+                    
+                    // Handle different cart formats
+                    let convertedItem: CartItem;
+                    
+                    if (item.product) {
+                      // ShoppingCart format - Enhanced conversion
+                      const basePrice = item.product.price || 0;
+                      const optionsPrice = item.optionsPricing ? 
+                        Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
+                      const totalPrice = basePrice + optionsPrice;
+                      
+                      // Get size from selectedOptions with fallback
+                      const getSize = () => {
+                        if (item.selectedOptions) {
+                          return item.selectedOptions.size || 
+                                 item.selectedOptions.الحجم || 
+                                 item.selectedOptions.المقاس || 
+                                 item.selectedOptions.Size || '';
+                        }
+                        return '';
+                      };
+                      
+                      convertedItem = {
+                        id: item.id?.toString() || item.productId?.toString() || `item-${index}`,
+                        name: item.product.name || 'منتج غير معروف',
+                        price: totalPrice,
+                        originalPrice: item.product.originalPrice || totalPrice,
+                        quantity: item.quantity || 1,
+                        image: item.product.mainImage || '',
+                        size: getSize(),
+                        category: item.product.productType || item.product.category?.name || '',
+                        discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
+                          Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
+                      };
+                    } else {
+                      // Simple format or already converted
+                      convertedItem = {
+                        id: item.id?.toString() || `item-${index}`,
+                        name: item.name || item.productName || 'منتج غير معروف',
+                        price: item.price || 0,
+                        originalPrice: item.originalPrice || item.price || 0,
+                        quantity: item.quantity || 1,
+                        image: item.image || '',
+                        size: item.size || '',
+                        category: item.category || '',
+                        discount: item.discount || 0
+                      };
+                    }
+                    
+                    console.log(`✅ [Checkout] Converted item ${index}:`, convertedItem);
+                    return convertedItem;
+                  });
+                  
+                  setCartItems(convertedCart);
+                  console.log(`🎯 [Checkout] Cart converted and loaded successfully with ${convertedCart.length} items`);
+                  return true; // Success
+                } else {
+                  console.log(`⚠️ [Checkout] Attempt ${attempt + 1} - Cart is empty or invalid array`);
+                }
+              } else {
+                console.log(`ℹ️ [Checkout] Attempt ${attempt + 1} - No cart found in localStorage`);
+              }
+            } catch (parseError) {
+              console.error(`❌ [Checkout] Attempt ${attempt + 1} - Error parsing cart:`, parseError);
+              
+              // Try to recover by clearing corrupted data
+              if (attempt === 2) { // Last attempt
+                console.log('🔧 [Checkout] Attempting to recover by clearing corrupted cart data');
+                localStorage.removeItem('cartItems');
+              }
             }
-          } catch (error) {
-            console.error('❌ [Checkout] Error parsing cart:', error);
-            setCartItems([]);
           }
-        } else {
-          console.log('ℹ️ [Checkout] No cart found in localStorage');
+          return false; // All attempts failed
+        };
+        
+        const cartLoaded = loadCartWithRetry();
+        
+        if (!cartLoaded) {
+          console.log('⚠️ [Checkout] Failed to load cart after all attempts');
           setCartItems([]);
         }
 

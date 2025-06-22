@@ -116,39 +116,64 @@ export const handler = async (event, context) => {
     if (method === 'POST') {
       const body = event.body ? JSON.parse(event.body) : {};
       console.log('➕ Creating new product:', body.name);
+      console.log('📋 Product data received:', JSON.stringify(body, null, 2));
       
-      // Validate required fields
-      if (!body.name || !body.price || !body.categoryId) {
+      // Validate required fields - تخفيف التحقق
+      if (!body.name || !body.price) {
+        console.error('❌ Missing required fields:', { name: body.name, price: body.price });
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'البيانات المطلوبة ناقصة (الاسم، السعر، التصنيف)' }),
+          body: JSON.stringify({ error: 'البيانات المطلوبة ناقصة (الاسم والسعر مطلوبان)' }),
         };
       }
       
+      // إعداد البيانات مع قيم افتراضية
       const productData = {
-        ...body,
-        price: parseFloat(body.price),
+        name: body.name,
+        description: body.description || '',
+        price: parseFloat(body.price) || 0,
+        originalPrice: parseFloat(body.originalPrice) || 0,
         stock: parseInt(body.stock) || 0,
+        categoryId: body.categoryId || null, // السماح بـ null
+        productType: body.productType || '',
+        mainImage: body.mainImage || '',
+        detailedImages: body.detailedImages || [],
+        specifications: body.specifications || [],
+        dynamicOptions: body.dynamicOptions || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       
-      const productsCollection = collection(db, 'products');
-      const docRef = await addDoc(productsCollection, productData);
+      console.log('💾 Saving product with data:', JSON.stringify(productData, null, 2));
       
-      const newProduct = {
-        id: docRef.id,
-        ...productData
-      };
-      
-      console.log('✅ Product created with ID:', docRef.id);
-      
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify(newProduct),
-      };
+      try {
+        const productsCollection = collection(db, 'products');
+        const docRef = await addDoc(productsCollection, productData);
+        
+        const newProduct = {
+          id: docRef.id,
+          ...productData
+        };
+        
+        console.log('✅ Product created successfully with ID:', docRef.id);
+        
+        return {
+          statusCode: 201,
+          headers,
+          body: JSON.stringify(newProduct),
+        };
+      } catch (firebaseError) {
+        console.error('❌ Firebase error creating product:', firebaseError);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ 
+            error: 'فشل في حفظ المنتج في قاعدة البيانات',
+            details: firebaseError.message
+          }),
+        };
+      }
     }
 
     // PUT /products/{id} - Update product

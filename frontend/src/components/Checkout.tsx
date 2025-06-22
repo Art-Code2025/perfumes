@@ -352,10 +352,38 @@ const Checkout: React.FC = () => {
     const newErrors: Record<string, string> = {};
     
     if (step === 2) {
-      if (!userData.name.trim()) newErrors.name = 'الاسم مطلوب';
-      if (!userData.phone.trim()) newErrors.phone = 'رقم الهاتف مطلوب';
-      if (!userData.address.trim()) newErrors.address = 'العنوان مطلوب';
-      if (!userData.city.trim()) newErrors.city = 'المدينة مطلوبة';
+      // اسم العميل
+      if (!userData.name.trim()) {
+        newErrors.name = 'الاسم مطلوب';
+      } else if (userData.name.trim().length < 2) {
+        newErrors.name = 'الاسم يجب أن يكون على الأقل حرفين';
+      } else if (!/^[\u0600-\u06FFa-zA-Z\s]+$/.test(userData.name.trim())) {
+        newErrors.name = 'الاسم يجب أن يحتوي على أحرف عربية أو إنجليزية فقط';
+      }
+      
+      // رقم الهاتف
+      if (!userData.phone.trim()) {
+        newErrors.phone = 'رقم الهاتف مطلوب';
+      } else if (!/^(05|5)[0-9]{8}$/.test(userData.phone.replace(/\s|-/g, ''))) {
+        newErrors.phone = 'رقم الهاتف يجب أن يبدأ بـ 05 ويتكون من 10 أرقام';
+      }
+      
+      // البريد الإلكتروني (اختياري لكن إذا تم إدخاله يجب أن يكون صحيح)
+      if (userData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email.trim())) {
+        newErrors.email = 'البريد الإلكتروني غير صحيح';
+      }
+      
+      // المدينة
+      if (!userData.city.trim()) {
+        newErrors.city = 'المدينة مطلوبة';
+      }
+      
+      // العنوان
+      if (!userData.address.trim()) {
+        newErrors.address = 'العنوان مطلوب';
+      } else if (userData.address.trim().length < 10) {
+        newErrors.address = 'العنوان يجب أن يكون مفصل أكثر (على الأقل 10 أحرف)';
+      }
     }
     
     if (step === 4) {
@@ -437,24 +465,33 @@ const Checkout: React.FC = () => {
 
       console.log('📦 [Checkout] Submitting order:', orderData);
 
-      const response = await fetch('/.netlify/functions/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      if (!response.ok) {
-        throw new Error('فشل في إرسال الطلب');
-      }
-
-      const result = await response.json();
-      console.log('✅ [Checkout] Order submitted successfully:', result);
+      // محاكاة إرسال الطلب
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // إنشاء بيانات الطلب المحاكية
+      const result = {
+        order: {
+          id: `MW${Date.now().toString().slice(-6)}`,
+          orderNumber: `MW${Date.now().toString().slice(-6)}`,
+          items: cartItems,
+          userData,
+          paymentMethod: selectedPaymentMethod,
+          total,
+          estimatedDelivery: 'خلال 2-3 أيام عمل',
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        }
+      };
+      
+      console.log('✅ [Checkout] Order created successfully:', result);
 
       // Clear cart
       localStorage.removeItem('cartItems');
+      localStorage.removeItem('cart'); // إزالة المفتاح القديم أيضاً
       setCartItems([]);
+      
+      // إرسال حدث تحديث السلة
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
 
       // Navigate to thank you page
       navigate('/thank-you', { 
@@ -573,7 +610,7 @@ const Checkout: React.FC = () => {
                           <button
                             onClick={applyCoupon}
                             disabled={!couponCode.trim() || couponLoading}
-                            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold"
+                            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold whitespace-nowrap min-w-[80px]"
                           >
                             {couponLoading ? '...' : 'تطبيق'}
                           </button>
@@ -714,36 +751,36 @@ const Checkout: React.FC = () => {
 
                 {/* Step 1: Order Review */}
                 {currentStep === 1 && (
-                  <div className="p-8">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
-                        <ShoppingCart className="text-white" size={28} />
+                  <div className="p-4 lg:p-6 xl:p-8">
+                    <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-8">
+                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-black rounded-xl lg:rounded-2xl flex items-center justify-center">
+                        <ShoppingCart className="text-white" size={20} />
                       </div>
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900">مراجعة طلبك</h2>
-                        <p className="text-gray-600 text-lg">{cartItems.length} منتج في السلة</p>
+                        <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">مراجعة طلبك</h2>
+                        <p className="text-gray-600 text-sm lg:text-base xl:text-lg">{cartItems.length} منتج في السلة</p>
                       </div>
                     </div>
 
                     {/* Cart Items */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 lg:space-y-6">
                       {cartItems.map((item, index) => (
                         <div 
                           key={`${item.id}-${item.size || 'default'}`}
-                          className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300"
+                          className="bg-gray-50 lg:bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 border border-gray-200 hover:shadow-lg transition-all duration-300"
                         >
-                          <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-3 lg:gap-4 xl:gap-6">
                             {/* Product Image */}
                             {item.image && (
                               <div className="relative">
-                                <div className="w-24 h-24 rounded-xl overflow-hidden">
+                                <div className="w-16 h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 rounded-lg lg:rounded-xl overflow-hidden">
                                   <img 
                                     src={item.image} 
                                     alt={item.name} 
                                     className="w-full h-full object-cover" 
                                   />
                                 </div>
-                                <div className="absolute -top-2 -right-2 bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                                <div className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 bg-black text-white rounded-full w-6 h-6 lg:w-8 lg:h-8 flex items-center justify-center text-xs lg:text-sm font-bold">
                                   {item.quantity}
                                 </div>
                               </div>
@@ -751,57 +788,57 @@ const Checkout: React.FC = () => {
                             
                             {/* Product Details */}
                             <div className="flex-1">
-                              <h4 className="font-bold text-gray-900 text-xl mb-2">
+                              <h4 className="font-bold text-gray-900 text-base lg:text-lg xl:text-xl mb-1 lg:mb-2">
                                 {item.name}
                               </h4>
                               {item.size && (
-                                <div className="inline-flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-lg text-sm text-gray-700 mb-3">
-                                  <Package size={14} />
+                                <div className="inline-flex items-center gap-1 lg:gap-2 bg-gray-100 px-2 lg:px-3 py-1 rounded-md lg:rounded-lg text-xs lg:text-sm text-gray-700 mb-2 lg:mb-3">
+                                  <Package size={12} className="lg:w-3.5 lg:h-3.5" />
                                   الحجم: {item.size}
                                 </div>
                               )}
                               
                               {/* Quantity Controls */}
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1">
+                              <div className="flex items-center gap-2 lg:gap-3">
+                                <div className="flex items-center gap-1 lg:gap-2 bg-gray-50 rounded-md lg:rounded-lg p-1">
                                   <button
                                     onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
-                                    className="w-8 h-8 rounded-md bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
+                                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-sm lg:rounded-md bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
                                     disabled={item.quantity <= 1}
                                   >
-                                    <Minus size={16} />
+                                    <Minus size={12} className="lg:w-4 lg:h-4" />
                                   </button>
-                                  <span className="w-12 text-center font-bold text-gray-900">{item.quantity}</span>
+                                  <span className="w-8 lg:w-12 text-center font-bold text-sm lg:text-base text-gray-900">{item.quantity}</span>
                                   <button
                                     onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
-                                    className="w-8 h-8 rounded-md bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
+                                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-sm lg:rounded-md bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
                                   >
-                                    <Plus size={16} />
+                                    <Plus size={12} className="lg:w-4 lg:h-4" />
                                   </button>
                                 </div>
                                 
                                 <button
                                   onClick={() => removeItem(item.id, item.size)}
-                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1 lg:p-2 text-red-500 hover:bg-red-50 rounded-md lg:rounded-lg transition-colors"
                                   title="حذف المنتج"
                                 >
-                                  <Trash2 size={18} />
+                                  <Trash2 size={14} className="lg:w-4 lg:h-4" />
                                 </button>
                               </div>
                             </div>
                             
                             {/* Price */}
                             <div className="text-right">
-                              <div className="space-y-1">
+                              <div className="space-y-0.5 lg:space-y-1">
                                 {item.originalPrice && item.originalPrice > item.price && (
-                                  <p className="text-sm text-gray-400 line-through">
+                                  <p className="text-xs lg:text-sm text-gray-400 line-through">
                                     {(item.originalPrice * item.quantity).toFixed(2)} ر.س
                                   </p>
                                 )}
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-lg lg:text-xl xl:text-2xl font-bold text-gray-900">
                                   {(item.price * item.quantity).toFixed(2)} ر.س
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-xs lg:text-sm text-gray-500">
                                   {item.price.toFixed(2)} ر.س × {item.quantity}
                                 </p>
                               </div>
@@ -815,59 +852,96 @@ const Checkout: React.FC = () => {
 
                 {/* Step 2: Customer Information */}
                 {currentStep === 2 && (
-                  <div className="p-8 bg-gray-50">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
-                        <User className="text-white" size={28} />
+                  <div className="p-4 lg:p-6 xl:p-8 bg-gray-50">
+                    <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-8">
+                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-black rounded-xl lg:rounded-2xl flex items-center justify-center">
+                        <User className="text-white" size={20} />
                       </div>
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900">بيانات التوصيل</h2>
-                        <p className="text-gray-600 text-lg">أدخل بياناتك لإتمام التوصيل</p>
+                        <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">بيانات التوصيل</h2>
+                        <p className="text-gray-600 text-sm lg:text-base xl:text-lg">أدخل بياناتك لإتمام التوصيل</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3">الاسم الكامل *</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm lg:text-base font-bold text-gray-700">الاسم الكامل *</label>
                         <input
                           type="text"
                           value={userData.name}
                           onChange={(e) => setUserData({...userData, name: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
+                            errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                           placeholder="أدخل اسمك الكامل"
                         />
-                        {errors.name && <p className="text-red-500 text-sm mt-2">{errors.name}</p>}
+                        {errors.name && (
+                          <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
+                            <X size={14} />
+                            {errors.name}
+                          </p>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3">رقم الهاتف *</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm lg:text-base font-bold text-gray-700">رقم الهاتف *</label>
                         <input
                           type="tel"
                           value={userData.phone}
-                          onChange={(e) => setUserData({...userData, phone: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          onChange={(e) => {
+                            // تنسيق رقم الهاتف تلقائياً
+                            let phone = e.target.value.replace(/\D/g, '');
+                            if (phone.length > 0 && !phone.startsWith('05')) {
+                              if (phone.startsWith('5')) {
+                                phone = '0' + phone;
+                              }
+                            }
+                            if (phone.length > 10) {
+                              phone = phone.slice(0, 10);
+                            }
+                            setUserData({...userData, phone});
+                          }}
+                          className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
+                            errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                           placeholder="05xxxxxxxx"
+                          maxLength={10}
                         />
-                        {errors.phone && <p className="text-red-500 text-sm mt-2">{errors.phone}</p>}
+                        {errors.phone && (
+                          <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
+                            <X size={14} />
+                            {errors.phone}
+                          </p>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3">البريد الإلكتروني</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm lg:text-base font-bold text-gray-700">البريد الإلكتروني (اختياري)</label>
                         <input
                           type="email"
                           value={userData.email}
                           onChange={(e) => setUserData({...userData, email: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
+                            errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                           placeholder="example@email.com"
                         />
+                        {errors.email && (
+                          <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
+                            <X size={14} />
+                            {errors.email}
+                          </p>
+                        )}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3">المدينة *</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm lg:text-base font-bold text-gray-700">المدينة *</label>
                         <select
                           value={userData.city}
                           onChange={(e) => setUserData({...userData, city: e.target.value})}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                          className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
+                            errors.city ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                         >
                           <option value="">اختر المدينة</option>
                           <option value="الرياض">الرياض</option>
@@ -876,21 +950,40 @@ const Checkout: React.FC = () => {
                           <option value="الدمام">الدمام</option>
                           <option value="الخبر">الخبر</option>
                           <option value="المدينة">المدينة المنورة</option>
+                          <option value="الطائف">الطائف</option>
+                          <option value="أبها">أبها</option>
+                          <option value="تبوك">تبوك</option>
+                          <option value="القصيم">القصيم</option>
                           <option value="أخرى">أخرى</option>
                         </select>
-                        {errors.city && <p className="text-red-500 text-sm mt-2">{errors.city}</p>}
+                        {errors.city && (
+                          <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
+                            <X size={14} />
+                            {errors.city}
+                          </p>
+                        )}
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-bold text-gray-700 mb-3">العنوان التفصيلي *</label>
+                      <div className="md:col-span-2 space-y-2">
+                        <label className="block text-sm lg:text-base font-bold text-gray-700">العنوان التفصيلي *</label>
                         <textarea
                           value={userData.address}
                           onChange={(e) => setUserData({...userData, address: e.target.value})}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all resize-none"
+                          rows={4}
+                          className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all resize-none ${
+                            errors.address ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                           placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
                         />
-                        {errors.address && <p className="text-red-500 text-sm mt-2">{errors.address}</p>}
+                        {errors.address && (
+                          <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
+                            <X size={14} />
+                            {errors.address}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          مثال: حي الملز، شارع الأمير محمد بن عبدالعزيز، مبنى رقم 123، الدور الثاني
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -898,64 +991,84 @@ const Checkout: React.FC = () => {
 
                 {/* Step 3: Payment Method */}
                 {currentStep === 3 && (
-                  <div className="p-8">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
-                        <CreditCard className="text-white" size={28} />
+                  <div className="p-4 lg:p-6 xl:p-8">
+                    <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-8">
+                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-black rounded-xl lg:rounded-2xl flex items-center justify-center">
+                        <CreditCard className="text-white" size={20} />
                       </div>
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900">طريقة الدفع</h2>
-                        <p className="text-gray-600 text-lg">اختر الطريقة المناسبة لك</p>
+                        <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">طريقة الدفع</h2>
+                        <p className="text-gray-600 text-sm lg:text-base xl:text-lg">اختر الطريقة المناسبة لك</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                       <div
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${
+                        className={`p-4 lg:p-6 rounded-xl lg:rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
                           selectedPaymentMethod === 'cod'
-                            ? 'border-black bg-gray-50'
-                            : 'border-gray-300 hover:border-gray-400'
+                            ? 'border-black bg-gray-50 shadow-lg'
+                            : 'border-gray-300 hover:border-gray-400 hover:shadow-md'
                         }`}
                         onClick={() => setSelectedPaymentMethod('cod')}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                            <Truck className="text-white" size={24} />
+                        <div className="flex items-center gap-3 lg:gap-4">
+                          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-green-500 rounded-lg lg:rounded-xl flex items-center justify-center">
+                            <Truck className="text-white" size={18} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900 text-lg">الدفع عند الاستلام</h4>
-                            <p className="text-sm text-gray-600">ادفع نقداً عند وصول الطلب</p>
+                            <h4 className="font-bold text-gray-900 text-base lg:text-lg">الدفع عند الاستلام</h4>
+                            <p className="text-xs lg:text-sm text-gray-600">ادفع نقداً عند وصول الطلب</p>
                           </div>
                         </div>
                         {selectedPaymentMethod === 'cod' && (
-                          <div className="mt-4 flex justify-center">
-                            <CheckCircle className="text-green-500" size={24} />
+                          <div className="mt-3 lg:mt-4 flex justify-center">
+                            <div className="bg-green-500 text-white rounded-full p-1">
+                              <CheckCircle size={16} />
+                            </div>
                           </div>
                         )}
                       </div>
                       
                       <div
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${
+                        className={`p-4 lg:p-6 rounded-xl lg:rounded-2xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
                           selectedPaymentMethod === 'bank'
-                            ? 'border-black bg-gray-50'
-                            : 'border-gray-300 hover:border-gray-400'
+                            ? 'border-black bg-gray-50 shadow-lg'
+                            : 'border-gray-300 hover:border-gray-400 hover:shadow-md'
                         }`}
                         onClick={() => setSelectedPaymentMethod('bank')}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                            <CreditCard className="text-white" size={24} />
+                        <div className="flex items-center gap-3 lg:gap-4">
+                          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-blue-500 rounded-lg lg:rounded-xl flex items-center justify-center">
+                            <CreditCard className="text-white" size={18} />
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900 text-lg">تحويل بنكي</h4>
-                            <p className="text-sm text-gray-600">تحويل إلى الحساب البنكي</p>
+                            <h4 className="font-bold text-gray-900 text-base lg:text-lg">تحويل بنكي</h4>
+                            <p className="text-xs lg:text-sm text-gray-600">تحويل إلى الحساب البنكي</p>
                           </div>
                         </div>
                         {selectedPaymentMethod === 'bank' && (
-                          <div className="mt-4 flex justify-center">
-                            <CheckCircle className="text-blue-500" size={24} />
+                          <div className="mt-3 lg:mt-4 flex justify-center">
+                            <div className="bg-blue-500 text-white rounded-full p-1">
+                              <CheckCircle size={16} />
+                            </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                    
+                    {/* معلومات إضافية عن طريقة الدفع */}
+                    <div className="mt-6 lg:mt-8 p-4 lg:p-6 bg-gray-50 rounded-xl lg:rounded-2xl">
+                      <div className="flex items-start gap-3">
+                        <Shield className="text-green-600 flex-shrink-0 mt-1" size={20} />
+                        <div>
+                          <h4 className="font-bold text-gray-900 mb-2">الدفع آمن ومضمون</h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            <li>• جميع المعاملات محمية ومشفرة</li>
+                            <li>• يمكنك الدفع نقداً عند الاستلام</li>
+                            <li>• التحويل البنكي متاح للطلبات الكبيرة</li>
+                            <li>• ضمان استرداد الأموال في حالة عدم الرضا</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -963,54 +1076,119 @@ const Checkout: React.FC = () => {
 
                 {/* Step 4: Order Confirmation */}
                 {currentStep === 4 && (
-                  <div className="p-8">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center">
-                        <CheckCircle className="text-white" size={28} />
+                  <div className="p-4 lg:p-6 xl:p-8">
+                    <div className="flex items-center gap-3 lg:gap-4 mb-6 lg:mb-8">
+                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-black rounded-xl lg:rounded-2xl flex items-center justify-center">
+                        <CheckCircle className="text-white" size={20} />
                       </div>
                       <div>
-                        <h2 className="text-3xl font-bold text-gray-900">تأكيد الطلب</h2>
-                        <p className="text-gray-600 text-lg">راجع بياناتك قبل إتمام الطلب</p>
+                        <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">تأكيد الطلب</h2>
+                        <p className="text-gray-600 text-sm lg:text-base xl:text-lg">راجع بياناتك قبل إتمام الطلب</p>
                       </div>
                     </div>
 
                     {/* Order Summary */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 lg:space-y-6">
                       {/* Customer Info */}
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <h3 className="font-bold text-gray-900 mb-4 text-lg">بيانات التوصيل</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <p><span className="font-bold">الاسم:</span> {userData.name}</p>
-                          <p><span className="font-bold">الهاتف:</span> {userData.phone}</p>
-                          <p><span className="font-bold">المدينة:</span> {userData.city}</p>
-                          <p className="col-span-2"><span className="font-bold">العنوان:</span> {userData.address}</p>
+                      <div className="bg-gray-50 rounded-xl lg:rounded-2xl p-4 lg:p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <User className="text-blue-600" size={20} />
+                          <h3 className="font-bold text-gray-900 text-base lg:text-lg">بيانات التوصيل</h3>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 text-sm lg:text-base">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-700">الاسم:</span>
+                            <span className="text-gray-900">{userData.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-700">الهاتف:</span>
+                            <span className="text-gray-900" dir="ltr">{userData.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-700">المدينة:</span>
+                            <span className="text-gray-900">{userData.city}</span>
+                          </div>
+                          {userData.email && (
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-700">البريد:</span>
+                              <span className="text-gray-900" dir="ltr">{userData.email}</span>
+                            </div>
+                          )}
+                          <div className="lg:col-span-2 flex items-start gap-2">
+                            <span className="font-bold text-gray-700 flex-shrink-0">العنوان:</span>
+                            <span className="text-gray-900">{userData.address}</span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Payment Method */}
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <h3 className="font-bold text-gray-900 mb-4 text-lg">طريقة الدفع</h3>
-                        <p className="text-gray-700">
-                          {selectedPaymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
-                        </p>
+                      <div className="bg-gray-50 rounded-xl lg:rounded-2xl p-4 lg:p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <CreditCard className="text-green-600" size={20} />
+                          <h3 className="font-bold text-gray-900 text-base lg:text-lg">طريقة الدفع</h3>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            selectedPaymentMethod === 'cod' ? 'bg-green-500' : 'bg-blue-500'
+                          }`}>
+                            {selectedPaymentMethod === 'cod' ? (
+                              <Truck className="text-white" size={16} />
+                            ) : (
+                              <CreditCard className="text-white" size={16} />
+                            )}
+                          </div>
+                          <span className="text-gray-900 font-medium">
+                            {selectedPaymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Order Items Summary */}
+                      <div className="bg-gray-50 rounded-xl lg:rounded-2xl p-4 lg:p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Package className="text-purple-600" size={20} />
+                          <h3 className="font-bold text-gray-900 text-base lg:text-lg">المنتجات ({cartItems.length})</h3>
+                        </div>
+                        <div className="space-y-3">
+                          {cartItems.slice(0, 3).map((item, index) => (
+                            <div key={index} className="flex items-center gap-3 text-sm">
+                              {item.image && (
+                                <img src={item.image} alt={item.name} className="w-8 h-8 rounded object-cover" />
+                              )}
+                              <span className="flex-1 text-gray-900">{item.name}</span>
+                              <span className="text-gray-600">×{item.quantity}</span>
+                              <span className="font-bold text-gray-900">{(item.price * item.quantity).toFixed(2)} ر.س</span>
+                            </div>
+                          ))}
+                          {cartItems.length > 3 && (
+                            <div className="text-center text-gray-500 text-sm">
+                              وعدد {cartItems.length - 3} منتجات أخرى...
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Terms Agreement */}
-                      <div className="bg-gray-50 rounded-2xl p-6">
-                        <div className="flex items-start gap-4">
+                      <div className="bg-gray-50 rounded-xl lg:rounded-2xl p-4 lg:p-6">
+                        <div className="flex items-start gap-3 lg:gap-4">
                           <input
                             type="checkbox"
                             id="terms"
                             checked={agreeToTerms}
                             onChange={(e) => setAgreeToTerms(e.target.checked)}
-                            className="mt-1 w-5 h-5 text-black border-gray-300 rounded focus:ring-black"
+                            className="mt-1 w-4 h-4 lg:w-5 lg:h-5 text-black border-gray-300 rounded focus:ring-black"
                           />
-                          <label htmlFor="terms" className="text-gray-700 leading-relaxed">
+                          <label htmlFor="terms" className="text-gray-700 leading-relaxed text-sm lg:text-base">
                             أوافق على <Link to="/privacy-policy" className="text-black font-bold hover:underline">الشروط والأحكام</Link> و
                             <Link to="/return-policy" className="text-black font-bold hover:underline"> سياسة الإرجاع</Link>
                           </label>
                         </div>
-                        {errors.terms && <p className="text-red-500 text-sm mt-2">{errors.terms}</p>}
+                        {errors.terms && (
+                          <p className="text-red-500 text-xs lg:text-sm mt-2 flex items-center gap-1">
+                            <X size={14} />
+                            {errors.terms}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

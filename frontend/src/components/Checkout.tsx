@@ -289,8 +289,47 @@ const Checkout: React.FC = () => {
             console.log('✅ [Checkout] Parsed cart:', parsedCart);
             
             if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-              setCartItems(parsedCart);
-              console.log('🎯 [Checkout] Cart loaded successfully with', parsedCart.length, 'items');
+              // Convert ShoppingCart format to Checkout format
+              const convertedCart = parsedCart.map((item: any) => {
+                // Handle both old and new cart formats
+                if (item.product) {
+                  // New format from ShoppingCart
+                  const basePrice = item.product.price || 0;
+                  const optionsPrice = item.optionsPricing ? 
+                    Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
+                  const totalPrice = basePrice + optionsPrice;
+                  
+                  return {
+                    id: item.id?.toString() || item.productId?.toString() || Date.now().toString(),
+                    name: item.product.name || 'منتج غير معروف',
+                    price: totalPrice,
+                    originalPrice: item.product.originalPrice || totalPrice,
+                    quantity: item.quantity || 1,
+                    image: item.product.mainImage || '',
+                    size: item.selectedOptions?.size || item.selectedOptions?.الحجم || '',
+                    category: item.product.productType || '',
+                    discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
+                      Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
+                  };
+                } else {
+                  // Old format or direct format - use as is but ensure correct types
+                  return {
+                    id: item.id?.toString() || Date.now().toString(),
+                    name: item.name || item.productName || 'منتج غير معروف',
+                    price: item.price || 0,
+                    originalPrice: item.originalPrice || item.price || 0,
+                    quantity: item.quantity || 1,
+                    image: item.image || '',
+                    size: item.size || '',
+                    category: item.category || '',
+                    discount: item.discount || 0
+                  };
+                }
+              });
+              
+              setCartItems(convertedCart);
+              console.log('🎯 [Checkout] Cart converted and loaded successfully with', convertedCart.length, 'items');
+              console.log('🔍 [Checkout] Sample converted item:', convertedCart[0]);
             } else {
               console.log('⚠️ [Checkout] Cart is empty or invalid array');
               setCartItems([]);
@@ -441,6 +480,7 @@ const Checkout: React.FC = () => {
   const updateQuantity = (itemId: string, size: string | undefined, newQuantity: number) => {
     if (newQuantity < 1) return;
     
+    // Update the converted cart items for display
     const updatedItems = cartItems.map(item => 
       item.id === itemId && item.size === size 
         ? { ...item, quantity: newQuantity }
@@ -448,7 +488,33 @@ const Checkout: React.FC = () => {
     );
     
     setCartItems(updatedItems);
-    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
+    
+    // Also update the original cart in localStorage
+    try {
+      const originalCart = localStorage.getItem('cartItems');
+      if (originalCart) {
+        const parsedOriginalCart = JSON.parse(originalCart);
+        if (Array.isArray(parsedOriginalCart)) {
+          const updatedOriginalCart = parsedOriginalCart.map((item: any) => {
+            const itemIdMatch = item.id?.toString() === itemId || item.productId?.toString() === itemId;
+            const sizeMatch = !size || 
+              item.selectedOptions?.size === size || 
+              item.selectedOptions?.الحجم === size ||
+              item.size === size;
+            
+            if (itemIdMatch && sizeMatch) {
+              return { ...item, quantity: newQuantity };
+            }
+            return item;
+          });
+          
+          localStorage.setItem('cartItems', JSON.stringify(updatedOriginalCart));
+          console.log('✅ [Checkout] Original cart updated in localStorage');
+        }
+      }
+    } catch (error) {
+      console.error('❌ [Checkout] Error updating original cart:', error);
+    }
     
     // Dispatch event for navbar update
     window.dispatchEvent(new CustomEvent('cartUpdated', { 
@@ -459,12 +525,36 @@ const Checkout: React.FC = () => {
   };
 
   const removeItem = (itemId: string, size: string | undefined) => {
+    // Remove from converted cart items for display
     const updatedItems = cartItems.filter(item => 
       !(item.id === itemId && item.size === size)
     );
     
     setCartItems(updatedItems);
-    localStorage.setItem('cartItems', JSON.stringify(updatedItems));
+    
+    // Also remove from original cart in localStorage
+    try {
+      const originalCart = localStorage.getItem('cartItems');
+      if (originalCart) {
+        const parsedOriginalCart = JSON.parse(originalCart);
+        if (Array.isArray(parsedOriginalCart)) {
+          const updatedOriginalCart = parsedOriginalCart.filter((item: any) => {
+            const itemIdMatch = item.id?.toString() === itemId || item.productId?.toString() === itemId;
+            const sizeMatch = !size || 
+              item.selectedOptions?.size === size || 
+              item.selectedOptions?.الحجم === size ||
+              item.size === size;
+            
+            return !(itemIdMatch && sizeMatch);
+          });
+          
+          localStorage.setItem('cartItems', JSON.stringify(updatedOriginalCart));
+          console.log('✅ [Checkout] Item removed from original cart in localStorage');
+        }
+      }
+    } catch (error) {
+      console.error('❌ [Checkout] Error removing item from original cart:', error);
+    }
     
     // Dispatch event for navbar update
     window.dispatchEvent(new CustomEvent('cartUpdated', { 

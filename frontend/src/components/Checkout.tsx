@@ -276,117 +276,93 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
-    // Small delay to ensure localStorage is available
-    setTimeout(() => {
-      try {
-        // Load cart items
-        const savedCart = localStorage.getItem('cartItems');
-        console.log('📦 [Checkout] Raw cart data:', savedCart);
-        
-        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
-          try {
-            const parsedCart = JSON.parse(savedCart);
-            console.log('✅ [Checkout] Parsed cart:', parsedCart);
-            
-            if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-              // تحويل بسيط وفعال من تنسيق ShoppingCart إلى تنسيق Checkout
-              const convertedCart = parsedCart.map((item: any, index: number) => {
-                console.log(`🔄 [Checkout] Converting item ${index}:`, item);
-                
-                // تحديد إذا كان هذا المنتج من تنسيق ShoppingCart (له product object)
-                if (item.product) {
-                  // تنسيق ShoppingCart - تحويل للتنسيق المطلوب
-                  const basePrice = parseFloat(item.product.price) || 0;
-                  const optionsPrice = item.optionsPricing ? 
-                    Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0) : 0;
-                  const totalPrice = basePrice + optionsPrice;
-                  
-                  // استخراج المقاس من selectedOptions
-                  let size = '';
-                  if (item.selectedOptions) {
-                    size = item.selectedOptions.size || 
-                           item.selectedOptions.الحجم || 
-                           item.selectedOptions.المقاس || 
-                           item.selectedOptions.Size || '';
-                  }
-                  
-                  return {
-                    id: (item.id || item.productId || `item-${index}`).toString(),
-                    name: item.product.name || 'منتج غير معروف',
-                    price: totalPrice,
-                    originalPrice: parseFloat(item.product.originalPrice) || totalPrice,
-                    quantity: parseInt(item.quantity) || 1,
-                    image: item.product.mainImage || '',
-                    size: size,
-                    category: item.product.productType || item.product.category?.name || '',
-                    discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
-                      Math.round(((parseFloat(item.product.originalPrice) - totalPrice) / parseFloat(item.product.originalPrice)) * 100) : 0
-                  };
-                } else {
-                  // تنسيق بسيط أو محول بالفعل
-                  return {
-                    id: (item.id || `item-${index}`).toString(),
-                    name: item.name || item.productName || 'منتج غير معروف',
-                    price: parseFloat(item.price) || 0,
-                    originalPrice: parseFloat(item.originalPrice || item.price) || 0,
-                    quantity: parseInt(item.quantity) || 1,
-                    image: item.image || '',
-                    size: item.size || '',
-                    category: item.category || '',
-                    discount: parseInt(item.discount) || 0
-                  };
-                }
-              });
+    // Immediate cart loading - NO DELAY
+    try {
+      // Load cart items
+      const savedCart = localStorage.getItem('cartItems');
+      console.log('📦 [Checkout] Raw cart data:', savedCart);
+      
+      if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
+        try {
+          const parsedCart = JSON.parse(savedCart);
+          console.log('✅ [Checkout] Parsed cart:', parsedCart);
+          
+          if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+            // FORCE CONVERSION - تحويل إجباري بسيط
+            const convertedCart = parsedCart.map((item: any, index: number) => {
+              console.log(`🔄 [Checkout] Converting item ${index}:`, item);
               
-              console.log('🎯 [Checkout] Final converted cart:', convertedCart);
-              setCartItems(convertedCart);
-              console.log(`✅ [Checkout] Cart loaded successfully with ${convertedCart.length} items`);
-            } else {
-              console.log('⚠️ [Checkout] Cart is empty or invalid');
-              setCartItems([]);
-            }
-          } catch (parseError) {
-            console.error('❌ [Checkout] Error parsing cart:', parseError);
+              // Simple conversion that works for ANY format
+              const result = {
+                id: (item.id || item.productId || `item-${index}`).toString(),
+                name: item.name || item.product?.name || item.productName || 'منتج غير معروف',
+                price: parseFloat(item.price || item.product?.price || 0),
+                originalPrice: parseFloat(item.originalPrice || item.product?.originalPrice || item.price || item.product?.price || 0),
+                quantity: parseInt(item.quantity || 1),
+                image: item.image || item.product?.mainImage || '',
+                size: item.size || item.selectedOptions?.size || item.selectedOptions?.الحجم || item.selectedOptions?.المقاس || '',
+                category: item.category || item.product?.productType || item.product?.category?.name || '',
+                discount: parseInt(item.discount || 0)
+              };
+              
+              // Add options pricing if exists
+              if (item.optionsPricing && typeof item.optionsPricing === 'object') {
+                const optionsPrice = Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0);
+                result.price += optionsPrice;
+              }
+              
+              console.log(`✅ [Checkout] Final converted item ${index}:`, result);
+              return result;
+            });
+            
+            console.log('🎯 [Checkout] ALL ITEMS CONVERTED:', convertedCart);
+            setCartItems(convertedCart);
+            console.log(`✅ [Checkout] SUCCESS! Cart loaded with ${convertedCart.length} items`);
+          } else {
+            console.log('⚠️ [Checkout] Cart array is empty or invalid');
             setCartItems([]);
           }
-        } else {
-          console.log('ℹ️ [Checkout] No cart found in localStorage');
+        } catch (parseError) {
+          console.error('❌ [Checkout] Error parsing cart:', parseError);
           setCartItems([]);
         }
-
-        // Load user data if logged in
-        const savedUser = localStorage.getItem('user');
-        if (savedUser && savedUser !== 'null' && savedUser !== 'undefined') {
-          try {
-            const user = JSON.parse(savedUser);
-            console.log('👤 [Checkout] Loading user data:', user);
-            setUserData({
-              name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : ''),
-              email: user.email || '',
-              phone: user.phone || '',
-              address: user.address || '',
-              city: user.city || '',
-              region: user.region || '',
-              postalCode: user.postalCode || '',
-              buildingNumber: user.buildingNumber || '',
-              floor: user.floor || '',
-              apartment: user.apartment || '',
-              landmark: user.landmark || ''
-            });
-          } catch (error) {
-            console.error('❌ [Checkout] Error parsing user data:', error);
-          }
-        } else {
-          console.log('ℹ️ [Checkout] No user data found - continuing as guest');
-        }
-      } catch (error) {
-        console.error('❌ [Checkout] Error in useEffect:', error);
+      } else {
+        console.log('ℹ️ [Checkout] No cart found in localStorage');
         setCartItems([]);
-      } finally {
-        setIsLoadingCart(false);
-        console.log('🏁 [Checkout] Loading completed');
       }
-    }, 100); // تقليل الوقت إلى 100ms
+
+      // Load user data if logged in
+      const savedUser = localStorage.getItem('user');
+      if (savedUser && savedUser !== 'null' && savedUser !== 'undefined') {
+        try {
+          const user = JSON.parse(savedUser);
+          console.log('👤 [Checkout] Loading user data:', user);
+          setUserData({
+            name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : ''),
+            email: user.email || '',
+            phone: user.phone || '',
+            address: user.address || '',
+            city: user.city || '',
+            region: user.region || '',
+            postalCode: user.postalCode || '',
+            buildingNumber: user.buildingNumber || '',
+            floor: user.floor || '',
+            apartment: user.apartment || '',
+            landmark: user.landmark || ''
+          });
+        } catch (error) {
+          console.error('❌ [Checkout] Error parsing user data:', error);
+        }
+      } else {
+        console.log('ℹ️ [Checkout] No user data found - continuing as guest');
+      }
+    } catch (error) {
+      console.error('❌ [Checkout] Error in useEffect:', error);
+      setCartItems([]);
+    } finally {
+      setIsLoadingCart(false);
+      console.log('🏁 [Checkout] Loading completed');
+    }
   }, []);
 
   // Auto-select shipping zone based on city

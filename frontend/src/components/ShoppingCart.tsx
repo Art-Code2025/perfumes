@@ -306,11 +306,12 @@ const ShoppingCart: React.FC = () => {
     }> = [];
 
     cartItems.forEach(item => {
-      if (!item.product.dynamicOptions || item.product.dynamicOptions.length === 0) {
-        return; // منتج بدون خيارات مطلوبة
+      // Add safety checks to prevent undefined errors
+      if (!item || !item.product || !item.product.dynamicOptions || !Array.isArray(item.product.dynamicOptions) || item.product.dynamicOptions.length === 0) {
+        return; // منتج بدون خيارات مطلوبة أو منتج غير صحيح
       }
       
-      const requiredOptions = item.product.dynamicOptions.filter(option => option.required);
+      const requiredOptions = item.product.dynamicOptions.filter(option => option && option.required);
       if (requiredOptions.length === 0) {
         return; // لا توجد خيارات مطلوبة
       }
@@ -318,6 +319,10 @@ const ShoppingCart: React.FC = () => {
       const missingOptions: string[] = [];
       
       requiredOptions.forEach(option => {
+        if (!option || !option.optionName) {
+          return; // تجاهل الخيارات غير الصحيحة
+        }
+        
         const isOptionFilled = item.selectedOptions && 
                               item.selectedOptions[option.optionName] && 
                               item.selectedOptions[option.optionName].trim() !== '';

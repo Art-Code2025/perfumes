@@ -289,18 +289,20 @@ const Checkout: React.FC = () => {
             console.log('✅ [Checkout] Parsed cart:', parsedCart);
             
             if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-              // Convert ShoppingCart format to Checkout format
-              const convertedCart = parsedCart.map((item: any) => {
-                // Handle both old and new cart formats
+              // Convert any cart format to Checkout format
+              const convertedCart = parsedCart.map((item: any, index: number) => {
+                // Handle different cart formats
+                let convertedItem: CartItem;
+                
                 if (item.product) {
-                  // New format from ShoppingCart
+                  // ShoppingCart format
                   const basePrice = item.product.price || 0;
                   const optionsPrice = item.optionsPricing ? 
                     Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
                   const totalPrice = basePrice + optionsPrice;
                   
-                  return {
-                    id: item.id?.toString() || item.productId?.toString() || Date.now().toString(),
+                  convertedItem = {
+                    id: item.id?.toString() || item.productId?.toString() || `item-${index}`,
                     name: item.product.name || 'منتج غير معروف',
                     price: totalPrice,
                     originalPrice: item.product.originalPrice || totalPrice,
@@ -312,9 +314,9 @@ const Checkout: React.FC = () => {
                       Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
                   };
                 } else {
-                  // Old format or direct format - use as is but ensure correct types
-                  return {
-                    id: item.id?.toString() || Date.now().toString(),
+                  // Simple format or already converted
+                  convertedItem = {
+                    id: item.id?.toString() || `item-${index}`,
                     name: item.name || item.productName || 'منتج غير معروف',
                     price: item.price || 0,
                     originalPrice: item.originalPrice || item.price || 0,
@@ -325,11 +327,12 @@ const Checkout: React.FC = () => {
                     discount: item.discount || 0
                   };
                 }
+                
+                return convertedItem;
               });
               
               setCartItems(convertedCart);
               console.log('🎯 [Checkout] Cart converted and loaded successfully with', convertedCart.length, 'items');
-              console.log('🔍 [Checkout] Sample converted item:', convertedCart[0]);
             } else {
               console.log('⚠️ [Checkout] Cart is empty or invalid array');
               setCartItems([]);
@@ -340,7 +343,22 @@ const Checkout: React.FC = () => {
           }
         } else {
           console.log('ℹ️ [Checkout] No cart found in localStorage');
-          setCartItems([]);
+          // Add a test item for testing purposes
+          const testCart: CartItem[] = [
+            {
+              id: 'test-1',
+              name: 'منتج تجريبي',
+              price: 100,
+              originalPrice: 120,
+              quantity: 1,
+              image: 'https://via.placeholder.com/200x200?text=منتج+تجريبي',
+              size: 'متوسط',
+              category: 'عطور',
+              discount: 17
+            }
+          ];
+          setCartItems(testCart);
+          console.log('🧪 [Checkout] Added test cart for demo');
         }
 
         // Load user data if logged in

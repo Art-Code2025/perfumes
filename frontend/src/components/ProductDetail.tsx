@@ -135,23 +135,67 @@ const ProductDetail: React.FC = () => {
         throw new Error('معرف المنتج غير صحيح');
       }
       
-      const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+      // Try multiple approaches to get product data
+      let product = null;
       
-      console.log('📦 All products loaded:', products.length);
+      // First, try to get all products
+      try {
+        const products = await apiCall(API_ENDPOINTS.PRODUCTS);
+        console.log('📦 All products loaded:', products.length);
+        
+        if (products && Array.isArray(products) && products.length > 0) {
+          product = products.find((p: Product) => {
+            // Try both string and number comparison
+            const pId = p.id.toString();
+            const searchId = productId.toString();
+            return pId === searchId;
+          });
+          
+          if (product) {
+            console.log('✅ Product found via products list:', product.name);
+          } else {
+            console.warn('⚠️ Product not found in products list. Available IDs:', 
+              products.map((p: Product) => p.id).slice(0, 10)
+            );
+          }
+        } else {
+          console.warn('⚠️ No products returned or invalid format');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching products list:', error);
+      }
       
-      const product = products.find((p: Product) => p.id.toString() === productId.toString());
+      // If not found, try direct product fetch
+      if (!product) {
+        try {
+          console.log('🔄 Trying direct product fetch...');
+          product = await apiCall(API_ENDPOINTS.PRODUCT_BY_ID(productId));
+          
+          if (product) {
+            console.log('✅ Product found via direct fetch:', product.name);
+          }
+        } catch (error) {
+          console.error('❌ Error with direct product fetch:', error);
+        }
+      }
       
+      // If still not found, throw error
       if (!product) {
         console.error('❌ Product not found with ID:', productId);
-        console.log('📋 Available product IDs:', products.map((p: Product) => p.id));
-        throw new Error('المنتج غير موجود');
+        throw new Error('المنتج غير موجود أو تم حذفه');
+      }
+      
+      // Validate product data
+      if (!product.name || !product.price) {
+        console.error('❌ Invalid product data:', product);
+        throw new Error('بيانات المنتج غير مكتملة');
       }
       
       setProduct(product);
-      setSelectedImage(product.mainImage);
-      console.log('✅ Product loaded:', product.name);
+      setSelectedImage(product.mainImage || '');
+      console.log('✅ Product loaded successfully:', product.name);
       
-      // تهيئة الخيارات الافتراضية
+      // Initialize default options
       if (product.dynamicOptions && product.dynamicOptions.length > 0) {
         const initialOptions: { [key: string]: string } = {};
         product.dynamicOptions.forEach((option: any) => {
@@ -160,15 +204,28 @@ const ProductDetail: React.FC = () => {
           }
         });
         setSelectedOptions(initialOptions);
+        console.log('🎛️ Initialized options:', initialOptions);
       }
       
-      // جلب معلومات التصنيف - Only if needed
+      // Fetch category info if available
       if (product.categoryId) {
         fetchCategory(product.categoryId);
       }
+      
     } catch (error) {
       console.error('❌ Error fetching product:', error);
-      setError('فشل في تحميل المنتج');
+      const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل المنتج';
+      setError(errorMessage);
+      
+      // Add toast notification
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -326,31 +383,77 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  // حالة التحميل
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل المنتج...</p>
+          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">جاري تحميل المنتج...</h2>
+          <p className="text-gray-600">يرجى الانتظار قليلاً</p>
         </div>
       </div>
     );
   }
 
-  // حالة الخطأ أو عدم وجود المنتج
-  if (error || !product) {
+  // Show error state
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error || 'المنتج غير موجود'}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600 transition-colors"
-          >
-            العودة للرئيسية
-          </button>
+        <div className="text-center max-w-md mx-auto">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">حدث خطأ</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                fetchProduct();
+              }}
+              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-3 rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 font-semibold"
+            >
+              <RefreshCw className="w-5 h-5 inline-block ml-2" />
+              إعادة المحاولة
+            </button>
+            <Link
+              to="/"
+              className="block w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+            >
+              العودة للرئيسية
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show "not found" state if no product but not loading
+  if (!product && !loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Package className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">المنتج غير موجود</h2>
+          <p className="text-gray-600 mb-6">لم يتم العثور على المنتج المطلوب. قد يكون تم حذفه أو لا يوجد.</p>
+          <div className="space-y-3">
+            <Link
+              to="/"
+              className="block w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-3 rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-300 font-semibold"
+            >
+              العودة للرئيسية
+            </Link>
+            <Link
+              to="/products"
+              className="block w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+            >
+              تصفح جميع المنتجات
+            </Link>
+          </div>
         </div>
       </div>
     );

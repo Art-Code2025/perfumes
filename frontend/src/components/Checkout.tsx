@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { 
   ShoppingCart, 
@@ -295,11 +295,22 @@ const Checkout: React.FC = () => {
                 let convertedItem: CartItem;
                 
                 if (item.product) {
-                  // ShoppingCart format
+                  // ShoppingCart format - Enhanced conversion
                   const basePrice = item.product.price || 0;
                   const optionsPrice = item.optionsPricing ? 
                     Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (price || 0), 0) : 0;
                   const totalPrice = basePrice + optionsPrice;
+                  
+                  // Get size from selectedOptions with fallback
+                  const getSize = () => {
+                    if (item.selectedOptions) {
+                      return item.selectedOptions.size || 
+                             item.selectedOptions.الحجم || 
+                             item.selectedOptions.المقاس || 
+                             item.selectedOptions.Size || '';
+                    }
+                    return '';
+                  };
                   
                   convertedItem = {
                     id: item.id?.toString() || item.productId?.toString() || `item-${index}`,
@@ -308,8 +319,8 @@ const Checkout: React.FC = () => {
                     originalPrice: item.product.originalPrice || totalPrice,
                     quantity: item.quantity || 1,
                     image: item.product.mainImage || '',
-                    size: item.selectedOptions?.size || item.selectedOptions?.الحجم || '',
-                    category: item.product.productType || '',
+                    size: getSize(),
+                    category: item.product.productType || item.product.category?.name || '',
                     discount: item.product.originalPrice && item.product.originalPrice > totalPrice ? 
                       Math.round(((item.product.originalPrice - totalPrice) / item.product.originalPrice) * 100) : 0
                   };
@@ -343,22 +354,7 @@ const Checkout: React.FC = () => {
           }
         } else {
           console.log('ℹ️ [Checkout] No cart found in localStorage');
-          // Add a test item for testing purposes
-          const testCart: CartItem[] = [
-            {
-              id: 'test-1',
-              name: 'منتج تجريبي',
-              price: 100,
-              originalPrice: 120,
-              quantity: 1,
-              image: 'https://via.placeholder.com/200x200?text=منتج+تجريبي',
-              size: 'متوسط',
-              category: 'عطور',
-              discount: 17
-            }
-          ];
-          setCartItems(testCart);
-          console.log('🧪 [Checkout] Added test cart for demo');
+          setCartItems([]);
         }
 
         // Load user data if logged in
@@ -874,6 +870,52 @@ const Checkout: React.FC = () => {
 
   // Render step content
   const renderStepContent = () => {
+    // Handle empty cart case
+    if (!isLoadingCart && cartItems.length === 0) {
+      return (
+        <div className="text-center py-16">
+          <div className="mb-8">
+            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+              <ShoppingCart className="w-16 h-16 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">
+              السلة فارغة
+            </h3>
+            <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+              لا توجد منتجات في سلة التسوق حالياً. يرجى إضافة بعض المنتجات أولاً لإتمام الطلب.
+            </p>
+            <div className="space-y-4">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold text-lg shadow-xl transform hover:scale-105"
+              >
+                <ArrowRight size={24} />
+                ابدأ التسوق الآن
+              </Link>
+              <div>
+                <Link
+                  to="/cart"
+                  className="text-gray-500 hover:text-gray-700 transition-colors underline"
+                >
+                  العودة إلى السلة
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show loading state
+    if (isLoadingCart) {
+      return (
+        <div className="text-center py-16">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">جاري تحميل بيانات السلة...</p>
+        </div>
+      );
+    }
+
     switch (currentStep) {
       case 1:
         return (

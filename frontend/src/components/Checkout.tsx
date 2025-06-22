@@ -527,32 +527,124 @@ const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50" dir="rtl">
-      {/* Modern Header with Gradient */}
-      <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
-        <div className="relative container mx-auto px-4 py-12">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mb-6 shadow-2xl">
-              <ShoppingCart className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">إتمام الطلب</h1>
-            <p className="text-white/90 text-xl font-medium">اكمل بياناتك لإتمام عملية الشراء بأمان</p>
+    <div className="min-h-screen bg-white" dir="rtl">
+      {/* Header */}
+      <header className="bg-white border-b shadow-sm sticky top-0 z-30" dir="rtl">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowRight className="w-5 h-5 ml-2" />
+            العودة للتسوق
+          </button>
+          <div className="flex items-center gap-2 text-gray-900 font-bold text-lg">
+            <ShoppingCart className="w-6 h-6" />
+            إتمام الطلب
           </div>
+          <div className="w-6 h-6"></div>
         </div>
-        {/* Decorative Elements */}
-        <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full -translate-x-20 -translate-y-20 animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-16 translate-y-16 animate-pulse delay-300"></div>
-      </div>
+      </header>
 
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-12">
+            
+            {/* Order Summary Sidebar – يظهر يسار الشاشة الكبيرة */}
+            <div className="order-2 xl:order-1">
+              <div className="sticky top-8">
+                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                  <div className="bg-black p-6 text-white">
+                    <h3 className="text-2xl font-bold mb-2">ملخص الطلب</h3>
+                    <p className="text-gray-300">تفاصيل طلبك النهائية</p>
+                  </div>
+
+                  <div className="p-8">
+                    {/* Coupon Section */}
+                    {!appliedCoupon && (
+                      <div className="mb-8">
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            placeholder="كود الخصم"
+                            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
+                            disabled={couponLoading}
+                          />
+                          <button
+                            onClick={applyCoupon}
+                            disabled={!couponCode.trim() || couponLoading}
+                            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold"
+                          >
+                            {couponLoading ? '...' : 'تطبيق'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {appliedCoupon && (
+                      <div className="mb-8 p-4 bg-green-50 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Gift className="text-green-600" size={24} />
+                            <div>
+                              <p className="font-bold text-green-800">{appliedCoupon.code}</p>
+                              <p className="text-sm text-green-600">{appliedCoupon.description}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={removeCoupon}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Price Breakdown */}
+                    <div className="space-y-6 mb-8">
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-600">المجموع الفرعي</span>
+                        <span className="font-bold text-gray-900">{subtotal.toFixed(2)} ر.س</span>
+                      </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-base text-green-600">
+                          <span>الخصم</span>
+                          <span className="font-bold">-{couponDiscount.toFixed(2)} ر.س</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-base">
+                        <span className="text-gray-600">الشحن</span>
+                        <span className={freeShipping ? 'font-bold text-green-600' : 'font-bold text-gray-900'}>
+                          {freeShipping ? 'مجاني' : `${finalShippingCost.toFixed(2)} ر.س`}
+                        </span>
+                      </div>
+                      <div className="border-t pt-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-gray-900">الإجمالي</span>
+                          <span className="text-2xl font-bold text-gray-900">{total.toFixed(2)} ر.س</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* زر الإتمام */}
+                    <button
+                      onClick={handleSubmit}
+                      disabled={loading || !agreeToTerms}
+                      className="w-full bg-black text-white py-4 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold text-lg"
+                    >
+                      {loading ? 'جاري الإرسال...' : 'إتمام الطلب'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             {/* Main Content */}
-            <div className="xl:col-span-2">
-              <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+            <div className="order-1 xl:order-2">
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                 
                 {/* Step 1: Order Review */}
                 <div className="p-8">
@@ -571,7 +663,7 @@ const Checkout: React.FC = () => {
                     {cartItems.map((item, index) => (
                       <div 
                         key={`${item.id}-${item.size || 'default'}`}
-                        className="group relative bg-gradient-to-r from-white to-gray-50/50 rounded-3xl p-6 border border-gray-100/50 hover:shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-purple-200"
+                        className="group relative bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
                         style={{
                           animation: `slideInUp 0.6s ease-out ${index * 0.1}s both`
                         }}
@@ -662,7 +754,7 @@ const Checkout: React.FC = () => {
                 </div>
 
                 {/* Customer Information Form */}
-                <div className="border-t border-gray-100/50 p-8 bg-gradient-to-r from-blue-50/30 to-purple-50/30">
+                <div className="border-t border-gray-100 p-8 bg-gray-50">
                   <div className="flex items-center gap-4 mb-8">
                     <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
                       <User className="text-white" size={28} />
@@ -856,120 +948,6 @@ const Checkout: React.FC = () => {
                       </label>
                     </div>
                     {errors.terms && <p className="text-red-500 text-sm mt-2 animate-pulse">{errors.terms}</p>}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Order Summary Sidebar */}
-            <div className="xl:col-span-1">
-              <div className="sticky top-8">
-                <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
-                    <h3 className="text-2xl font-bold mb-2">ملخص الطلب</h3>
-                    <p className="text-purple-100">تفاصيل طلبك النهائية</p>
-                  </div>
-                  
-                  <div className="p-8">
-                    {/* Coupon Section */}
-                    {!appliedCoupon && (
-                      <div className="mb-8">
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            placeholder="كود الخصم"
-                            className="flex-1 px-4 py-3 border border-gray-200/50 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white/70 backdrop-blur-sm transition-all duration-300"
-                            disabled={couponLoading}
-                          />
-                          <button
-                            onClick={applyCoupon}
-                            disabled={!couponCode.trim() || couponLoading}
-                            className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-2xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 disabled:opacity-50 font-bold shadow-lg hover:scale-105 active:scale-95"
-                          >
-                            {couponLoading ? '...' : 'تطبيق'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {appliedCoupon && (
-                      <div className="mb-8 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200/50 animate-pulse">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Gift className="text-emerald-600 animate-bounce" size={24} />
-                            <div>
-                              <p className="font-bold text-emerald-800">{appliedCoupon.code}</p>
-                              <p className="text-sm text-emerald-600">{appliedCoupon.description}</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={removeCoupon}
-                            className="text-red-500 hover:text-red-700 p-1 hover:scale-110 transition-all duration-300"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Price Breakdown */}
-                    <div className="space-y-6 mb-8">
-                      <div className="flex justify-between text-xl">
-                        <span className="text-gray-600">المجموع الفرعي:</span>
-                        <span className="font-bold text-gray-800">{subtotal.toFixed(2)} ريال</span>
-                      </div>
-                      
-                      {appliedCoupon && (
-                        <div className="flex justify-between text-xl text-emerald-600 animate-pulse">
-                          <span>الخصم:</span>
-                          <span className="font-bold">-{couponDiscount.toFixed(2)} ريال</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between text-xl">
-                        <span className="text-gray-600">الشحن:</span>
-                        <span className={`font-bold ${freeShipping ? 'text-emerald-600' : 'text-gray-800'}`}>
-                          {freeShipping ? 'مجاني 🎉' : `${finalShippingCost.toFixed(2)} ريال`}
-                        </span>
-                      </div>
-
-                      <div className="border-t border-gray-200/50 pt-6">
-                        <div className="flex justify-between text-3xl font-bold">
-                          <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">المجموع:</span>
-                          <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{total.toFixed(2)} ريال</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading || !agreeToTerms}
-                      className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 text-white py-6 rounded-3xl hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xl shadow-2xl transform hover:scale-105 active:scale-95 animate-gradient-x"
-                      style={{
-                        backgroundSize: '200% 200%'
-                      }}
-                    >
-                      {loading ? (
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                          جاري إرسال الطلب...
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-3">
-                          <CheckCircle size={28} />
-                          إتمام الطلب 🚀
-                        </div>
-                      )}
-                    </button>
-
-                    {/* Security Badge */}
-                    <div className="mt-6 flex items-center justify-center gap-2 text-gray-500 text-sm">
-                      <Shield size={20} className="animate-pulse" />
-                      <span>معاملة آمنة ومحمية 🔒</span>
-                    </div>
                   </div>
                 </div>
               </div>

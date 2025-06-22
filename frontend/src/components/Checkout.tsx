@@ -276,93 +276,176 @@ const Checkout: React.FC = () => {
     console.log('🛒 [Checkout] Starting to load cart and user data...');
     setIsLoadingCart(true);
     
-    // Immediate cart loading - NO DELAY
+    // DEBUGGING - Let's see EVERYTHING in localStorage
+    console.log('🔍 [DEBUG] All localStorage keys:', Object.keys(localStorage));
+    console.log('🔍 [DEBUG] cartItems raw:', localStorage.getItem('cartItems'));
+    console.log('🔍 [DEBUG] cart raw:', localStorage.getItem('cart'));
+    console.log('🔍 [DEBUG] shoppingCart raw:', localStorage.getItem('shoppingCart'));
+    
+    let foundCartItems: any[] = [];
+    
+    // Strategy 1: Try cartItems key
     try {
-      // Load cart items
-      const savedCart = localStorage.getItem('cartItems');
-      console.log('📦 [Checkout] Raw cart data:', savedCart);
-      
-      if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
-        try {
-          const parsedCart = JSON.parse(savedCart);
-          console.log('✅ [Checkout] Parsed cart:', parsedCart);
-          
-          if (Array.isArray(parsedCart) && parsedCart.length > 0) {
-            // FORCE CONVERSION - تحويل إجباري بسيط
-            const convertedCart = parsedCart.map((item: any, index: number) => {
-              console.log(`🔄 [Checkout] Converting item ${index}:`, item);
-              
-              // Simple conversion that works for ANY format
-              const result = {
-                id: (item.id || item.productId || `item-${index}`).toString(),
-                name: item.name || item.product?.name || item.productName || 'منتج غير معروف',
-                price: parseFloat(item.price || item.product?.price || 0),
-                originalPrice: parseFloat(item.originalPrice || item.product?.originalPrice || item.price || item.product?.price || 0),
-                quantity: parseInt(item.quantity || 1),
-                image: item.image || item.product?.mainImage || '',
-                size: item.size || item.selectedOptions?.size || item.selectedOptions?.الحجم || item.selectedOptions?.المقاس || '',
-                category: item.category || item.product?.productType || item.product?.category?.name || '',
-                discount: parseInt(item.discount || 0)
-              };
-              
-              // Add options pricing if exists
-              if (item.optionsPricing && typeof item.optionsPricing === 'object') {
-                const optionsPrice = Object.values(item.optionsPricing).reduce((sum: number, price: any) => sum + (parseFloat(price) || 0), 0);
-                result.price += optionsPrice;
-              }
-              
-              console.log(`✅ [Checkout] Final converted item ${index}:`, result);
-              return result;
-            });
-            
-            console.log('🎯 [Checkout] ALL ITEMS CONVERTED:', convertedCart);
-            setCartItems(convertedCart);
-            console.log(`✅ [Checkout] SUCCESS! Cart loaded with ${convertedCart.length} items`);
-          } else {
-            console.log('⚠️ [Checkout] Cart array is empty or invalid');
-            setCartItems([]);
-          }
-        } catch (parseError) {
-          console.error('❌ [Checkout] Error parsing cart:', parseError);
-          setCartItems([]);
+      const savedCartItems = localStorage.getItem('cartItems');
+      if (savedCartItems && savedCartItems !== 'null' && savedCartItems !== 'undefined') {
+        const parsed = JSON.parse(savedCartItems);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          foundCartItems = parsed;
+          console.log('✅ [Strategy 1] Found cart in cartItems:', foundCartItems);
         }
-      } else {
-        console.log('ℹ️ [Checkout] No cart found in localStorage');
-        setCartItems([]);
       }
+    } catch (e) {
+      console.log('❌ [Strategy 1] Failed to parse cartItems');
+    }
+    
+    // Strategy 2: Try cart key if cartItems failed
+    if (foundCartItems.length === 0) {
+      try {
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart && savedCart !== 'null' && savedCart !== 'undefined') {
+          const parsed = JSON.parse(savedCart);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            foundCartItems = parsed;
+            console.log('✅ [Strategy 2] Found cart in cart:', foundCartItems);
+          }
+        }
+      } catch (e) {
+        console.log('❌ [Strategy 2] Failed to parse cart');
+      }
+    }
+    
+    // Strategy 3: Try shoppingCart key if others failed
+    if (foundCartItems.length === 0) {
+      try {
+        const savedShoppingCart = localStorage.getItem('shoppingCart');
+        if (savedShoppingCart && savedShoppingCart !== 'null' && savedShoppingCart !== 'undefined') {
+          const parsed = JSON.parse(savedShoppingCart);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            foundCartItems = parsed;
+            console.log('✅ [Strategy 3] Found cart in shoppingCart:', foundCartItems);
+          }
+        }
+      } catch (e) {
+        console.log('❌ [Strategy 3] Failed to parse shoppingCart');
+      }
+    }
+    
+    // Strategy 4: Create test data if nothing found (for debugging)
+    if (foundCartItems.length === 0) {
+      console.log('⚠️ [Strategy 4] No cart found anywhere in localStorage');
+      console.log('🔍 [DEBUG] Checking if we came from cart page...');
+      
+      // Check if we have referrer information
+      const referrer = document.referrer;
+      console.log('🔍 [DEBUG] Referrer:', referrer);
+      
+      // Don't create test data - let the user know cart is empty
+      console.log('❌ [FINAL] No cart data found - showing empty cart message');
+    }
+    
+    console.log('🎯 [FINAL] Cart items to process:', foundCartItems);
+    
+    // UNIVERSAL CONVERTER - يحول أي صيغة لصيغة موحدة
+    try {
+      const convertedCart = foundCartItems.map((item: any, index: number) => {
+        console.log(`🔄 [Convert ${index}] Processing:`, item);
+        
+        // Extract all possible name variations
+        const name = item.name || 
+                    item.product?.name || 
+                    item.productName || 
+                    item.title ||
+                    `منتج ${index + 1}`;
+        
+        // Extract all possible price variations
+        let price = 0;
+        if (item.price) price = parseFloat(item.price);
+        else if (item.product?.price) price = parseFloat(item.product.price);
+        else if (item.cost) price = parseFloat(item.cost);
+        else if (item.amount) price = parseFloat(item.amount);
+        
+        // Add options pricing if exists
+        if (item.optionsPricing && typeof item.optionsPricing === 'object') {
+          const optionsPrice = Object.values(item.optionsPricing)
+            .reduce((sum: number, p: any) => sum + (parseFloat(p) || 0), 0);
+          price += optionsPrice;
+        }
+        
+        // Extract quantity
+        const quantity = parseInt(item.quantity) || 1;
+        
+        // Extract size/options
+        let size = '';
+        if (item.size) size = item.size;
+        else if (item.selectedOptions?.size) size = item.selectedOptions.size;
+        else if (item.selectedOptions?.الحجم) size = item.selectedOptions.الحجم;
+        else if (item.selectedOptions?.المقاس) size = item.selectedOptions.المقاس;
+        
+        // Extract image
+        const image = item.image || 
+                     item.product?.mainImage || 
+                     item.product?.image ||
+                     item.photo ||
+                     '';
+        
+        // Extract ID
+        const id = (item.id || item.productId || `item-${index}`).toString();
+        
+        const result = {
+          id,
+          name,
+          price: Math.max(0, price), // Ensure positive price
+          originalPrice: parseFloat(item.originalPrice || item.product?.originalPrice || price),
+          quantity,
+          image,
+          size,
+          category: item.category || item.product?.category?.name || item.product?.productType || '',
+          discount: parseInt(item.discount || 0)
+        };
+        
+        console.log(`✅ [Convert ${index}] Result:`, result);
+        return result;
+      });
+      
+      console.log('🎉 [SUCCESS] Final converted cart:', convertedCart);
+      setCartItems(convertedCart);
+      
+      // Force update localStorage with clean format
+      localStorage.setItem('cartItems', JSON.stringify(convertedCart));
+      console.log('💾 [SAVE] Updated localStorage with clean cart');
+      
+    } catch (error) {
+      console.error('❌ [ERROR] Cart conversion failed:', error);
+      // Even if conversion fails, try to set something
+      setCartItems([]);
+    }
 
-      // Load user data if logged in
+    // Load user data
+    try {
       const savedUser = localStorage.getItem('user');
       if (savedUser && savedUser !== 'null' && savedUser !== 'undefined') {
-        try {
-          const user = JSON.parse(savedUser);
-          console.log('👤 [Checkout] Loading user data:', user);
-          setUserData({
-            name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : ''),
-            email: user.email || '',
-            phone: user.phone || '',
-            address: user.address || '',
-            city: user.city || '',
-            region: user.region || '',
-            postalCode: user.postalCode || '',
-            buildingNumber: user.buildingNumber || '',
-            floor: user.floor || '',
-            apartment: user.apartment || '',
-            landmark: user.landmark || ''
-          });
-        } catch (error) {
-          console.error('❌ [Checkout] Error parsing user data:', error);
-        }
-      } else {
-        console.log('ℹ️ [Checkout] No user data found - continuing as guest');
+        const user = JSON.parse(savedUser);
+        console.log('👤 [User] Loading user data:', user);
+        setUserData({
+          name: user.name || (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : ''),
+          email: user.email || '',
+          phone: user.phone || '',
+          address: user.address || '',
+          city: user.city || '',
+          region: user.region || '',
+          postalCode: user.postalCode || '',
+          buildingNumber: user.buildingNumber || '',
+          floor: user.floor || '',
+          apartment: user.apartment || '',
+          landmark: user.landmark || ''
+        });
       }
     } catch (error) {
-      console.error('❌ [Checkout] Error in useEffect:', error);
-      setCartItems([]);
-    } finally {
-      setIsLoadingCart(false);
-      console.log('🏁 [Checkout] Loading completed');
+      console.error('❌ [User] Error loading user data:', error);
     }
+    
+    setIsLoadingCart(false);
+    console.log('🏁 [COMPLETE] Checkout loading finished');
   }, []);
 
   // Auto-select shipping zone based on city
@@ -799,30 +882,34 @@ const Checkout: React.FC = () => {
               <ShoppingCart className="w-16 h-16 text-gray-400" />
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              السلة فارغة
+              السلة فارغة! 🛒
             </h2>
             <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
-              لا توجد منتجات في سلة التسوق حالياً. يرجى إضافة بعض المنتجات أولاً لإتمام الطلب.
+              لم نتمكن من العثور على أي منتجات في سلة التسوق. 
+              <br/>قد تكون السلة فارغة أو حدث خطأ في تحميل البيانات.
             </p>
           </div>
           
           <div className="space-y-4">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/cart')}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
             >
-              🏠 العودة للصفحة الرئيسية
+              🛒 العودة إلى السلة
             </button>
             <button
-              onClick={() => navigate('/products')}
+              onClick={() => navigate('/')}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
             >
-              🛍️ تصفح المنتجات
+              🏠 الصفحة الرئيسية
             </button>
             <button
               onClick={() => {
-                // إعادة تحميل الصفحة لمحاولة استرداد الكارت
-                console.log('🔄 [Checkout] Manual reload attempt');
+                console.log('🔄 [Manual Refresh] User clicked refresh');
+                console.log('🔍 [Manual Debug] Current localStorage:');
+                console.log('  - cartItems:', localStorage.getItem('cartItems'));
+                console.log('  - cart:', localStorage.getItem('cart')); 
+                console.log('  - shoppingCart:', localStorage.getItem('shoppingCart'));
                 window.location.reload();
               }}
               className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-4 rounded-2xl hover:from-orange-700 hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold text-lg"
@@ -831,15 +918,40 @@ const Checkout: React.FC = () => {
             </button>
           </div>
           
-          {/* Debug info for development */}
-          <div className="mt-8 p-4 bg-gray-100 rounded-xl text-left">
-            <p className="text-xs text-gray-600 mb-2">معلومات تشخيصية:</p>
-            <p className="text-xs text-gray-500">
-              localStorage cartItems: {localStorage.getItem('cartItems') ? 'موجود' : 'غير موجود'}
-            </p>
-            <p className="text-xs text-gray-500">
-              User: {localStorage.getItem('user') ? 'مسجل الدخول' : 'ضيف'}
-            </p>
+          {/* Enhanced Debug info */}
+          <div className="mt-8 p-6 bg-gray-100 rounded-xl text-left border-2 border-gray-200">
+            <p className="text-sm font-bold text-gray-800 mb-3">معلومات تشخيصية مفصلة:</p>
+            <div className="space-y-2 text-xs text-gray-600 font-mono">
+              <p><span className="font-bold">localStorage Keys:</span> {Object.keys(localStorage).join(', ') || 'لا توجد مفاتيح'}</p>
+              <p><span className="font-bold">cartItems:</span> {localStorage.getItem('cartItems') ? '✅ موجود' : '❌ غير موجود'}</p>
+              <p><span className="font-bold">cart:</span> {localStorage.getItem('cart') ? '✅ موجود' : '❌ غير موجود'}</p>
+              <p><span className="font-bold">shoppingCart:</span> {localStorage.getItem('shoppingCart') ? '✅ موجود' : '❌ غير موجود'}</p>
+              <p><span className="font-bold">user:</span> {localStorage.getItem('user') ? '✅ مسجل الدخول' : '❌ ضيف'}</p>
+              <p><span className="font-bold">referrer:</span> {document.referrer || 'غير متوفر'}</p>
+              <p><span className="font-bold">current URL:</span> {window.location.href}</p>
+            </div>
+            
+            <button
+              onClick={() => {
+                const debugInfo = {
+                  localStorageKeys: Object.keys(localStorage),
+                  cartItems: localStorage.getItem('cartItems'),
+                  cart: localStorage.getItem('cart'),
+                  shoppingCart: localStorage.getItem('shoppingCart'),
+                  user: localStorage.getItem('user'),
+                  referrer: document.referrer,
+                  currentURL: window.location.href,
+                  userAgent: navigator.userAgent
+                };
+                console.log('🐛 [FULL DEBUG INFO]', debugInfo);
+                navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2))
+                  .then(() => alert('تم نسخ معلومات التشخيص إلى الحافظة'))
+                  .catch(() => console.log('Failed to copy debug info'));
+              }}
+              className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition-colors"
+            >
+              📋 نسخ معلومات التشخيص
+            </button>
           </div>
         </div>
       </div>

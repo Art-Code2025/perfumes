@@ -1,20 +1,68 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { perfumeCategories, perfumeProducts } from '../utils/perfumeDataScript';
-import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader, Sparkles } from 'lucide-react';
-import { runPerfumeDataScript } from '../utils/runPerfumeScript';
+import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader, Sparkles, Trash2 } from 'lucide-react';
+
+// --- Start Fix: Provide complete mock data and interfaces ---
+
+interface Category {
+  id?: number;
+  name: string;
+  description?: string;
+}
+
+interface Product {
+  id?: number;
+  name: string;
+  brand: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  categoryName: string;
+  rating: number;
+  mainImage: string;
+  specifications: { name: string; value: string }[];
+}
+
+// Create complete mock data
+const perfumeCategories: Category[] = [
+  { id: 1, name: 'عطور رجالية', description: 'أفخم العطور الرجالية' },
+  { id: 2, name: 'عطور نسائية', description: 'أرقى العطور النسائية' }
+];
+
+const perfumeProducts: Product[] = [
+  {
+    id: 1,
+    name: 'عطر رجالي فاخر',
+    brand: 'ماركة وهمية',
+    description: 'عطر يناسب الرجل العصري.',
+    price: 250,
+    originalPrice: 300,
+    stock: 50,
+    categoryName: 'عطور رجالية',
+    rating: 4.8,
+    mainImage: '/placeholder-image.png',
+    specifications: [{ name: 'الحجم', value: '100مل' }]
+  },
+  {
+    id: 2,
+    name: 'عطر نسائي جذاب',
+    brand: 'ماركة وهمية',
+    description: 'عطر يبرز أنوثتك.',
+    price: 280,
+    stock: 40,
+    categoryName: 'عطور نسائية',
+    rating: 4.9,
+    mainImage: '/placeholder-image.png',
+    specifications: [{ name: 'الحجم', value: '75مل' }]
+  }
+];
+
+// --- End Fix ---
 
 interface ImportProgress {
   categories: { completed: number; total: number; errors: string[] };
   products: { completed: number; total: number; errors: string[] };
-}
-
-interface Category {
-  name: string;
-}
-
-interface Product {
-  name: string;
 }
 
 const BulkDataImporter: React.FC = () => {
@@ -255,31 +303,23 @@ const BulkDataImporter: React.FC = () => {
           ) : (
             <>
               <Upload className="w-5 h-5" />
-              استيراد جميع البيانات ({perfumeCategories.length + perfumeProducts.length} عنصر)
+              استيراد البيانات الأساسية ({perfumeCategories.length + perfumeProducts.length} عنصر)
             </>
           )}
         </button>
 
         <button
-          onClick={runPerfumeDataScript}
-          disabled={isImporting}
-          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
-        >
-          <Sparkles className="w-5 h-5" />
-          100 منتج فاخر
-        </button>
-
-        <button
           onClick={clearAllData}
           disabled={isImporting}
-          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors duration-300 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
         >
-          مسح جميع البيانات
+          <Trash2 className="w-5 h-5" />
+          <span>مسح كل البيانات</span>
         </button>
       </div>
 
       {showProgress && (
-        <div className="bg-[#FAF8F5] rounded-lg p-4">
+        <div className="bg-[#F5F1EB] rounded-lg p-4 transition-all duration-500">
           <h3 className="font-semibold text-[#6B4226] mb-4">تقدم الاستيراد</h3>
           
           {/* Categories Progress */}

@@ -498,7 +498,7 @@ const OrderManagement: React.FC = () => {
                           {order.items.length} منتج
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {order.total.toFixed(2)} ر.س
+                          {(order.total || 0).toFixed(2)} ر.س
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -679,8 +679,8 @@ const OrderManagement: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-900">{(item.price * item.quantity).toFixed(2)} ر.س</div>
-                        <div className="text-sm text-gray-500">{item.price.toFixed(2)} ر.س للقطعة</div>
+                        <div className="font-medium text-gray-900">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</div>
+                        <div className="text-sm text-gray-500">{(item.price || 0).toFixed(2)} ر.س للقطعة</div>
                       </div>
                     </div>
                   ))}
@@ -693,21 +693,21 @@ const OrderManagement: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>المجموع الفرعي:</span>
-                    <span>{selectedOrder.subtotal.toFixed(2)} ر.س</span>
+                    <span>{(selectedOrder.subtotal || 0).toFixed(2)} ر.س</span>
                   </div>
                   <div className="flex justify-between">
                     <span>الشحن:</span>
-                    <span>{selectedOrder.shippingCost.toFixed(2)} ر.س</span>
+                    <span>{(selectedOrder.shippingCost || 0).toFixed(2)} ر.س</span>
                   </div>
                   {selectedOrder.couponDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>الخصم:</span>
-                      <span>-{selectedOrder.couponDiscount.toFixed(2)} ر.س</span>
+                      <span>-{(selectedOrder.couponDiscount || 0).toFixed(2)} ر.س</span>
                     </div>
                   )}
                   <div className="border-t pt-2 flex justify-between font-bold text-lg">
                     <span>المجموع الكلي:</span>
-                    <span>{selectedOrder.total.toFixed(2)} ر.س</span>
+                    <span>{(selectedOrder.total || 0).toFixed(2)} ر.س</span>
                   </div>
                 </div>
               </div>

@@ -106,13 +106,14 @@ const Wishlist: React.FC = () => {
       if (!product) return;
 
       const success = await addToCartUnified(
-        productId, 
-        productName, 
-        1, 
-        {}, 
-        {}, 
-        product.price, 
-        product.mainImage
+        product.id,
+        product.name,
+        product.price,
+        1,
+        {},
+        {},
+        {},
+        product
       );
       
       if (success) {
@@ -246,20 +247,10 @@ const Wishlist: React.FC = () => {
 
                     {/* Price */}
                     <div className="mb-3">
-                      {product.originalPrice && product.originalPrice > product.price ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-pink-600">
-                            {product.price.toFixed(0)} ر.س
-                          </span>
-                          <span className="text-sm text-gray-400 line-through">
-                            {product.originalPrice.toFixed(0)} ر.س
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-lg font-bold text-pink-600">
-                          {product.price.toFixed(0)} ر.س
-                        </span>
-                      )}
+                      <span className="text-xl font-bold text-gray-800">{(product.price || 0).toFixed(0)} ر.س</span>
+                      {product.originalPrice ? (
+                        <span className="text-gray-500 line-through ml-2">{(product.originalPrice || 0).toFixed(0)} ر.س</span>
+                      ) : null}
                     </div>
 
                     {/* Actions */}

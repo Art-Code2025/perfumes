@@ -359,12 +359,10 @@ const ProductDetail: React.FC = () => {
             <div className="bg-beige-50 rounded-2xl p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-3xl font-bold text-zico-primary">
-                    {selectedSize.price.toFixed(2)} ر.س
-                  </span>
-                  {selectedSize.originalPrice && (
-                    <span className="text-lg text-gray-400 line-through">
-                      {selectedSize.originalPrice.toFixed(2)} ر.س
+                  <span className="text-4xl font-bold text-orange-600">{(selectedSize.price || 0).toFixed(2)} ر.س</span>
+                  {selectedSize.originalPrice && selectedSize.originalPrice > selectedSize.price && (
+                    <span className="text-2xl text-gray-500 line-through ml-3">
+                      {(selectedSize.originalPrice || 0).toFixed(2)} ر.س
                     </span>
                   )}
                 </div>
@@ -396,9 +394,7 @@ const ProductDetail: React.FC = () => {
                     }`}
                   >
                     <div className="font-bold text-gray-900">{size.size}</div>
-                    <div className="text-sm text-zico-primary font-medium">
-                      {size.price.toFixed(0)} ر.س
-                    </div>
+                    <div className="text-xl font-semibold text-gray-800">{(size.price || 0).toFixed(0)} ر.س</div>
                   </button>
                 ))}
               </div>
@@ -424,9 +420,9 @@ const ProductDetail: React.FC = () => {
                   </button>
                 </div>
                 <span className="text-beige-600">
-                  الإجمالي: <span className="font-bold text-zico-primary">
-                    {(selectedSize.price * quantity).toFixed(2)} ر.س
-                  </span>
+                  الإجمالي: <div className="text-3xl font-bold text-orange-600">
+                    {((selectedSize.price || 0) * quantity).toFixed(2)} ر.س
+                  </div>
                 </span>
               </div>
             </div>
@@ -644,35 +640,17 @@ const ProductDetail: React.FC = () => {
                 </div>
                 
                 <div className="p-6">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-1">
-                    {relatedProduct.name}
-                  </h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">{relatedProduct.name}</h3>
                   
-                  <div className="flex items-center gap-2 mb-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < Math.floor(relatedProduct.rating) 
-                            ? 'text-zico-gold fill-zico-gold' 
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
+                  <div className="flex items-baseline justify-center text-orange-600">
+                    <span className="text-xl font-bold">{(relatedProduct.price || 0).toFixed(2)}</span>
+                    <span className="text-sm ml-1">ر.س</span>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl font-bold text-zico-primary">
-                        {relatedProduct.price.toFixed(2)} ر.س
-                      </span>
-                      {relatedProduct.originalPrice && (
-                        <span className="text-sm text-gray-400 line-through">
-                          {relatedProduct.originalPrice.toFixed(2)} ر.س
-                        </span>
-                      )}
+                  {relatedProduct.originalPrice && (
+                    <div className="text-gray-500 line-through text-sm">
+                      {(relatedProduct.originalPrice || 0).toFixed(2)} ر.س
                     </div>
-                  </div>
+                  )}
                 </div>
               </Link>
             ))}

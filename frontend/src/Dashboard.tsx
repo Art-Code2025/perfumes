@@ -1567,7 +1567,7 @@ const Dashboard: React.FC = () => {
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">{stats.totalValue.toFixed(0)}</div>
+                      <div className="text-2xl font-bold text-green-600">{(stats.totalValue || 0).toFixed(0)}</div>
                       <div className="text-sm text-gray-500">قيمة المخزون (ر.س)</div>
                     </div>
                   </div>
@@ -1645,7 +1645,7 @@ const Dashboard: React.FC = () => {
                           <div className="grid grid-cols-3 gap-4 mb-4">
                             <div>
                               <span className="text-gray-500 text-sm">السعر</span>
-                              <div className="font-bold text-lg text-black">{product.price.toFixed(2)} ر.س</div>
+                              <div className="font-bold text-lg text-black">{(product.price || 0).toFixed(2)} ر.س</div>
                             </div>
                             <div>
                               <span className="text-gray-500 text-sm">المخزون</span>
@@ -1725,9 +1725,9 @@ const Dashboard: React.FC = () => {
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="font-bold text-black">{product.price.toFixed(2)} ر.س</div>
-                                  {product.originalPrice && product.originalPrice > product.price && (
-                                    <div className="text-sm text-gray-500 line-through">{product.originalPrice.toFixed(2)} ر.س</div>
+                                  <div className="font-bold text-black">{(product.price || 0).toFixed(2)} ر.س</div>
+                                  {product.originalPrice && (
+                                    <div className="text-sm text-gray-500 line-through">{(product.originalPrice || 0).toFixed(2)} ر.س</div>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -2212,7 +2212,7 @@ const Dashboard: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
                             <span className="text-gray-600 text-sm">المبلغ الإجمالي</span>
-                            <div className="font-bold text-lg text-black">{order.total.toFixed(2)} ر.س</div>
+                            <div className="font-bold text-lg text-black">{(order.total || 0).toFixed(2)} ر.س</div>
                           </div>
                           <div>
                             <span className="text-gray-600 text-sm">عدد المنتجات</span>
@@ -2265,7 +2265,7 @@ const Dashboard: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="font-bold text-black">{order.total.toFixed(2)} ر.س</div>
+                                <div className="font-bold text-black">{(order.total || 0).toFixed(2)} ر.س</div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <select
@@ -2509,12 +2509,12 @@ const Dashboard: React.FC = () => {
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">{stats.totalRevenue.toFixed(0)}</div>
+                      <div className="text-2xl font-bold text-gray-900">{(stats.totalRevenue || 0).toFixed(0)}</div>
                       <div className="text-sm text-gray-500">إجمالي الإيرادات (ر.س)</div>
                     </div>
                   </div>
                   <div className="text-sm text-green-600">
-                    متوسط الطلب: {stats.averageOrderValue.toFixed(0)} ر.س
+                    متوسط الطلب: {(stats.averageOrderValue || 0).toFixed(0)} ر.س
                   </div>
                 </div>
               </div>
@@ -2560,7 +2560,7 @@ const Dashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-gray-900">{order.total.toFixed(2)} ر.س</p>
+                              <p className="font-bold text-gray-900">{(order.total || 0).toFixed(2)} ر.س</p>
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${getOrderStatusColor(order.status)}`}>
                                 {getOrderStatusText(order.status)}
                               </span>
@@ -2606,7 +2606,7 @@ const Dashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-gray-900">{product.price.toFixed(2)} ر.س</p>
+                              <p className="font-bold text-gray-900">{(product.price || 0).toFixed(2)} ر.س</p>
                               <p className="text-sm text-gray-500">{product.productType}</p>
                             </div>
                           </div>

@@ -599,24 +599,24 @@ const Checkout: React.FC = () => {
                     <div className="space-y-6 mb-8">
                       <div className="flex justify-between text-base">
                         <span className="text-gray-600">المجموع الفرعي</span>
-                        <span className="font-bold text-gray-900">{subtotal.toFixed(2)} ر.س</span>
+                        <span className="font-bold text-gray-900">{(subtotal || 0).toFixed(2)} ر.س</span>
                       </div>
                       {appliedCoupon && (
                         <div className="flex justify-between text-base text-green-600">
                           <span>الخصم</span>
-                          <span className="font-bold">-{couponDiscount.toFixed(2)} ر.س</span>
+                          <span className="font-bold">-{(couponDiscount || 0).toFixed(2)} ر.س</span>
                         </div>
                       )}
                       <div className="flex justify-between text-base">
                         <span className="text-gray-600">الشحن</span>
                         <span className={freeShipping ? 'font-bold text-green-600' : 'font-bold text-gray-900'}>
-                          {freeShipping ? 'مجاني' : `${finalShippingCost.toFixed(2)} ر.س`}
+                          {freeShipping ? 'مجاني' : `${(finalShippingCost || 0).toFixed(2)} ر.س`}
                         </span>
                       </div>
                       <div className="border-t pt-4">
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-bold text-gray-900">الإجمالي</span>
-                          <span className="text-2xl font-bold text-gray-900">{total.toFixed(2)} ر.س</span>
+                          <span className="text-2xl font-bold text-gray-900">{(total || 0).toFixed(2)} ر.س</span>
                         </div>
                       </div>
                     </div>
@@ -669,7 +669,7 @@ const Checkout: React.FC = () => {
                                 <p className="font-bold text-green-800 text-lg">{appliedCoupon.code}</p>
                                 <p className="text-sm text-green-600">{appliedCoupon.description}</p>
                                 <p className="text-lg font-bold text-green-700 mt-1">
-                                  وفرت {couponDiscount.toFixed(2)} ر.س
+                                  وفرت {(couponDiscount || 0).toFixed(2)} ر.س
                                 </p>
                               </div>
                             </div>
@@ -853,14 +853,14 @@ const Checkout: React.FC = () => {
                               <div className="space-y-1 lg:space-y-2">
                                 {item.originalPrice && item.originalPrice > item.price && (
                                   <p className="text-sm lg:text-base text-gray-400 line-through">
-                                    {(item.originalPrice * item.quantity).toFixed(2)} ر.س
+                                    <span className="text-gray-500 line-through">{((item.originalPrice || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
                                   </p>
                                 )}
                                 <p className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">
-                                  {(item.price * item.quantity).toFixed(2)} ر.س
+                                  <span className="font-bold text-gray-900 text-lg">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
                                 </p>
                                 <p className="text-sm lg:text-base text-gray-500">
-                                  {item.price.toFixed(2)} ر.س × {item.quantity}
+                                  {(item.price || 0).toFixed(2)} ر.س × {item.quantity || 1}
                                 </p>
                               </div>
                             </div>
@@ -1192,7 +1192,7 @@ const Checkout: React.FC = () => {
                               )}
                               <span className="flex-1 text-gray-900 font-medium">{item.name}</span>
                               <span className="text-gray-600 font-medium">×{item.quantity}</span>
-                              <span className="font-bold text-gray-900 text-lg">{(item.price * item.quantity).toFixed(2)} ر.س</span>
+                              <span className="font-bold text-gray-900 text-lg">{(item.price || 0).toFixed(2)} ر.س</span>
                             </div>
                           ))}
                           {cartItems.length > 3 && (

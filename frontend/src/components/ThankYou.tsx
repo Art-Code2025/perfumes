@@ -144,7 +144,7 @@ const ThankYou: React.FC = () => {
                         <p className="text-sm text-gray-600">الكمية: {item.quantity}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900">{(item.price * item.quantity).toFixed(2)} ر.س</p>
+                        <p className="font-bold text-gray-900">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</p>
                       </div>
                     </div>
                   ))}

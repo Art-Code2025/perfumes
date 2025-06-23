@@ -404,12 +404,10 @@ const ProductManagement: React.FC = () => {
                               {getCategoryName(product.categoryId)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {product.price.toFixed(0)} ر.س
-                              </div>
-                              {product.originalPrice && product.originalPrice > product.price && (
-                                <div className="text-sm text-gray-500 line-through">
-                                  {product.originalPrice.toFixed(0)} ر.س
+                              <div className="text-gray-900 font-semibold">{(product.price || 0).toFixed(0)} ر.س</div>
+                              {product.originalPrice && (
+                                <div className="text-gray-500 line-through text-sm">
+                                  {(product.originalPrice || 0).toFixed(0)} ر.س
                                 </div>
                               )}
                             </td>
@@ -494,14 +492,10 @@ const ProductManagement: React.FC = () => {
                         
                         {/* Price */}
                         <div className="mb-3">
-                          <div className="text-lg font-bold text-gray-900">
-                            {product.price.toFixed(0)} ر.س
-                          </div>
-                          {product.originalPrice && product.originalPrice > product.price && (
-                            <div className="text-sm text-gray-500 line-through">
-                              {product.originalPrice.toFixed(0)} ر.س
-                            </div>
-                          )}
+                          <span className="text-xl font-bold text-gray-800">{(product.price || 0).toFixed(0)} ر.س</span>
+                          {product.originalPrice ? (
+                            <span className="text-gray-500 line-through ml-2">{(product.originalPrice || 0).toFixed(0)} ر.س</span>
+                          ) : null}
                         </div>
 
                         {/* Stock */}

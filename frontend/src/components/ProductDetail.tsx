@@ -285,17 +285,10 @@ const ProductDetail: React.FC = () => {
               </div>
 
               {/* Price */}
-              <div className="flex items-center space-x-4">
-                {product.originalPrice && product.originalPrice > product.price ? (
-                  <>
-                    <span className="text-3xl font-bold text-brown-600">{product.price.toFixed(2)} ر.س</span>
-                    <span className="text-xl text-brown-400 line-through">{product.originalPrice.toFixed(2)} ر.س</span>
-                    <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">
-                      -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-3xl font-bold text-brown-600">{product.price.toFixed(2)} ر.س</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-brown-600">{(product.price || 0).toFixed(2)} ر.س</span>
+                {product.originalPrice && (
+                  <span className="text-xl text-brown-400 line-through">{(product.originalPrice || 0).toFixed(2)} ر.س</span>
                 )}
               </div>
 
@@ -461,21 +454,14 @@ const RelatedProducts: React.FC<{ currentProductId: string | number }> = ({ curr
               <p className="text-brown-600 text-sm mb-3 line-clamp-2">{product.description}</p>
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  {product.originalPrice && product.originalPrice > product.price ? (
-                    <>
-                      <div className="flex items-center gap-1 mb-1">
-                        <span className="text-xs text-brown-400 line-through">
-                          {product.originalPrice.toFixed(2)}
-                        </span>
-                        <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs font-bold">
-                          -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-                        </span>
-                      </div>
-                      <span className="text-lg font-bold text-brown-600">{product.price.toFixed(2)} ر.س</span>
-                    </>
-                  ) : (
-                    <span className="text-lg font-bold text-brown-600">{product.price.toFixed(2)} ر.س</span>
-                  )}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-brown-600">{(product.price || 0).toFixed(2)} ر.س</span>
+                    {product.originalPrice && (
+                      <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs font-bold">
+                        -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button className="bg-gradient-to-r from-brown-500 to-brown-600 text-white px-3 py-2 rounded-lg hover:from-brown-600 hover:to-brown-700 transition-colors duration-200 text-sm">
                   عرض

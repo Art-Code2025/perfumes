@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface StatsCardProps {
   title: string;
@@ -33,11 +34,18 @@ const StatsCard: React.FC<StatsCardProps> = ({
     return colors[colorName as keyof typeof colors] || colors.blue;
   };
 
-  const formatValue = (val: string | number) => {
-    if (typeof val === 'number') {
-      return val.toLocaleString('ar-SA');
+  const formatValue = (value: number, format: 'currency' | 'number' | 'percent') => {
+    if (value === null || value === undefined) {
+      return format === 'currency' ? '0 ر.س' : '0';
     }
-    return val;
+    switch (format) {
+      case 'currency':
+        return `${value.toFixed(2)} ر.س`;
+      case 'percent':
+        return `${(value || 0).toFixed(1)}%`;
+      default:
+        return value.toString();
+    }
   };
 
   return (
@@ -49,16 +57,13 @@ const StatsCard: React.FC<StatsCardProps> = ({
           </p>
           <div className="flex items-baseline space-x-1 sm:space-x-2">
             <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate">
-              {formatValue(value)}
+              {formatValue(typeof value === 'number' ? value : 0, typeof value === 'number' ? 'number' : 'currency')}
             </h3>
             {change && (
-              <span className={`text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ${
-                change.type === 'increase' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {change.type === 'increase' ? '↗' : '↘'} {Math.abs(change.value)}%
-              </span>
+              <div className={`flex items-center text-sm font-semibold ${change.type === 'increase' ? 'text-green-600' : 'text-red-600'}`}>
+                {change.type === 'increase' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                {Math.abs(change.value || 0).toFixed(1)}%
+              </div>
             )}
           </div>
           {subtitle && (
@@ -178,7 +183,7 @@ export const StatsTrendCard: React.FC<StatsTrendCardProps> = ({
                 <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
-            {Math.abs(change).toFixed(1)}%
+            {Math.abs(change || 0).toFixed(1)}%
           </span>
           <span className="text-xs sm:text-sm text-gray-500 truncate">
             من الفترة السابقة

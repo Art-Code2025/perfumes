@@ -431,16 +431,16 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                     <tr>
                       <td style="font-weight: 600; color: #2d3748;">${item.productName}</td>
                       <td style="font-weight: 700; color: #4299e1;">${item.quantity}</td>
-                      <td style="color: #38a169;">${item.price.toFixed(2)} ر.س</td>
+                      <td style="color: #38a169;">${(item.price || 0).toFixed(2)} ر.س</td>
                       <td style="font-size: 0.9rem; color: #4a5568;">
                         ${item.selectedOptions ? Object.entries(item.selectedOptions).map(([key, value]) => 
                           `<div style="margin: 2px 0; padding: 2px 6px; background: #f0fff4; border-radius: 4px; display: inline-block;">
                             <strong>${formatOptionName(key)}:</strong> ${value}
-                            ${item.optionsPricing?.[key] ? `<span style="color: #38a169;">(+${item.optionsPricing[key]} ر.س)</span>` : ''}
+                            ${item.optionsPricing?.[key] ? `<span style="color: #38a169;">(+${item.optionsPricing[key] || 0} ر.س)</span>` : ''}
                           </div>`
                         ).join(' ') : '<span style="color: #a0aec0;">بدون مواصفات إضافية</span>'}
                       </td>
-                      <td style="font-weight: 700; color: #2d3748; font-size: 1.1rem;">${item.totalPrice.toFixed(2)} ر.س</td>
+                      <td style="font-weight: 700; color: #2d3748; font-size: 1.1rem;">${(item.totalPrice || 0).toFixed(2)} ر.س</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -456,23 +456,23 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
               <div class="totals-section">
                 <div class="total-row">
                   <span><strong>📦 المجموع الفرعي:</strong></span>
-                  <span style="font-weight: 600;">${(order.subtotal || order.total).toFixed(2)} ر.س</span>
+                  <span style="font-weight: 600;">${(order.subtotal || order.total || 0).toFixed(2)} ر.س</span>
                 </div>
                 ${order.deliveryFee && order.deliveryFee > 0 ? `
                   <div class="total-row">
                     <span><strong>🚚 رسوم التوصيل:</strong></span>
-                    <span style="color: #4299e1; font-weight: 600;">${order.deliveryFee.toFixed(2)} ر.س</span>
+                    <span style="color: #4299e1; font-weight: 600;">${(order.deliveryFee || 0).toFixed(2)} ر.س</span>
                   </div>
                 ` : ''}
                 ${order.couponDiscount && order.couponDiscount > 0 ? `
                   <div class="total-row">
                     <span><strong>🎫 خصم الكوبون:</strong></span>
-                    <span style="color: #38a169; font-weight: 600;">-${order.couponDiscount.toFixed(2)} ر.س</span>
+                    <span style="color: #38a169; font-weight: 600;">-${(order.couponDiscount || 0).toFixed(2)} ر.س</span>
                   </div>
                 ` : ''}
                 <div class="total-row">
                   <span><strong>🏆 المجموع النهائي شامل الضريبة:</strong></span>
-                  <span>${order.total.toFixed(2)} ر.س</span>
+                  <span>${(order.total || 0).toFixed(2)} ر.س</span>
                 </div>
               </div>
               
@@ -679,26 +679,26 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                       <span className="text-gray-600">المجموع الفرعي</span>
-                      <span className="font-bold text-lg">{(order.subtotal || order.total).toFixed(2)} ر.س</span>
+                      <span className="font-bold text-lg">${(order.subtotal || order.total || 0).toFixed(2)} ر.س</span>
                     </div>
 
                     {order.deliveryFee && order.deliveryFee > 0 && (
                       <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl">
                         <span className="text-gray-600">رسوم التوصيل</span>
-                        <span className="font-bold text-lg text-blue-600">{order.deliveryFee.toFixed(2)} ر.س</span>
+                        <span className="font-bold text-lg text-blue-600">${(order.deliveryFee || 0).toFixed(2)} ر.س</span>
                       </div>
                     )}
 
                     {order.couponDiscount && order.couponDiscount > 0 && (
                       <div className="flex justify-between items-center p-4 bg-green-50 rounded-xl">
                         <span className="text-gray-600">خصم الكوبون</span>
-                        <span className="font-bold text-lg text-green-600">-{order.couponDiscount.toFixed(2)} ر.س</span>
+                        <span className="font-bold text-lg text-green-600">-${(order.couponDiscount || 0).toFixed(2)} ر.س</span>
                       </div>
                     )}
 
                     <div className="flex justify-between items-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border-2 border-orange-200">
                       <span className="text-gray-800 font-semibold">المجموع النهائي</span>
-                      <span className="font-bold text-2xl text-orange-600">{order.total.toFixed(2)} ر.س</span>
+                      <span className="font-bold text-2xl text-orange-600">${(order.total || 0).toFixed(2)} ر.س</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mt-6">
@@ -743,11 +743,11 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                             </div>
                             <div className="text-center p-2 bg-green-50 rounded-lg">
                               <p className="text-xs text-gray-500">السعر</p>
-                              <p className="font-bold text-green-600">{item.price.toFixed(2)} ر.س</p>
+                              <p className="font-bold text-green-600">${(item.price || 0).toFixed(2)} ر.س</p>
                             </div>
                             <div className="text-center p-2 bg-purple-50 rounded-lg">
                               <p className="text-xs text-gray-500">الإجمالي</p>
-                              <p className="font-bold text-purple-600">{item.totalPrice.toFixed(2)} ر.س</p>
+                              <p className="font-bold text-purple-600">${(item.totalPrice || 0).toFixed(2)} ر.س</p>
                             </div>
                           </div>
 
@@ -763,7 +763,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                                       {value}
                                       {item.optionsPricing?.[optionName] && item.optionsPricing[optionName] > 0 && (
                                         <span className="text-amber-600 text-xs mr-1">
-                                          (+{item.optionsPricing[optionName]} ر.س)
+                                          (+${(item.optionsPricing[optionName] || 0).toFixed(2)} ر.س)
                                         </span>
                                       )}
                                     </p>
@@ -906,8 +906,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                       <tr key={index}>
                         <td className="border border-gray-200 p-3">{item.productName}</td>
                         <td className="border border-gray-200 p-3">{item.quantity}</td>
-                        <td className="border border-gray-200 p-3">{item.price.toFixed(2)} ر.س</td>
-                        <td className="border border-gray-200 p-3">{item.totalPrice.toFixed(2)} ر.س</td>
+                        <td className="border border-gray-200 p-3">${(item.price || 0).toFixed(2)} ر.س</td>
+                        <td className="border border-gray-200 p-3">${(item.totalPrice || 0).toFixed(2)} ر.س</td>
                       </tr>
                     ))}
                   </tbody>
@@ -916,23 +916,23 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, isOpen, onClose, onStatu
                 <div className="text-left space-y-2">
                   <div className="flex justify-between">
                     <span>المجموع الفرعي:</span>
-                    <span>{(order.subtotal || order.total).toFixed(2)} ر.س</span>
+                    <span>${(order.subtotal || order.total || 0).toFixed(2)} ر.س</span>
                   </div>
                   {order.deliveryFee && order.deliveryFee > 0 && (
                     <div className="flex justify-between">
                       <span>رسوم التوصيل:</span>
-                      <span>{order.deliveryFee.toFixed(2)} ر.س</span>
+                      <span>${(order.deliveryFee || 0).toFixed(2)} ر.س</span>
                     </div>
                   )}
                   {order.couponDiscount && order.couponDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>خصم الكوبون:</span>
-                      <span>-{order.couponDiscount.toFixed(2)} ر.س</span>
+                      <span>-${(order.couponDiscount || 0).toFixed(2)} ر.س</span>
                     </div>
                   )}
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>المجموع النهائي:</span>
-                    <span>{order.total.toFixed(2)} ر.س</span>
+                    <span>${(order.total || 0).toFixed(2)} ر.س</span>
                   </div>
                 </div>
               </div>

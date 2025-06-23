@@ -349,13 +349,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {/* Price */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-lg lg:text-xl font-bold text-zico-primary">
-                {product.price.toFixed(2)} ر.س
-              </span>
-              {product.originalPrice && (
-                <span className="text-sm text-gray-400 line-through">
-                  {product.originalPrice.toFixed(2)} ر.س
-                </span>
+              <span className="font-bold text-lg text-brown-700">{(product.price || 0).toFixed(2)} ر.س</span>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className="text-gray-500 line-through text-sm">{(product.originalPrice || 0).toFixed(2)} ر.س</span>
               )}
             </div>
             

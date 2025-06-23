@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { productsAPI, categoriesAPI, ordersAPI, couponsAPI, dashboardAPI, uploadAPI } from '../utils/api';
 import { buildImageUrl } from '../config/api';
-import BulkDataImporter from './BulkDataImporter';
 
 // Interfaces
 interface Product {
@@ -436,26 +435,6 @@ const Dashboard: React.FC = () => {
     fetchOrders();
     fetchCoupons();
     fetchStats();
-
-    // Add event listeners for bulk import updates
-    const handleProductsUpdated = () => {
-      fetchProducts();
-      fetchStats();
-    };
-
-    const handleCategoriesUpdated = () => {
-      fetchCategories();
-      fetchStats();
-    };
-
-    window.addEventListener('productsUpdated', handleProductsUpdated);
-    window.addEventListener('categoriesUpdated', handleCategoriesUpdated);
-
-    // Cleanup event listeners
-    return () => {
-      window.removeEventListener('productsUpdated', handleProductsUpdated);
-      window.removeEventListener('categoriesUpdated', handleCategoriesUpdated);
-    };
   }, []);
 
   return (
@@ -589,7 +568,7 @@ const Dashboard: React.FC = () => {
                       <span className="text-xs text-gray-400">جاري...</span>
                     </div>
                   ) : (
-                    <p className="text-base lg:text-xl font-bold text-gray-900">{(stats.totalRevenue || 0).toFixed(2)} ر.س</p>
+                    <p className="text-base lg:text-xl font-bold text-gray-900">{stats.totalRevenue} ر.س</p>
                   )}
                 </div>
               </div>
@@ -616,22 +595,11 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Products Section with Bulk Data Importer */}
+        {/* Simple message for other sections */}
         <div className={`${activeMobileSection === 'products' ? 'block' : 'hidden'} lg:block fade-in`}>
-          <BulkDataImporter />
-          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">إدارة المنتجات</h2>
-            <p className="text-gray-600">
-              بعد استيراد البيانات، استخدم صفحة إدارة المنتجات المخصصة لإدارة المنتجات بشكل كامل.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {products.length} منتج محفوظ
-              </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {categories.length} تصنيف محفوظ
-              </span>
-            </div>
+            <p className="text-gray-600">استخدم صفحة إدارة المنتجات المخصصة لإدارة المنتجات بشكل كامل.</p>
           </div>
         </div>
 

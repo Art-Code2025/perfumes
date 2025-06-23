@@ -595,49 +595,6 @@ const Checkout: React.FC = () => {
                   </div>
 
                   <div className="p-8">
-                    {/* Coupon Section */}
-                    {!appliedCoupon && (
-                      <div className="mb-8">
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            placeholder="كود الخصم"
-                            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all"
-                            disabled={couponLoading}
-                          />
-                          <button
-                            onClick={applyCoupon}
-                            disabled={!couponCode.trim() || couponLoading}
-                            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 font-bold whitespace-nowrap min-w-[80px]"
-                          >
-                            {couponLoading ? '...' : 'تطبيق'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {appliedCoupon && (
-                      <div className="mb-8 p-4 bg-green-50 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Gift className="text-green-600" size={24} />
-                            <div>
-                              <p className="font-bold text-green-800">{appliedCoupon.code}</p>
-                              <p className="text-sm text-green-600">{appliedCoupon.description}</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={removeCoupon}
-                            className="text-red-500 hover:text-red-700 p-1"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
                     {/* Price Breakdown */}
                     <div className="space-y-6 mb-8">
                       <div className="flex justify-between text-base">
@@ -662,6 +619,70 @@ const Checkout: React.FC = () => {
                           <span className="text-2xl font-bold text-gray-900">{total.toFixed(2)} ر.س</span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Coupon Section */}
+                    <div className="mb-8">
+                      <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Gift className="text-green-600" size={20} />
+                        كود الخصم
+                      </h4>
+                      
+                      {!appliedCoupon ? (
+                        <div className="bg-gray-50 rounded-2xl p-6 border-2 border-dashed border-gray-200">
+                          <div className="space-y-4">
+                            <input
+                              type="text"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              placeholder="أدخل كود الخصم هنا"
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all text-center font-mono text-lg tracking-wider"
+                              disabled={couponLoading}
+                            />
+                            <button
+                              onClick={applyCoupon}
+                              disabled={!couponCode.trim() || couponLoading}
+                              className="w-full bg-gradient-to-r from-black to-gray-800 text-white py-3 px-6 rounded-xl hover:from-gray-800 hover:to-black transition-all duration-300 disabled:opacity-50 font-bold text-lg shadow-lg"
+                            >
+                              {couponLoading ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  جاري التحقق...
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  <Gift size={20} />
+                                  تطبيق كود الخصم
+                                </div>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                                <Gift className="text-white" size={24} />
+                              </div>
+                              <div>
+                                <p className="font-bold text-green-800 text-lg">{appliedCoupon.code}</p>
+                                <p className="text-sm text-green-600">{appliedCoupon.description}</p>
+                                <p className="text-lg font-bold text-green-700 mt-1">
+                                  وفرت {couponDiscount.toFixed(2)} ر.س
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={removeCoupon}
+                              className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 border-2 border-red-200 hover:border-red-300"
+                              title="إلغاء كود الخصم"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* زر الإتمام */}

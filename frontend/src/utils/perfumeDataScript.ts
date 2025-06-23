@@ -748,6 +748,7 @@ interface AutoProduct {
   brand: string;
   description: string;
   price: number;
+  originalPrice: number;
   stock: number;
   categoryName: string;
   rating: number;
@@ -765,19 +766,20 @@ const catMap = [
 ];
 
 const generatedProducts: AutoProduct[] = Array.from({ length: 60 }, (_, idx) => {
-  const globalId = 41 + idx; // Continue after last manual id (40)
-  const catIndex = Math.floor(idx / 10); // 0-5, each 10 products per category
+  const globalId = 41 + idx;
+  const catIndex = Math.floor(idx / 10);
   const categoryName = catMap[catIndex] || "عطور نيش";
-  const brand = `Brand ${globalId}`;
+  const basePrice = 300 + (idx % 10) * 20;
   return {
     id: globalId,
     name: `Perfume ${globalId}`,
-    brand,
-    description: `عطر تجريبي رقم ${globalId} من ${brand}`,
-    price: 300 + (idx % 10) * 20,
+    brand: `Brand ${globalId}`,
+    description: `عطر تجريبي رقم ${globalId} من Brand ${globalId}`,
+    price: basePrice,
+    originalPrice: basePrice + 50,
     stock: 20 + (idx % 5) * 5,
     categoryName,
-    rating: 4 + (idx % 2) * 0.5, // 4 or 4.5
+    rating: 4 + (idx % 2) * 0.5,
     mainImage: "/products/placeholder.jpg",
     specifications: [
       { name: "الحجم", value: "100 مل" },

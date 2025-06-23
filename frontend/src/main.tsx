@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Navbar from './components/Navbar';
+import FleurNavbar from './components/FleurNavbar';
 import App from './App.tsx';
 // Direct import for debugging
 import './index.css';
@@ -37,10 +37,10 @@ const ReturnPolicy = React.lazy(() => import('./components/ReturnPolicy'));
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="flex justify-center items-center min-h-screen bg-white">
+  <div className="flex justify-center items-center min-h-screen bg-[#FAF8F5]">
     <div className="text-center">
-      <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-      <div className="text-xl text-black font-medium">جاري التحميل...</div>
+      <div className="w-12 h-12 border-4 border-[#8B5A3C] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <div className="text-xl text-[#6B4226] font-medium">جاري التحميل...</div>
     </div>
   </div>
 );
@@ -128,7 +128,7 @@ const LayoutWrapper: React.FC = () => {
 
   return (
     <>
-      {!shouldHideNavbar && <Navbar />}
+      {!shouldHideNavbar && <FleurNavbar />}
       <div className={contentClass}>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, Package, Sparkles, Home, Grid, Phone, Info, LogOut, ChevronLeft } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, X, Package, Sparkles, Home, Grid, Phone, Info, LogOut, ChevronLeft, Crown, Droplets, Star } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { createCategorySlug, createProductSlug } from '../utils/slugify';
 import { productsAPI, categoriesAPI } from '../utils/api';
@@ -30,9 +30,14 @@ interface Product {
   // Add other product properties as needed
 }
 
-function Navbar() {
+interface NavbarProps {
+  onCartClick?: () => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ onCartClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [cartItemsCount, setCartItemsCount] = useState<number>(0);
   const [wishlistItemsCount, setWishlistItemsCount] = useState<number>(0);
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -51,7 +56,7 @@ function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -433,7 +438,7 @@ function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-gradient-to-r from-[#f8f6ea]/95 via-[#f8f6ea]/98 to-[#f8f6ea]/95 backdrop-blur-2xl border-b border-gray-300/30 shadow-xl" dir="rtl">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-lg" dir="rtl">
         <style>
           {`
             /* Mobile Touch Optimization */
@@ -489,13 +494,9 @@ function Navbar() {
           `}
         </style>
         
-        {/* Premium Glass Morphism Background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#f8f6ea]/20 via-[#f8f6ea]/30 to-[#f8f6ea]/20 backdrop-blur-3xl" />
+        {/* Removed background and border for seamless overlay */}
         
-        {/* Luxury Border Gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-400/40 to-transparent" />
-        
-        <div className="relative flex items-center justify-between h-20 sm:h-20 lg:h-24 px-4 sm:px-6 lg:px-12">
+        <div className="relative flex items-center justify-between h-16 px-4 lg:px-12">
           {/* Menu Button for Mobile - حجم مصغر ومتناسق */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -508,90 +509,29 @@ function Navbar() {
             {isMenuOpen ? <X size={20} className="sm:w-5 sm:h-5" /> : <Menu size={20} className="sm:w-5 sm:h-5" />}
           </button>
 
-          {/* Premium Logo - Fixed Center with proper z-index */}
-          <div className="mobile-logo-area lg:relative lg:left-auto lg:top-auto lg:transform-none z-[50]">
-            <div 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🏠 Logo clicked - navigating to home');
-                navigate('/');
-                setIsMenuOpen(false);
-                window.scrollTo(0, 0);
-              }}
-              className="mobile-touch-target flex items-center gap-2 sm:gap-4 transition-all duration-500 hover:scale-105 group cursor-pointer relative z-[50] bg-transparent p-3 rounded-2xl no-select"
-              style={{ 
-                pointerEvents: 'auto',
-                touchAction: 'manipulation'
-              }}
-            >
-              <div className="relative">
-                <img 
-                  src={logo} 
-                  alt="GHEM Store Logo" 
-                  className="h-10 sm:h-14 lg:h-20 w-auto drop-shadow-2xl select-none pointer-events-none" 
-                  draggable={false}
-                />
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-300/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </div>
-            </div>
-          </div>
+          {/* Brand */}
+          <Link to="/" onClick={()=>{setIsMenuOpen(false);window.scrollTo(0,0);}} className="text-2xl font-extrabold text-red-600 select-none lg:absolute lg:right-8">
+            Desi
+          </Link>
 
-          {/* Premium Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1 xl:gap-2 z-[40]">
-            {/* عرض Categories فوراً بدون شرط */}
-            {categories.map((category, index) => (
-                <button
-                  key={category.id}
-                  id={`category-btn-${category.id}`}
-                  data-category-name={category.name}
-                  data-category-id={category.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔗 Category clicked:', category.name, 'ID:', category.id);
-                    console.log('🔗 Button element:', e.currentTarget);
-                    console.log('🔗 Event details:', e);
-                    
-                    if (category.name === 'مريول مدرسي') {
-                      console.log('🎯 مريول مدرسي clicked! Force navigating...');
-                      console.log('🎯 Current location:', window.location.href);
-                    }
-                    
-                    try {
-                      const categorySlug = createCategorySlug(category.id, category.name);
-                      navigate(`/category/${categorySlug}`);
-                      console.log('✅ Navigation attempted to:', `/category/${categorySlug}`);
-                    } catch (error) {
-                      console.error('❌ Navigation error:', error);
-                    }
-                  }}
-                  className={`relative px-3 lg:px-4 xl:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl font-medium text-sm lg:text-base text-gray-700 hover:text-gray-800 transition-all duration-300 ease-out transform hover:scale-105 group cursor-pointer z-[40] ${
-                    isActive(`/category/${createCategorySlug(category.id, category.name)}`) 
-                      ? 'bg-white/60 backdrop-blur-xl border border-gray-300/50 text-gray-800 shadow-lg' 
-                      : 'hover:bg-white/40 hover:backdrop-blur-xl hover:border hover:border-gray-300/30'
-                  }`}
-                  style={{
-                    position: 'relative',
-                    zIndex: 40,
-                    pointerEvents: 'auto'
-                  }}
-                >
-                  {category.name}
-                  
-                  {/* Premium Hover Effect */}
-                  <div className="absolute inset-0 rounded-xl lg:rounded-2xl bg-gradient-to-r from-[#f8f6ea]/20 via-[#f8f6ea]/30 to-[#f8f6ea]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  {/* Active Indicator */}
-                  {isActive(`/category/${createCategorySlug(category.id, category.name)}`) && (
-                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-6 lg:w-8 h-1 bg-gradient-to-r from-pink-400 via-pink-500 to-rose-500 rounded-full shadow-lg" />
-                  )}
-                                </button>
-              ))}
-            </div>
+          {/* Centered Links */}
+          <ul className="hidden lg:flex absolute left-1/2 transform -translate-x-1/2 items-center gap-8 text-sm font-medium text-gray-700">
+            {[
+              {label:'Home',to:'/'},
+              {label:'Products',to:'/products'},
+              {label:'Categories',to:'/categories'},
+              {label:'Pages',to:'#'},
+              {label:'Blog',to:'/blog'},
+              {label:'Contact us',to:'/contact'}
+            ].map(link=> (
+              <Link key={link.label} to={link.to} className="hover:text-red-600 transition-colors">
+                {link.label}
+              </Link>
+            ))}
+          </ul>
 
-          {/* Premium Icons Section - أحجام أصغر ومتناسقة */}
-          <div className="mobile-icons-area flex items-center gap-1 sm:gap-2 lg:gap-3 z-[60] relative">
+          {/* Icons */}
+          <div className="mobile-icons-area flex items-center gap-3 z-[60] relative">
             {/* Cart Icon - حجم مصغر */}
             <Link 
               to="/cart" 

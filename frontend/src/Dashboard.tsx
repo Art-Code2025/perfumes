@@ -17,6 +17,7 @@ import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar
 import { apiCall, API_ENDPOINTS, buildImageUrl } from './config/api';
 import OrderModal from './components/OrderModal';
 import DeleteModal from './components/DeleteModal';
+import BulkDataImporter from './components/BulkDataImporter';
 import logo from './assets/logo.png';
 
 // تعريف الأنواع

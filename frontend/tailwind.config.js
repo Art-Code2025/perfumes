@@ -7,15 +7,48 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: {
-          50: '#f8f5f0', // اللون الكريمي الفاتح
-          100: '#f0ece5',
+        // Zico Perfume Brand Colors - Beige & Burgundy Theme
+        burgundy: {
+          50: '#fdf2f4',   // Very light burgundy
+          100: '#fce7ea',  // Light burgundy
+          200: '#f9d0d6',  // Soft burgundy
+          300: '#f4a8b4',  // Medium light burgundy
+          400: '#ec7085',  // Medium burgundy
+          500: '#de4a5f',  // Base burgundy
+          600: '#c4314a',  // Strong burgundy
+          700: '#a91b47',  // Dark burgundy
+          800: '#8b1538',  // Very dark burgundy
+          900: '#4a0e1a',  // Deep burgundy
         },
-        gold: {
-          500: '#d4af37', // ذهبي فاتح
-          600: '#c19a2e', // ذهبي غامق شوية
-          700: '#af8725', // ذهبي أغمق
+        beige: {
+          50: '#fdfcfa',   // Very light beige
+          100: '#f8f5f0',  // Light beige
+          200: '#f5f1eb',  // Soft beige
+          300: '#ede6d9',  // Medium light beige
+          400: '#e0d4c1',  // Medium beige
+          500: '#c4a484',  // Base beige
+          600: '#b8956b',  // Strong beige
+          700: '#a08052',  // Dark beige
+          800: '#8a6b42',  // Very dark beige
+          900: '#6b5235',  // Deep beige
         },
+        // Zico Brand Specific Colors
+        zico: {
+          primary: '#8B1538',    // Main burgundy
+          secondary: '#A91B47',  // Secondary burgundy
+          accent: '#C4A484',     // Warm beige
+          light: '#F5F1EB',      // Cream beige
+          dark: '#4A0E1A',       // Deep burgundy
+          gold: '#D4AF37',       // Luxury gold accent
+          rose: '#E8B4B8',       // Soft rose
+          cream: '#FAF8F5',      // Warm cream
+        },
+        // Remove old cream and gold colors
+      },
+      fontFamily: {
+        arabic: ['Cairo', 'Tajawal', 'Almarai', 'sans-serif'],
+        english: ['Cormorant Garamond', 'serif'],
+        body: ['Inter', 'sans-serif'],
       },
       screens: {
         'xs': '475px',
@@ -54,6 +87,9 @@ export default {
         'slide-in': 'slideIn 0.5s ease-out',
         'bounce-gentle': 'bounceGentle 2s infinite',
         'pulse-slow': 'pulse 3s infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -72,11 +108,37 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgba(139, 21, 56, 0.5)' },
+          '100%': { boxShadow: '0 0 20px rgba(139, 21, 56, 0.8)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-1000px 0' },
+          '100%': { backgroundPosition: '1000px 0' },
+        },
+      },
+      backgroundImage: {
+        'gradient-zico': 'linear-gradient(135deg, #8B1538 0%, #A91B47 50%, #C4A484 100%)',
+        'gradient-beige': 'linear-gradient(135deg, #F5F1EB 0%, #C4A484 100%)',
+        'gradient-burgundy': 'linear-gradient(135deg, #4A0E1A 0%, #8B1538 100%)',
+        'shimmer-gradient': 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+      },
+      boxShadow: {
+        'zico': '0 4px 20px rgba(139, 21, 56, 0.15)',
+        'zico-lg': '0 8px 30px rgba(139, 21, 56, 0.2)',
+        'zico-xl': '0 12px 40px rgba(139, 21, 56, 0.25)',
+        'beige': '0 4px 20px rgba(196, 164, 132, 0.15)',
+        'beige-lg': '0 8px 30px rgba(196, 164, 132, 0.2)',
+        'inner-glow': 'inset 0 2px 4px rgba(255, 255, 255, 0.1)',
       },
     },
   },
   plugins: [
-    function({ addUtilities }) {
+    function({ addUtilities, addComponents }) {
       const newUtilities = {
         '.container-responsive': {
           'width': '100%',
@@ -146,7 +208,24 @@ export default {
           },
         },
       }
+
+      const newComponents = {
+        '.btn-zico': {
+          '@apply bg-gradient-to-r from-zico-primary to-zico-secondary text-white font-semibold py-3 px-6 rounded-xl hover:shadow-zico-lg transition-all duration-300 transform hover:scale-105': {},
+        },
+        '.btn-zico-outline': {
+          '@apply border-2 border-zico-primary text-zico-primary bg-transparent font-semibold py-3 px-6 rounded-xl hover:bg-zico-primary hover:text-white transition-all duration-300': {},
+        },
+        '.card-zico': {
+          '@apply bg-white rounded-2xl shadow-zico border border-beige-200 overflow-hidden hover:shadow-zico-lg transition-all duration-300': {},
+        },
+        '.perfume-bottle': {
+          '@apply relative overflow-hidden rounded-2xl bg-gradient-to-br from-beige-50 to-beige-100 p-6 hover:shadow-zico-xl transition-all duration-500 transform hover:-translate-y-2': {},
+        },
+      }
+
       addUtilities(newUtilities)
+      addComponents(newComponents)
     }
   ],
 }

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { productsAPI, categoriesAPI, ordersAPI, couponsAPI, dashboardAPI, uploadAPI } from '../utils/api';
 import { buildImageUrl } from '../config/api';
+import BulkDataImporter from './BulkDataImporter';
 
 // Interfaces
 interface Product {
@@ -513,6 +514,9 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto p-3 lg:p-6">
         {/* Desktop Title */}
         <h1 className="hidden lg:block text-2xl font-bold text-gray-900 mb-6">لوحة التحكم</h1>
+        
+        {/* Bulk Data Importer */}
+        <BulkDataImporter />
         
         {/* Stats Cards */}
         <div className={`${activeMobileSection === 'stats' ? 'block' : 'hidden'} lg:block fade-in mb-4 lg:mb-6`}>

@@ -76,6 +76,10 @@
     @apply bg-white rounded-3xl shadow-zico-lg border border-beige-300 overflow-hidden hover:shadow-zico-xl transition-all duration-500 transform hover:-translate-y-2;
   }
 
+  .perfume-card-group {
+    @apply group;
+  }
+
   .perfume-bottle-container {
     @apply relative overflow-hidden bg-gradient-to-br from-beige-50 to-beige-100 aspect-square flex items-center justify-center;
   }

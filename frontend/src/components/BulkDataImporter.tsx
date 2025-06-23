@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader, Sparkles, Trash2 } from 'lucide-react';
+import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader, Sparkles, Trash2, Database, Zap } from 'lucide-react';
+import { seedCategories, seedProducts } from '../utils/seedData';
 
 // --- Start Fix: Provide complete mock data and interfaces ---
 
@@ -24,13 +25,13 @@ interface Product {
   specifications: { name: string; value: string }[];
 }
 
-// Create complete mock data
-const perfumeCategories: Category[] = [
+// Create complete mock data - KEEPING a small version for quick testing
+const smallScaleCategories: Category[] = [
   { id: 1, name: 'عطور رجالية', description: 'أفخم العطور الرجالية' },
   { id: 2, name: 'عطور نسائية', description: 'أرقى العطور النسائية' }
 ];
 
-const perfumeProducts: Product[] = [
+const smallScaleProducts: Product[] = [
   {
     id: 1,
     name: 'عطر رجالي فاخر',
@@ -76,16 +77,16 @@ const BulkDataImporter: React.FC = () => {
   // Simulate API delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const importCategories = async () => {
+  const importCategories = async (categoriesToImport: Category[]) => {
     console.log('🏷️ Starting category import...');
-    const total = perfumeCategories.length;
+    const total = categoriesToImport.length;
     setProgress(prev => ({ ...prev, categories: { completed: 0, total, errors: [] } }));
 
-    for (let i = 0; i < perfumeCategories.length; i++) {
-      const category = perfumeCategories[i];
+    for (let i = 0; i < categoriesToImport.length; i++) {
+      const category = categoriesToImport[i];
       try {
         // Simulate API call
-        await delay(300);
+        await delay(50);
         
         // Get existing categories from localStorage
         const existingCategories = JSON.parse(localStorage.getItem('categories') || '[]');
@@ -131,19 +132,19 @@ const BulkDataImporter: React.FC = () => {
     console.log('🎉 Categories import completed!');
   };
 
-  const importProducts = async () => {
+  const importProducts = async (productsToImport: Product[]) => {
     console.log('📦 Starting products import...');
-    const total = perfumeProducts.length;
+    const total = productsToImport.length;
     setProgress(prev => ({ ...prev, products: { completed: 0, total, errors: [] } }));
 
     // Get categories for mapping
     const categories = JSON.parse(localStorage.getItem('categories') || '[]');
     
-    for (let i = 0; i < perfumeProducts.length; i++) {
-      const product = perfumeProducts[i];
+    for (let i = 0; i < productsToImport.length; i++) {
+      const product = productsToImport[i];
       try {
         // Simulate API call
-        await delay(200);
+        await delay(20);
         
         // Find category ID
         const category = categories.find((cat: any) => cat.name === product.categoryName);
@@ -202,22 +203,25 @@ const BulkDataImporter: React.FC = () => {
     console.log('🎉 Products import completed!');
   };
 
-  const handleBulkImport = async () => {
+  const handleBulkImport = async (scale: 'small' | 'large') => {
     if (isImporting) return;
     
+    const categories = scale === 'large' ? seedCategories : smallScaleCategories;
+    const products = scale === 'large' ? seedProducts : smallScaleProducts;
+
     setIsImporting(true);
     setShowProgress(true);
     
     try {
-      toast.info('🚀 بدء استيراد البيانات...');
+      toast.info(`🚀 بدء استيراد ${scale === 'large' ? 'البيانات الكبيرة' : 'البيانات الصغيرة'}...`);
       
       // Import categories first
-      await importCategories();
-      toast.success(`✅ تم استيراد ${perfumeCategories.length} تصنيف بنجاح!`);
+      await importCategories(categories);
+      toast.success(`✅ تم استيراد ${categories.length} تصنيف بنجاح!`);
       
       // Then import products
-      await importProducts();
-      toast.success(`✅ تم استيراد ${perfumeProducts.length} منتج بنجاح!`);
+      await importProducts(products);
+      toast.success(`✅ تم استيراد ${products.length} منتج بنجاح!`);
       
       toast.success('🎉 تم استيراد جميع البيانات بنجاح!');
       
@@ -233,6 +237,13 @@ const BulkDataImporter: React.FC = () => {
     if (window.confirm('هل أنت متأكد من حذف جميع البيانات؟ هذا الإجراء لا يمكن التراجع عنه.')) {
       localStorage.removeItem('categories');
       localStorage.removeItem('products');
+      localStorage.removeItem('wishlist');
+      localStorage.removeItem('cart');
+      localStorage.removeItem('orders');
+      localStorage.removeItem('coupons');
+      localStorage.removeItem('shippingZones');
+      localStorage.removeItem('shippingSettings');
+      localStorage.removeItem('customers');
       window.dispatchEvent(new CustomEvent('categoriesUpdated'));
       window.dispatchEvent(new CustomEvent('productsUpdated'));
       toast.success('تم حذف جميع البيانات بنجاح');
@@ -243,158 +254,95 @@ const BulkDataImporter: React.FC = () => {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
       <div className="flex items-center gap-3 mb-6">
-        <Upload className="w-6 h-6 text-[#8B5A3C]" />
-        <h2 className="text-2xl font-bold text-[#6B4226]">استيراد البيانات المجمعة</h2>
+        <Database className="w-6 h-6 text-[#8B5A3C]" />
+        <h2 className="text-2xl font-bold text-[#6B4226]">إدارة بيانات المتجر</h2>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-gradient-to-br from-[#FAF8F5] to-[#F5F1EB] rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Tag className="w-5 h-5 text-[#8B5A3C]" />
-            <h3 className="font-semibold text-[#6B4226]">التصنيفات</h3>
-          </div>
-          <p className="text-[#A67C52] text-sm mb-2">
-            سيتم إضافة {perfumeCategories.length} تصنيف للعطور
+        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-500" /> استيراد بيانات جديدة</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            قم بإضافة مجموعة من المنتجات والتصنيفات الجاهزة لتجربة لوحة التحكم.
           </p>
-          <ul className="text-xs text-[#8B5A3C] space-y-1">
-            {perfumeCategories.slice(0, 4).map((cat: Category, i: number) => (
-              <li key={i}>• {cat.name}</li>
-            ))}
-            {perfumeCategories.length > 4 && (
-              <li className="text-[#A67C52]">... و {perfumeCategories.length - 4} تصنيف آخر</li>
-            )}
-          </ul>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => handleBulkImport('large')}
+              disabled={isImporting}
+              className="w-full flex items-center justify-center gap-2 bg-[#6B4226] text-white px-4 py-3 rounded-lg hover:bg-[#543520] transition-colors disabled:opacity-50"
+            >
+              {isImporting ? <Loader className="animate-spin w-5 h-5" /> : <Zap className="w-5 h-5" />}
+              <span>استيراد 100 منتج فاخر</span>
+            </button>
+            <button
+              onClick={() => handleBulkImport('small')}
+              disabled={isImporting}
+              className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+            >
+              {isImporting ? <Loader className="animate-spin w-5 h-5" /> : <Package className="w-5 h-5" />}
+              <span>استيراد بيانات تجريبية صغيرة</span>
+            </button>
+          </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#FAF8F5] to-[#F5F1EB] rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Package className="w-5 h-5 text-[#8B5A3C]" />
-            <h3 className="font-semibold text-[#6B4226]">المنتجات</h3>
-          </div>
-          <p className="text-[#A67C52] text-sm mb-2">
-            سيتم إضافة {perfumeProducts.length} منتج عطر فاخر
+        <div className="bg-red-50 rounded-lg p-6 border border-red-200">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-red-600" /> منطقة الخطر</h3>
+           <p className="text-sm text-red-700 mb-4">
+            سيؤدي هذا الإجراء إلى حذف جميع المنتجات والتصنيفات والطلبات من الذاكرة المحلية للمتصفح.
           </p>
-          <ul className="text-xs text-[#8B5A3C] space-y-1">
-            {perfumeProducts.slice(0, 4).map((prod: Product, i: number) => (
-              <li key={i}>• {prod.name}</li>
-            ))}
-            {perfumeProducts.length > 4 && (
-              <li className="text-[#A67C52]">... و {perfumeProducts.length - 4} منتج آخر</li>
-            )}
-          </ul>
+          <button
+            onClick={clearAllData}
+            disabled={isImporting}
+            className="w-full flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="w-5 h-5" />
+            <span>حذف جميع البيانات</span>
+          </button>
         </div>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <button
-          onClick={handleBulkImport}
-          disabled={isImporting}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
-            isImporting
-              ? 'bg-[#C4A484] cursor-not-allowed'
-              : 'bg-gradient-to-r from-[#8B5A3C] to-[#A67C52] hover:from-[#6B4226] hover:to-[#8B5A3C] text-white shadow-lg hover:shadow-xl'
-          }`}
-        >
-          {isImporting ? (
-            <>
-              <Loader className="w-5 h-5 animate-spin" />
-              جاري الاستيراد...
-            </>
-          ) : (
-            <>
-              <Upload className="w-5 h-5" />
-              استيراد البيانات الأساسية ({perfumeCategories.length + perfumeProducts.length} عنصر)
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={clearAllData}
-          disabled={isImporting}
-          className="flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-        >
-          <Trash2 className="w-5 h-5" />
-          <span>مسح كل البيانات</span>
-        </button>
       </div>
 
       {showProgress && (
-        <div className="bg-[#F5F1EB] rounded-lg p-4 transition-all duration-500">
-          <h3 className="font-semibold text-[#6B4226] mb-4">تقدم الاستيراد</h3>
-          
-          {/* Categories Progress */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[#8B5A3C]">التصنيفات</span>
-              <span className="text-sm text-[#A67C52]">
-                {progress.categories.completed}/{progress.categories.total}
-              </span>
-            </div>
-            <div className="w-full bg-[#E5D5C8] rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-[#8B5A3C] to-[#A67C52] h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: progress.categories.total > 0 
-                    ? `${(progress.categories.completed / progress.categories.total) * 100}%` 
-                    : '0%'
-                }}
-              />
-            </div>
-            {progress.categories.errors.length > 0 && (
-              <div className="mt-2">
-                {progress.categories.errors.map((error, i) => (
-                  <div key={i} className="flex items-center gap-2 text-red-600 text-xs">
-                    <AlertCircle className="w-3 h-3" />
-                    {error}
-                  </div>
-                ))}
+        <div className="mt-6">
+          <h3 className="font-bold text-lg mb-4">تقدم عملية الاستيراد</h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-medium text-gray-700">التصنيفات</span>
+                <span className="text-sm font-medium text-gray-500">
+                  {progress.categories.completed} / {progress.categories.total}
+                </span>
               </div>
-            )}
-          </div>
-
-          {/* Products Progress */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[#8B5A3C]">المنتجات</span>
-              <span className="text-sm text-[#A67C52]">
-                {progress.products.completed}/{progress.products.total}
-              </span>
-            </div>
-            <div className="w-full bg-[#E5D5C8] rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-[#A67C52] to-[#C4A484] h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: progress.products.total > 0 
-                    ? `${(progress.products.completed / progress.products.total) * 100}%` 
-                    : '0%'
-                }}
-              />
-            </div>
-            {progress.products.errors.length > 0 && (
-              <div className="mt-2">
-                {progress.products.errors.slice(0, 5).map((error, i) => (
-                  <div key={i} className="flex items-center gap-2 text-red-600 text-xs">
-                    <AlertCircle className="w-3 h-3" />
-                    {error}
-                  </div>
-                ))}
-                {progress.products.errors.length > 5 && (
-                  <div className="text-xs text-[#A67C52] mt-1">
-                    ... و {progress.products.errors.length - 5} خطأ آخر
-                  </div>
-                )}
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${(progress.categories.completed / (progress.categories.total || 1)) * 100}%` }}
+                ></div>
               </div>
-            )}
-          </div>
-
-          {/* Completion Status */}
-          {!isImporting && progress.categories.completed === progress.categories.total && 
-           progress.products.completed === progress.products.total && (
-            <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 rounded-lg text-green-700">
-              <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">تم الانتهاء من استيراد جميع البيانات بنجاح!</span>
+              {progress.categories.errors.length > 0 && (
+                <div className="mt-2 text-xs text-red-600">
+                  {progress.categories.errors.length} أخطاء
+                </div>
+              )}
             </div>
-          )}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-medium text-gray-700">المنتجات</span>
+                <span className="text-sm font-medium text-gray-500">
+                  {progress.products.completed} / {progress.products.total}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${(progress.products.completed / (progress.products.total || 1)) * 100}%` }}
+                ></div>
+              </div>
+              {progress.products.errors.length > 0 && (
+                <div className="mt-2 text-xs text-red-600">
+                  {progress.products.errors.length} أخطاء
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

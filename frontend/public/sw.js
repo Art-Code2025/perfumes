@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ghem-store-v1';
+const CACHE_NAME = 'fleur-store-v2';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -51,8 +51,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
+      icon: '/logo.png',
+      badge: '/logo.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),
@@ -62,12 +62,12 @@ self.addEventListener('push', (event) => {
         {
           action: 'explore',
           title: 'عرض المنتج',
-          icon: '/icon-192x192.png'
+          icon: '/logo.png'
         },
         {
           action: 'close',
           title: 'إغلاق',
-          icon: '/icon-192x192.png'
+          icon: '/logo.png'
         }
       ]
     };

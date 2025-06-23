@@ -360,7 +360,7 @@ const OrderManagement: React.FC = () => {
           
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="text-center">
-              <div className="text-lg font-bold text-green-600">{stats.totalRevenue.toFixed(0)} ر.س</div>
+              <div className="text-lg font-bold text-green-600">{(stats.totalRevenue || 0).toFixed(0)} ر.س</div>
               <div className="text-sm text-gray-600">إجمالي المبيعات</div>
             </div>
           </div>

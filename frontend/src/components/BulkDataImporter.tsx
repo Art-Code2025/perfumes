@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { perfumeCategories, perfumeProducts, Category, Product } from '../utils/seedData';
-import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { perfumeCategories, perfumeProducts } from '../utils/perfumeDataScript';
+import { Upload, Package, Tag, CheckCircle, AlertCircle, Loader, Sparkles } from 'lucide-react';
+import { runPerfumeDataScript } from '../utils/runPerfumeScript';
 
 interface ImportProgress {
   categories: { completed: number; total: number; errors: string[] };
   products: { completed: number; total: number; errors: string[] };
+}
+
+interface Category {
+  name: string;
+}
+
+interface Product {
+  name: string;
 }
 
 const BulkDataImporter: React.FC = () => {
@@ -38,8 +47,8 @@ const BulkDataImporter: React.FC = () => {
         
         if (!exists) {
           const newCategory = {
-            id: Date.now() + i,
             ...category,
+            id: Date.now() + i,
             createdAt: new Date().toISOString()
           };
           
@@ -100,7 +109,6 @@ const BulkDataImporter: React.FC = () => {
         
         if (!exists) {
           const newProduct = {
-            id: Date.now() + i,
             name: product.name,
             description: product.description,
             price: product.price,
@@ -111,7 +119,8 @@ const BulkDataImporter: React.FC = () => {
             rating: product.rating || 4,
             brand: product.brand,
             specifications: product.specifications || [],
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            id: Date.now() + i
           };
           
           existingProducts.push(newProduct);
@@ -249,6 +258,15 @@ const BulkDataImporter: React.FC = () => {
               استيراد جميع البيانات ({perfumeCategories.length + perfumeProducts.length} عنصر)
             </>
           )}
+        </button>
+
+        <button
+          onClick={runPerfumeDataScript}
+          disabled={isImporting}
+          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
+        >
+          <Sparkles className="w-5 h-5" />
+          100 منتج فاخر
         </button>
 
         <button

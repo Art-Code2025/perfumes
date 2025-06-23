@@ -589,7 +589,7 @@ const Dashboard: React.FC = () => {
                       <span className="text-xs text-gray-400">جاري...</span>
                     </div>
                   ) : (
-                    <p className="text-base lg:text-xl font-bold text-gray-900">{stats.totalRevenue} ر.س</p>
+                    <p className="text-base lg:text-xl font-bold text-gray-900">{(stats.totalRevenue || 0).toFixed(2)} ر.س</p>
                   )}
                 </div>
               </div>

@@ -19,6 +19,8 @@ import FleurNavbar from './components/FleurNavbar';
 import HeroFleur from './components/HeroFleur';
 import CustomerFavoritesSection from './components/CustomerFavoritesSection';
 import DiscoverNewSection from './components/DiscoverNewSection';
+// استيراد سكريپت بيانات العطور للداشبورد
+import './utils/runPerfumeScript';
 
 // Simple image URL builder for mock data
 const getImageUrl = (imagePath: string): string => {

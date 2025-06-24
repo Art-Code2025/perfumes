@@ -239,6 +239,28 @@ export const mockProducts: MockProduct[] = [
       { name: "المكونات الأساسية", value: "الجريب فروت، الفلفل، الأرز" }
     ],
     createdAt: new Date().toISOString()
+  },
+  // Add the specific product that the user is trying to access
+  {
+    id: "43a0veCDOJ4jGmpbcWgg",
+    name: "Oud Royal Premium",
+    description: "عطر شرقي فاخر بتركيبة العود الأصيل والورد الطائفي. يتميز بثبات استثنائي ورائحة ملكية تجذب الانتباه في كل مكان.",
+    price: 750,
+    originalPrice: 950,
+    stock: 5,
+    categoryId: 4,
+    mainImage: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjOEIwMDAwIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTYwIiBmaWxsPSJnb2xkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiPk91ZCBSb3lhbDwvdGV4dD4KPHRleHQgeD0iMjAwIiB5PSIyMDAiIGZpbGw9ImdvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMjAiIGZvbnQtZmFtaWx5PSJBcmlhbCI+UHJlbWl1bTwvdGV4dD4KPHRleHQgeD0iMjAwIiB5PSIyNDAiIGZpbGw9ImdvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2LnYt9ixINi02LHZgtmKINmB2KfYrtixPC90ZXh0Pgo8L3N2Zz4K",
+    rating: 5,
+    brand: "Royal Oud Collection",
+    specifications: [
+      { name: "الحجم", value: "50 مل" },
+      { name: "نوع العطر", value: "Parfum" },
+      { name: "العائلة العطرية", value: "شرقي - خشبي" },
+      { name: "المكونات الأساسية", value: "العود الكمبودي، الورد الطائفي، العنبر الأبيض، المسك" },
+      { name: "الثبات", value: "12+ ساعة" },
+      { name: "المناسبة", value: "المناسبات الخاصة والأمسيات" }
+    ],
+    createdAt: new Date().toISOString()
   }
 ];
 

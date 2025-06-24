@@ -137,8 +137,7 @@ const LayoutWrapper: React.FC = () => {
             {/* E-commerce Routes */}
             <Route path="/" element={<App />} />
             <Route path="/products" element={<AllProducts />} />
-            {/* SEO-friendly product routes */}
-            <Route path="/product/:slug" element={<ProductDetail />} />
+            {/* Single product route that handles both IDs and slugs */}
             <Route path="/product/:id" element={<ProductDetail />} />
             {/* SEO-friendly category routes */}
             <Route path="/category/:slug" element={<CategoryPage />} />

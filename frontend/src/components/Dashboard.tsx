@@ -150,9 +150,14 @@ const Dashboard: React.FC = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productsAPI.getAll();
-      const productsData = response.success ? response.data : [];
-      setProducts(productsData);
+      const productsData = await productsAPI.getAll();
+      if (Array.isArray(productsData)) {
+        setProducts(productsData);
+      } else {
+        setProducts([]);
+        console.error("API did not return an array for products:", productsData);
+        toast.error('فشل في تحميل المنتجات، البيانات المستلمة غير صالحة.');
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('فشل في جلب المنتجات');
@@ -164,9 +169,14 @@ const Dashboard: React.FC = () => {
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
-      const response = await categoriesAPI.getAll();
-      const categoriesData = response.success ? response.data : [];
-      setCategories(categoriesData);
+      const categoriesData = await categoriesAPI.getAll();
+      if (Array.isArray(categoriesData)) {
+        setCategories(categoriesData);
+      } else {
+        setCategories([]);
+        console.error("API did not return an array for categories:", categoriesData);
+        toast.error('فشل في تحميل التصنيفات، البيانات المستلمة غير صالحة.');
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast.error('فشل في جلب التصنيفات');
@@ -178,9 +188,14 @@ const Dashboard: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoadingOrders(true);
-      const response = await ordersAPI.getAll();
-      const ordersData = response.success ? response.data : [];
-      setOrders(ordersData);
+      const ordersData = await ordersAPI.getAll();
+      if (Array.isArray(ordersData)) {
+        setOrders(ordersData);
+      } else {
+        setOrders([]);
+        console.error("API did not return an array for orders:", ordersData);
+        toast.error('فشل في تحميل الطلبات، البيانات المستلمة غير صالحة.');
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('فشل في جلب الطلبات');
@@ -192,9 +207,14 @@ const Dashboard: React.FC = () => {
   const fetchCoupons = async () => {
     try {
       setLoadingCoupons(true);
-      const response = await couponsAPI.getAll();
-      const couponsData = response.success ? response.data : [];
-      setCoupons(couponsData);
+      const couponsData = await couponsAPI.getAll();
+      if (Array.isArray(couponsData)) {
+        setCoupons(couponsData);
+      } else {
+        setCoupons([]);
+        console.error("API did not return an array for coupons:", couponsData);
+        toast.error('فشل في تحميل الكوبونات، البيانات المستلمة غير صالحة.');
+      }
     } catch (error) {
       console.error('Error fetching coupons:', error);
       toast.error('فشل في جلب الكوبونات');

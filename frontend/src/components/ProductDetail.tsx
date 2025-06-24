@@ -74,11 +74,12 @@ const ProductDetail: React.FC = () => {
       }
 
       try {
-        const response = await productsAPI.getAll({}, true);
-        if (!response.success || !Array.isArray(response.data)) {
-          throw new Error('فشل في تحميل قائمة المنتجات');
+        const allProducts: Product[] = await productsAPI.getAll({}, true);
+        
+        if (!Array.isArray(allProducts)) {
+          console.error("API did not return an array for products:", allProducts);
+          throw new Error('فشل في تحميل قائمة المنتجات، البيانات المستلمة غير صالحة.');
         }
-        const allProducts: Product[] = response.data;
 
         const foundProduct = allProducts.find(p => {
           if (id) return p.id.toString() === id;

@@ -27,6 +27,8 @@ import {
 import WhatsAppButton from './WhatsAppButton';
 import { buildImageUrl } from '../config/api';
 import { addToCartUnified } from '../utils/cartUtils';
+import { productsAPI } from '../utils/api';
+import { createProductSlug } from '../utils/slugify';
 
 interface Product {
   id: string | number;
@@ -50,7 +52,7 @@ interface Category {
 }
 
 const ProductDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string, slug?: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -60,39 +62,47 @@ const ProductDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchProduct();
-    } else {
-      setError('معرف المنتج غير صحيح');
-      setLoading(false);
-    }
-  }, [id]);
-
-  const fetchProduct = async () => {
-    try {
+    const findAndSetProduct = async () => {
       setLoading(true);
       setError(null);
       
-      // محاكاة تحميل المنتج من localStorage (نظام بسيط)
-      const products = JSON.parse(localStorage.getItem('products') || '[]');
-      const foundProduct = products.find((p: Product) => p.id.toString() === id);
-      
-      if (!foundProduct) {
-        throw new Error('المنتج غير موجود');
+      const identifier = id || slug;
+      if (!identifier) {
+        setError('معرف المنتج غير صحيح');
+        setLoading(false);
+        return;
       }
-      
-      setProduct(foundProduct);
-      setSelectedImage(foundProduct.mainImage);
-      
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل المنتج';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      try {
+        const response = await productsAPI.getAll();
+        if (!response.success || !Array.isArray(response.data)) {
+          throw new Error('فشل في تحميل قائمة المنتجات');
+        }
+        const allProducts: Product[] = response.data;
+
+        const foundProduct = allProducts.find(p => {
+          if (id) return p.id.toString() === id;
+          if (slug) return createProductSlug(p.id, p.name) === slug;
+          return false;
+        });
+
+        if (foundProduct) {
+          setProduct(foundProduct);
+          setSelectedImage(buildImageUrl(foundProduct.mainImage));
+        } else {
+          throw new Error('المنتج غير موجود');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'فشل في تحميل المنتج';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    findAndSetProduct();
+  }, [id, slug]);
 
   const incrementQuantity = () => setQuantity(prev => Math.min(prev + 1, product?.stock || 1));
   const decrementQuantity = () => setQuantity(prev => Math.max(prev - 1, 1));
@@ -184,7 +194,6 @@ const ProductDetail: React.FC = () => {
               onClick={() => {
                 setError(null);
                 setLoading(true);
-                fetchProduct();
               }}
               className="w-full bg-gradient-to-r from-brown-500 to-brown-600 text-white px-6 py-3 rounded-xl hover:from-brown-600 hover:to-brown-700 transition-all duration-300 font-semibold"
             >

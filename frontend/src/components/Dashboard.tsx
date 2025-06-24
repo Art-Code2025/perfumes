@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { productsAPI, categoriesAPI, ordersAPI, couponsAPI, dashboardAPI, uploadAPI } from '../utils/api';
 import { buildImageUrl } from '../config/api';
-import BulkDataImporter from './BulkDataImporter';
 
 // Interfaces
 interface Product {
@@ -42,6 +41,7 @@ interface Product {
   mainImage: string;
   dynamicOptions?: any[];
   specifications?: any[];
+  totalRevenue: number;
 }
 
 interface Category {
@@ -253,11 +253,14 @@ const Dashboard: React.FC = () => {
       }
 
       const productData = {
-        ...newProduct,
+        name: newProduct.name || '',
+        description: newProduct.description || '',
+        price: Number(newProduct.price) || 0,
+        stock: Number(newProduct.stock) || 0,
+        categoryId: newProduct.categoryId || null,
         mainImage: imageUrl,
-        price: Number(newProduct.price),
-        stock: Number(newProduct.stock),
-        categoryId: Number(newProduct.categoryId)
+        dynamicOptions: newProduct.dynamicOptions || [],
+        specifications: newProduct.specifications || []
       };
 
       const response = await productsAPI.create(productData);
@@ -289,11 +292,14 @@ const Dashboard: React.FC = () => {
       }
 
       const productData = {
-        ...editingProduct,
-        mainImage: imageUrl,
+        name: editingProduct.name,
+        description: editingProduct.description,
         price: Number(editingProduct.price),
         stock: Number(editingProduct.stock),
-        categoryId: Number(editingProduct.categoryId)
+        categoryId: Number(editingProduct.categoryId),
+        mainImage: imageUrl,
+        dynamicOptions: editingProduct.dynamicOptions || [],
+        specifications: editingProduct.specifications || []
       };
 
       const response = await productsAPI.update(editingProduct.id, productData);
@@ -514,9 +520,6 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto p-3 lg:p-6">
         {/* Desktop Title */}
         <h1 className="hidden lg:block text-2xl font-bold text-gray-900 mb-6">لوحة التحكم</h1>
-        
-        {/* Bulk Data Importer */}
-        <BulkDataImporter />
         
         {/* Stats Cards */}
         <div className={`${activeMobileSection === 'stats' ? 'block' : 'hidden'} lg:block fade-in mb-4 lg:mb-6`}>

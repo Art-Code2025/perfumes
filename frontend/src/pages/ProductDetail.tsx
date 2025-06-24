@@ -29,7 +29,6 @@ import {
 import { toast } from 'react-toastify';
 import { productsAPI } from '../utils/api';
 import { buildImageUrl } from '../config/api';
-import { createProductSlug } from '../utils/slugify';
 
 interface Product {
   id: number;
@@ -86,8 +85,9 @@ const ProductDetail: React.FC = () => {
   // Fetch product data
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!id) { // 'id' from useParams() is actually the slug now
-        setError('رابط المنتج غير صحيح');
+      if (!id) {
+        console.error('❌ No product ID/slug provided');
+        setError('معرف المنتج غير صحيح');
         setLoading(false);
         return;
       }
@@ -96,19 +96,97 @@ const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const allProducts = await productsAPI.getAll({}, true);
+        let productData = null;
         
-        const foundProduct = allProducts.find((p: any) => createProductSlug(p.name) === id);
+        // Try to determine if this is a numeric ID or a slug
+        const isNumericId = /^\d+$/.test(id);
         
-        if (foundProduct) {
-          setProduct(foundProduct);
+        if (isNumericId) {
+          // Get product by ID
+          productData = await productsAPI.getById(parseInt(id));
+        } else {
+          // Search by slug - try to get all products and find by slug
+          try {
+            const allProducts = await productsAPI.getAll({}, true);
+            
+            // Try to find product by slug (assuming slug might be stored in a slug field or generated from name)
+            productData = allProducts.find((p: any) => {
+              // Check if product has a slug field
+              if (p.slug && p.slug === id) return true;
+              
+              // Generate slug from name and compare
+              const generatedSlug = p.name
+                ?.toLowerCase()
+                .replace(/[^\w\s-]/g, '') // Remove special characters
+                .replace(/\s+/g, '-') // Replace spaces with hyphens
+                .trim();
+              
+              return generatedSlug === id;
+            });
+            
+            if (!productData) {
+              // Last resort: try to find by any field that might match
+              productData = allProducts.find((p: any) => 
+                p.id?.toString() === id || 
+                p._id?.toString() === id ||
+                p.productId?.toString() === id
+              );
+            }
+          } catch (slugError) {
+            // If slug search fails, try treating it as ID anyway
+            if (id.length < 10) { // Short strings might be IDs
+              try {
+                productData = await productsAPI.getById(id as any);
+              } catch (idError) {
+                // Silent fail
+              }
+            }
+          }
+        }
+        
+        if (productData) {
+          setProduct(productData);
+          
+          // Test images after product is loaded
+          if (productData.mainImage) {
+            const imageUrl = buildImageUrl(productData.mainImage);
+            testImageUrl(imageUrl).then(isValid => {
+              // Silent validation
+            });
+          }
+          
+          if (productData.detailedImages && productData.detailedImages.length > 0) {
+            productData.detailedImages.forEach((img: string, index: number) => {
+              const imageUrl = buildImageUrl(img);
+              testImageUrl(imageUrl).then(isValid => {
+                // Silent validation
+              });
+            });
+          }
         } else {
           setError('المنتج غير موجود');
         }
         
       } catch (error) {
-        console.error('Error fetching product by slug:', error);
-        setError('حدث خطأ أثناء تحميل المنتج');
+        console.error('❌ Error fetching product:', {
+          id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          fullError: error
+        });
+        
+        // Try to provide more specific error messages
+        if (error instanceof Error) {
+          if (error.message.includes('المنتج غير موجود')) {
+            setError('المنتج غير موجود');
+          } else if (error.message.includes('Failed to fetch')) {
+            setError('خطأ في الاتصال - تأكد من اتصالك بالإنترنت');
+          } else {
+            setError(`حدث خطأ في تحميل المنتج: ${error.message}`);
+          }
+        } else {
+          setError('حدث خطأ غير متوقع في تحميل المنتج');
+        }
       } finally {
         setLoading(false);
       }

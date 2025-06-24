@@ -15,7 +15,6 @@ import {
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { buildImageUrl } from '../config/api';
-import { createProductSlug } from '../utils/slugify';
 
 interface Product {
   id: string;
@@ -186,7 +185,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link to={`/product/${createProductSlug(product.name)}`} className="block">
+      <Link to={`/product/${product.id}`} className="block">
         
         {/* Product Image Container */}
         <div className="perfume-bottle-container relative p-6">

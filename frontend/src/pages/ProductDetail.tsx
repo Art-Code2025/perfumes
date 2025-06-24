@@ -62,6 +62,7 @@ const ProductDetail: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) {
+        console.error('❌ No product ID provided');
         setError('معرف المنتج غير صحيح');
         setLoading(false);
         return;
@@ -71,22 +72,46 @@ const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        console.log('🔍 Fetching product with ID:', id);
+        console.log('🔍 ProductDetail: Fetching product with ID:', id);
+        console.log('🔍 Environment check:', {
+          mode: import.meta.env.MODE,
+          dev: import.meta.env.DEV,
+          hostname: window.location.hostname,
+          port: window.location.port,
+          url: window.location.href
+        });
         
         // Get product by ID
         const productData = await productsAPI.getById(parseInt(id));
         
         if (productData) {
-          console.log('✅ Product data loaded:', productData);
+          console.log('✅ Product data loaded successfully:', productData);
           setProduct(productData);
         } else {
-          console.log('❌ Product not found');
+          console.log('❌ Product data is null/undefined');
           setError('المنتج غير موجود');
         }
         
       } catch (error) {
-        console.error('❌ Error fetching product:', error);
-        setError('حدث خطأ في تحميل المنتج');
+        console.error('❌ Error fetching product:', {
+          id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          fullError: error
+        });
+        
+        // Try to provide more specific error messages
+        if (error instanceof Error) {
+          if (error.message.includes('المنتج غير موجود')) {
+            setError('المنتج غير موجود');
+          } else if (error.message.includes('Failed to fetch')) {
+            setError('خطأ في الاتصال - تأكد من اتصالك بالإنترنت');
+          } else {
+            setError(`حدث خطأ في تحميل المنتج: ${error.message}`);
+          }
+        } else {
+          setError('حدث خطأ غير متوقع في تحميل المنتج');
+        }
       } finally {
         setLoading(false);
       }
@@ -129,10 +154,28 @@ const ProductDetail: React.FC = () => {
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">المنتج غير موجود</h2>
-          <p className="text-gray-600 mb-6">{error || 'لم يتم العثور على المنتج المطلوب'}</p>
+          <p className="text-gray-600 mb-4">{error || 'لم يتم العثور على المنتج المطلوب'}</p>
+          
+          {/* Debug information */}
+          <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left text-sm">
+            <div className="font-bold mb-2">معلومات التشخيص:</div>
+            <div>Product ID: {id || 'undefined'}</div>
+            <div>URL: {window.location.href}</div>
+            <div>Hostname: {window.location.hostname}</div>
+            <div>Port: {window.location.port}</div>
+            <div>Mode: {import.meta.env.MODE}</div>
+            <div>Dev: {String(import.meta.env.DEV)}</div>
+            <div className="mt-2 text-xs text-gray-500">
+              افتح Developer Tools (F12) واذهب إلى Console لمزيد من التفاصيل
+            </div>
+          </div>
+          
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                console.log('🔄 Retry button clicked');
+                window.location.reload();
+              }}
               className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-medium hover:bg-blue-700 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
@@ -145,6 +188,16 @@ const ProductDetail: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
               العودة للرئيسية
             </Link>
+            <button
+              onClick={() => {
+                console.log('🔍 Debug button clicked');
+                console.log('Current state:', { id, error, product, loading });
+                alert('تم طباعة معلومات التشخيص في Console. افتح Developer Tools (F12) لرؤيتها.');
+              }}
+              className="flex items-center justify-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-full font-medium hover:bg-orange-700 transition-colors"
+            >
+              🔍 تشخيص
+            </button>
           </div>
         </div>
       </div>

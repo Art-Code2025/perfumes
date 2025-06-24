@@ -8,7 +8,27 @@ console.log('🌐 Hostname:', window.location.hostname);
 
 // Check if we should use mock data (only in development when API is not available)
 const shouldUseMockData = () => {
-  return import.meta.env.MODE === 'development' && window.location.hostname === 'localhost';
+  // Use mock data in development mode OR when API is not available
+  const isDevelopment = import.meta.env.MODE === 'development' || 
+                       import.meta.env.DEV || 
+                       window.location.hostname === 'localhost' ||
+                       window.location.hostname.includes('5173') ||
+                       window.location.hostname.includes('5174') ||
+                       window.location.hostname.includes('5175') ||
+                       window.location.hostname.includes('5176') ||
+                       window.location.hostname.includes('5177') ||
+                       window.location.hostname.includes('3000') ||
+                       window.location.hostname.includes('3001');
+  
+  console.log('🔍 shouldUseMockData check:', {
+    mode: import.meta.env.MODE,
+    dev: import.meta.env.DEV,
+    hostname: window.location.hostname,
+    port: window.location.port,
+    isDevelopment
+  });
+  
+  return isDevelopment;
 };
 
 // Generic API request function with fallback to mock data ONLY in development
@@ -81,17 +101,30 @@ export const productsAPI = {
   },
 
   getById: async (id: string | number) => {
+    console.log(`🔍 ProductsAPI.getById called with ID: ${id}`);
+    
     try {
-      return await apiRequest(`/products/${id}`, { method: 'GET' });
+      const result = await apiRequest(`/products/${id}`, { method: 'GET' });
+      console.log(`✅ Product found via API:`, result);
+      return result;
     } catch (error) {
+      console.log(`❌ API failed for product ${id}:`, error);
+      
       if (shouldUseMockData()) {
-        console.log(`🔄 Using mock product data for ID: ${id}`);
+        console.log(`🔄 Falling back to mock data for product ID: ${id}`);
         const mockProduct = getMockProductById(id);
+        
         if (!mockProduct) {
+          console.log(`❌ Product ${id} not found in mock data either`);
+          console.log('📋 Available mock products:', getMockProducts().map(p => ({ id: p.id, name: p.name })));
           throw new Error('المنتج غير موجود');
         }
+        
+        console.log(`✅ Mock product found:`, mockProduct);
         return mockProduct;
       }
+      
+      console.log(`❌ Not in development mode, throwing error`);
       throw error;
     }
   },

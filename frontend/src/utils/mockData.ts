@@ -282,8 +282,25 @@ export const getMockCategories = (): MockCategory[] => {
 };
 
 export const getMockProductById = (id: string | number): MockProduct | null => {
+  console.log(`🔍 getMockProductById called with ID: ${id} (type: ${typeof id})`);
+  
   const products = getMockProducts();
-  return products.find(p => p.id.toString() === id.toString()) || null;
+  console.log(`📋 Available products:`, products.map(p => ({ id: p.id, name: p.name, type: typeof p.id })));
+  
+  const product = products.find(p => {
+    const match = p.id.toString() === id.toString();
+    console.log(`🔍 Comparing product ${p.id} (${typeof p.id}) with ${id} (${typeof id}): ${match}`);
+    return match;
+  });
+  
+  if (product) {
+    console.log(`✅ Found product:`, product);
+  } else {
+    console.log(`❌ Product not found. Searched for: ${id}`);
+    console.log(`📋 Available IDs: [${products.map(p => p.id).join(', ')}]`);
+  }
+  
+  return product || null;
 };
 
 export const getMockProductsByCategory = (categoryId: string | number): MockProduct[] => {

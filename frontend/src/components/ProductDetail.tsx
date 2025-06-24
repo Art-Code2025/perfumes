@@ -81,6 +81,8 @@ const ProductDetail: React.FC = () => {
           throw new Error('فشل في تحميل قائمة المنتجات، البيانات المستلمة غير صالحة.');
         }
 
+        console.log('✅ Products loaded successfully:', allProducts.length);
+
         const foundProduct = allProducts.find(p => {
           if (id) return p.id.toString() === id;
           if (slug) return createProductSlug(p.id, p.name) === slug;
@@ -88,12 +90,15 @@ const ProductDetail: React.FC = () => {
         });
 
         if (foundProduct) {
+          console.log('✅ Product found:', foundProduct.name);
           setProduct(foundProduct);
           setSelectedImage(buildImageUrl(foundProduct.mainImage));
         } else {
+          console.log('❌ Product not found with identifier:', identifier);
           throw new Error('المنتج غير موجود');
         }
       } catch (err) {
+        console.error('❌ Error in findAndSetProduct:', err);
         const errorMessage = err instanceof Error ? err.message : 'فشل في تحميل المنتج';
         setError(errorMessage);
         toast.error(errorMessage);

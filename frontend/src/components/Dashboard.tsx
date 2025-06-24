@@ -151,15 +151,19 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const productsData = await productsAPI.getAll();
+      
+      // The API returns a direct array, not a wrapped object
       if (Array.isArray(productsData)) {
+        console.log('✅ Products loaded successfully:', productsData.length);
         setProducts(productsData);
       } else {
-        setProducts([]);
         console.error("API did not return an array for products:", productsData);
+        setProducts([]);
         toast.error('فشل في تحميل المنتجات، البيانات المستلمة غير صالحة.');
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('❌ Error fetching products:', error);
+      setProducts([]);
       toast.error('فشل في جلب المنتجات');
     } finally {
       setLoading(false);
@@ -170,15 +174,19 @@ const Dashboard: React.FC = () => {
     try {
       setLoadingCategories(true);
       const categoriesData = await categoriesAPI.getAll();
+      
+      // The API returns a direct array, not a wrapped object
       if (Array.isArray(categoriesData)) {
+        console.log('✅ Categories loaded successfully:', categoriesData.length);
         setCategories(categoriesData);
       } else {
-        setCategories([]);
         console.error("API did not return an array for categories:", categoriesData);
+        setCategories([]);
         toast.error('فشل في تحميل التصنيفات، البيانات المستلمة غير صالحة.');
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('❌ Error fetching categories:', error);
+      setCategories([]);
       toast.error('فشل في جلب التصنيفات');
     } finally {
       setLoadingCategories(false);
@@ -189,15 +197,19 @@ const Dashboard: React.FC = () => {
     try {
       setLoadingOrders(true);
       const ordersData = await ordersAPI.getAll();
+      
+      // The API returns a direct array, not a wrapped object
       if (Array.isArray(ordersData)) {
+        console.log('✅ Orders loaded successfully:', ordersData.length);
         setOrders(ordersData);
       } else {
-        setOrders([]);
         console.error("API did not return an array for orders:", ordersData);
+        setOrders([]);
         toast.error('فشل في تحميل الطلبات، البيانات المستلمة غير صالحة.');
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
+      setOrders([]);
       toast.error('فشل في جلب الطلبات');
     } finally {
       setLoadingOrders(false);
@@ -208,15 +220,19 @@ const Dashboard: React.FC = () => {
     try {
       setLoadingCoupons(true);
       const couponsData = await couponsAPI.getAll();
+      
+      // The API returns a direct array, not a wrapped object
       if (Array.isArray(couponsData)) {
+        console.log('✅ Coupons loaded successfully:', couponsData.length);
         setCoupons(couponsData);
       } else {
-        setCoupons([]);
         console.error("API did not return an array for coupons:", couponsData);
+        setCoupons([]);
         toast.error('فشل في تحميل الكوبونات، البيانات المستلمة غير صالحة.');
       }
     } catch (error) {
-      console.error('Error fetching coupons:', error);
+      console.error('❌ Error fetching coupons:', error);
+      setCoupons([]);
       toast.error('فشل في جلب الكوبونات');
     } finally {
       setLoadingCoupons(false);
@@ -226,19 +242,43 @@ const Dashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       setLoadingStats(true);
-      const response = await dashboardAPI.getStats();
-      if (response.success) {
-        const statsData = response.data;
+      const statsData = await dashboardAPI.getStats();
+      
+      // Handle the response - it might be direct data or wrapped
+      console.log('📊 Stats data received:', statsData);
+      
+      if (statsData && typeof statsData === 'object') {
+        // Try to extract stats from different possible response formats
+        const data = statsData.data || statsData;
+        
         setStats({
-          totalProducts: statsData.products?.total || 0,
-          totalCustomers: statsData.insights?.recentOrders?.length || 0,
-          totalOrders: statsData.orders?.total || 0,
-          totalRevenue: statsData.revenue?.total || 0
+          totalProducts: data.products?.total || data.totalProducts || 0,
+          totalCustomers: data.insights?.recentOrders?.length || data.totalCustomers || 0,
+          totalOrders: data.orders?.total || data.totalOrders || 0,
+          totalRevenue: data.revenue?.total || data.totalRevenue || 0
+        });
+        
+        console.log('✅ Stats updated successfully');
+      } else {
+        console.warn('⚠️ Unexpected stats response format:', statsData);
+        // Set default values if response format is unexpected
+        setStats({
+          totalProducts: 0,
+          totalCustomers: 0,
+          totalOrders: 0,
+          totalRevenue: 0
         });
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('❌ Error fetching stats:', error);
       toast.error('فشل في جلب الإحصائيات');
+      // Set default values on error
+      setStats({
+        totalProducts: 0,
+        totalCustomers: 0,
+        totalOrders: 0,
+        totalRevenue: 0
+      });
     } finally {
       setLoadingStats(false);
     }
@@ -264,11 +304,16 @@ const Dashboard: React.FC = () => {
     try {
       let imageUrl = '';
       
-      // Upload image if selected
+      // Handle image upload using base64 if a file is selected
       if (selectedFile) {
-        const uploadResponse = await uploadAPI.single(selectedFile, 'products');
-        if (uploadResponse.success) {
-          imageUrl = uploadResponse.data.url;
+        try {
+          console.log('📤 Converting image to base64...');
+          imageUrl = await convertFileToBase64(selectedFile);
+          console.log('✅ Image converted to base64 successfully');
+        } catch (uploadError) {
+          console.error('❌ Error converting image:', uploadError);
+          toast.error('فشل في معالجة الصورة');
+          return;
         }
       }
 
@@ -283,17 +328,20 @@ const Dashboard: React.FC = () => {
         specifications: newProduct.specifications || []
       };
 
-      const response = await productsAPI.create(productData);
+      console.log('📦 Creating product with data:', { ...productData, mainImage: imageUrl ? 'base64_image' : 'no_image' });
+
+      const newProductResponse = await productsAPI.create(productData);
       
-      if (response.success) {
-        setProducts([...products, response.data]);
-        setShowAddModal(false);
-        resetNewProduct();
-        toast.success('تم إضافة المنتج بنجاح');
-      }
+      // API returns the product directly, not wrapped in success object
+      console.log('✅ Product created successfully:', newProductResponse);
+      setProducts([...products, newProductResponse]);
+      setShowAddModal(false);
+      resetNewProduct();
+      toast.success('تم إضافة المنتج بنجاح');
+      
     } catch (error) {
-      console.error('Error adding product:', error);
-      toast.error('خطأ في إضافة المنتج');
+      console.error('❌ Error adding product:', error);
+      toast.error('خطأ في إضافة المنتج: ' + (error instanceof Error ? error.message : 'خطأ غير معروف'));
     }
   };
 
@@ -303,11 +351,16 @@ const Dashboard: React.FC = () => {
     try {
       let imageUrl = editingProduct.mainImage;
       
-      // Upload new image if selected
+      // Handle new image upload using base64 if a file is selected
       if (selectedFile) {
-        const uploadResponse = await uploadAPI.single(selectedFile, 'products');
-        if (uploadResponse.success) {
-          imageUrl = uploadResponse.data.url;
+        try {
+          console.log('📤 Converting new image to base64...');
+          imageUrl = await convertFileToBase64(selectedFile);
+          console.log('✅ New image converted to base64 successfully');
+        } catch (uploadError) {
+          console.error('❌ Error converting new image:', uploadError);
+          toast.error('فشل في معالجة الصورة الجديدة');
+          return;
         }
       }
 
@@ -322,18 +375,21 @@ const Dashboard: React.FC = () => {
         specifications: editingProduct.specifications || []
       };
 
-      const response = await productsAPI.update(editingProduct.id, productData);
+      console.log('📦 Updating product with data:', { ...productData, mainImage: imageUrl ? 'image_present' : 'no_image' });
+
+      const updatedProduct = await productsAPI.update(editingProduct.id, productData);
       
-      if (response.success) {
-        setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, mainImage: imageUrl } : p));
-        setShowEditModal(false);
-        setEditingProduct(null);
-        setSelectedFile(null);
-        toast.success('تم تحديث المنتج بنجاح');
-      }
+      // API returns the updated product directly, not wrapped in success object
+      console.log('✅ Product updated successfully:', updatedProduct);
+      setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, mainImage: imageUrl } : p));
+      setShowEditModal(false);
+      setEditingProduct(null);
+      setSelectedFile(null);
+      toast.success('تم تحديث المنتج بنجاح');
+      
     } catch (error) {
-      console.error('Error updating product:', error);
-      toast.error('خطأ في تحديث المنتج');
+      console.error('❌ Error updating product:', error);
+      toast.error('خطأ في تحديث المنتج: ' + (error instanceof Error ? error.message : 'خطأ غير معروف'));
     }
   };
 
@@ -341,14 +397,14 @@ const Dashboard: React.FC = () => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
 
     try {
-      const response = await productsAPI.delete(id);
+      await productsAPI.delete(id);
       
-      if (response.success) {
-        setProducts(products.filter(p => p.id !== id));
-        toast.success('تم حذف المنتج بنجاح');
-      }
+      // API returns success directly, no wrapper needed
+      console.log('✅ Product deleted successfully');
+      setProducts(products.filter(p => p.id !== id));
+      toast.success('تم حذف المنتج بنجاح');
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error('❌ Error deleting product:', error);
       toast.error('خطأ في حذف المنتج');
     }
   };
@@ -357,11 +413,16 @@ const Dashboard: React.FC = () => {
     try {
       let imageUrl = '';
       
-      // Upload image if selected
+      // Handle image upload using base64 if a file is selected
       if (selectedCategoryFile) {
-        const uploadResponse = await uploadAPI.single(selectedCategoryFile, 'categories');
-        if (uploadResponse.success) {
-          imageUrl = uploadResponse.data.url;
+        try {
+          console.log('📤 Converting category image to base64...');
+          imageUrl = await convertFileToBase64(selectedCategoryFile);
+          console.log('✅ Category image converted to base64 successfully');
+        } catch (uploadError) {
+          console.error('❌ Error converting category image:', uploadError);
+          toast.error('فشل في معالجة صورة التصنيف');
+          return;
         }
       }
 
@@ -370,17 +431,17 @@ const Dashboard: React.FC = () => {
         image: imageUrl
       };
 
-      const response = await categoriesAPI.create(categoryData);
+      const newCategoryResponse = await categoriesAPI.create(categoryData);
       
-      if (response.success) {
-        toast.success('تم إضافة الفئة بنجاح');
-        setShowAddCategoryModal(false);
-        setNewCategory({ name: '', description: '' });
-        setSelectedCategoryFile(null);
-        fetchCategories();
-      }
+      // API returns the category directly, no wrapper needed
+      console.log('✅ Category created successfully:', newCategoryResponse);
+      toast.success('تم إضافة الفئة بنجاح');
+      setShowAddCategoryModal(false);
+      setNewCategory({ name: '', description: '' });
+      setSelectedCategoryFile(null);
+      fetchCategories();
     } catch (error) {
-      console.error('Error adding category:', error);
+      console.error('❌ Error adding category:', error);
       toast.error('خطأ في إضافة الفئة');
     }
   };
@@ -389,52 +450,52 @@ const Dashboard: React.FC = () => {
     if (!window.confirm('هل أنت متأكد من حذف هذه الفئة؟')) return;
 
     try {
-      const response = await categoriesAPI.delete(id);
+      await categoriesAPI.delete(id);
       
-      if (response.success) {
-        toast.success('تم حذف الفئة بنجاح');
-        fetchCategories();
-      }
+      // API returns success directly, no wrapper needed
+      console.log('✅ Category deleted successfully');
+      toast.success('تم حذف الفئة بنجاح');
+      fetchCategories();
     } catch (error) {
-      console.error('Error deleting category:', error);
+      console.error('❌ Error deleting category:', error);
       toast.error('خطأ في حذف الفئة');
     }
   };
 
   const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
     try {
-      const response = await ordersAPI.update(orderId, { status: newStatus });
+      const updatedOrder = await ordersAPI.update(orderId, { status: newStatus });
       
-      if (response.success) {
-        toast.success('تم تحديث حالة الطلب');
-        fetchOrders();
-      }
+      // API returns the order directly, no wrapper needed
+      console.log('✅ Order status updated successfully:', updatedOrder);
+      toast.success('تم تحديث حالة الطلب');
+      fetchOrders();
     } catch (error) {
-      console.error('Error updating order status:', error);
+      console.error('❌ Error updating order status:', error);
       toast.error('خطأ في تحديث حالة الطلب');
     }
   };
 
   const handleAddCoupon = async () => {
     try {
-      const response = await couponsAPI.create(newCoupon);
+      const newCouponResponse = await couponsAPI.create(newCoupon);
       
-      if (response.success) {
-        toast.success('تم إضافة الكوبون بنجاح');
-        setShowAddCouponModal(false);
-        setNewCoupon({
-          code: '',
-          type: 'percentage',
-          value: 0,
-          minOrderValue: 0,
-          maxUses: 1,
-          endDate: '',
-          isActive: true
-        });
-        fetchCoupons();
-      }
+      // API returns the coupon directly, no wrapper needed
+      console.log('✅ Coupon created successfully:', newCouponResponse);
+      toast.success('تم إضافة الكوبون بنجاح');
+      setShowAddCouponModal(false);
+      setNewCoupon({
+        code: '',
+        type: 'percentage',
+        value: 0,
+        minOrderValue: 0,
+        maxUses: 1,
+        endDate: '',
+        isActive: true
+      });
+      fetchCoupons();
     } catch (error) {
-      console.error('Error adding coupon:', error);
+      console.error('❌ Error adding coupon:', error);
       toast.error('خطأ في إضافة الكوبون');
     }
   };
@@ -443,16 +504,37 @@ const Dashboard: React.FC = () => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
 
     try {
-      const response = await couponsAPI.delete(id);
+      await couponsAPI.delete(id);
       
-      if (response.success) {
-        toast.success('تم حذف الكوبون بنجاح');
-        fetchCoupons();
-      }
+      // API returns success directly, no wrapper needed
+      console.log('✅ Coupon deleted successfully');
+      toast.success('تم حذف الكوبون بنجاح');
+      fetchCoupons();
     } catch (error) {
-      console.error('Error deleting coupon:', error);
+      console.error('❌ Error deleting coupon:', error);
       toast.error('خطأ في حذف الكوبون');
     }
+  };
+
+  // Helper function to convert file to base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = () => {
+        if (reader.result && typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('فشل في قراءة الملف'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('خطأ في قراءة الملف'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
   };
 
   // Load data on component mount

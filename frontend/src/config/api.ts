@@ -40,14 +40,38 @@ export const buildApiUrl = (endpoint: string): string => {
 // It will now only trust absolute URLs (like those from Cloudinary)
 // and fall back to a placeholder for anything else (null, undefined, relative paths).
 export const buildImageUrl = (imagePath: string | null | undefined): string => {
-  const placeholder = '/placeholder-image.png';
+  // Use a data URL as placeholder to avoid 404 errors
+  const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgMTUwSDIyNVYyNTBIMTc1VjE1MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMjAwIDE1MEwyNTAgMjAwVjI1MEgxNTBWMjAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
 
-  if (imagePath && (imagePath.startsWith('http') || imagePath.startsWith('data:image/'))) {
+  console.log('🖼️ buildImageUrl called with:', imagePath);
+
+  if (!imagePath) {
+    console.log('🖼️ No image path provided, using placeholder');
+    return placeholder;
+  }
+
+  // Handle absolute URLs (Cloudinary, etc.)
+  if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+    console.log('🖼️ Using absolute URL:', imagePath);
     return imagePath;
   }
-  
-  // For any other case (null, undefined, relative path, etc.), return the placeholder.
-  return placeholder;
+
+  // Handle data URLs (base64)
+  if (imagePath.startsWith('data:image/')) {
+    console.log('🖼️ Using data URL (base64)');
+    return imagePath;
+  }
+
+  // Handle relative paths - try to build a proper URL
+  if (imagePath.startsWith('/')) {
+    console.log('🖼️ Using relative path:', imagePath);
+    return imagePath;
+  }
+
+  // For anything else, try to build a relative URL
+  const relativeUrl = `/${imagePath}`;
+  console.log('🖼️ Building relative URL:', relativeUrl);
+  return relativeUrl;
 };
 
 // دالة مركزية لجميع API calls للـ Serverless

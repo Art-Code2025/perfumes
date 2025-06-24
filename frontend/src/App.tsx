@@ -13,7 +13,9 @@ import cover1 from './assets/cover1.jpg';
 import { createCategorySlug, createProductSlug } from './utils/slugify';
 import cover2 from './assets/cover2.jpg';
 import cover3 from './assets/cover3.jpg';
+// Import API functions
 import { productsAPI, categoriesAPI } from './utils/api';
+import { buildImageUrl } from './config/api';
 import { addToCartUnified } from './utils/cartUtils';
 import FleurNavbar from './components/FleurNavbar';
 import HeroFleur from './components/HeroFleur';
@@ -21,13 +23,6 @@ import CustomerFavoritesSection from './components/CustomerFavoritesSection';
 import DiscoverNewSection from './components/DiscoverNewSection';
 // استيراد سكريپت بيانات العطور للداشبورد
 // import './utils/runPerfumeScript';
-
-// Simple image URL builder for mock data
-const getImageUrl = (imagePath: string): string => {
-  if (!imagePath) return '/placeholder-image.png';
-  if (imagePath.startsWith('http')) return imagePath;
-  return imagePath;
-};
 
 interface Product {
   id: number;
@@ -142,10 +137,17 @@ const App: React.FC = () => {
 
     window.addEventListener('categoriesUpdated', handleCategoriesUpdate);
     window.addEventListener('productsUpdated', handleCategoriesUpdate);
+    // Add listener for product creation from dashboard
+    window.addEventListener('productCreated', handleCategoriesUpdate);
+    window.addEventListener('productUpdated', handleCategoriesUpdate);
+    window.addEventListener('productDeleted', handleCategoriesUpdate);
 
     return () => {
       window.removeEventListener('categoriesUpdated', handleCategoriesUpdate);
       window.removeEventListener('productsUpdated', handleCategoriesUpdate);
+      window.removeEventListener('productCreated', handleCategoriesUpdate);
+      window.removeEventListener('productUpdated', handleCategoriesUpdate);
+      window.removeEventListener('productDeleted', handleCategoriesUpdate);
     };
   }, []);
 
@@ -153,193 +155,239 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('🔄 Fetching real data from API...');
 
-      // Mock data for perfume store
-      const mockCategories = [
-        {
-          id: 1,
-          name: "عطور رجالية",
-          description: "عطور فاخرة للرجال بنفحات قوية وثابتة",
-          image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop"
-        },
-        {
-          id: 2,
-          name: "عطور نسائية",
-          description: "عطور أنثوية راقية بروائح زهرية وفاكهية",
-          image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop"
-        },
-        {
-          id: 3,
-          name: "عطور مشتركة",
-          description: "عطور للجنسين بتركيبات متوازنة",
-          image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop"
-        },
-        {
-          id: 4,
-          name: "عطور فاخرة",
-          description: "مجموعة حصرية من أرقى العطور العالمية",
-          image: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop"
-        }
-      ];
+      // Fetch real data from API
+      const [products, categories] = await Promise.all([
+        productsAPI.getAll({}, true), // Public request
+        categoriesAPI.getAll()
+      ]);
 
-      const mockProducts = [
-        // Men's Perfumes
-        {
-          id: 1,
-          name: "Maison Francis",
-          description: "عطر رجالي فاخر بنفحات خشبية",
-          price: 320,
-          originalPrice: 420,
-          stock: 15,
-          categoryId: 1,
-          mainImage: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop",
-          rating: 5,
-          brand: "Maison Francis",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 2,
-          name: "Philosophy",
-          description: "عطر عصري بلمسة من الحمضيات",
-          price: 280,
-          stock: 12,
-          categoryId: 1,
-          mainImage: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop",
-          rating: 4,
-          brand: "Philosophy",
-          createdAt: new Date().toISOString()
-        },
-        // Women's Perfumes
-        {
-          id: 3,
-          name: "Aerin",
-          description: "عطر نسائي بروائح زهرية ناعمة",
-          price: 350,
-          originalPrice: 450,
-          stock: 20,
-          categoryId: 2,
-          mainImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop",
-          rating: 5,
-          brand: "Aerin",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 4,
-          name: "Viktor & Rolf",
-          description: "عطر أنيق بلمسة من الفانيليا",
-          price: 380,
-          stock: 25,
-          categoryId: 2,
-          mainImage: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop",
-          rating: 4,
-          brand: "Viktor & Rolf",
-          createdAt: new Date().toISOString()
-        },
-        // Unisex Perfumes
-        {
-          id: 5,
-          name: "Chanel",
-          description: "عطر كلاسيكي للجنسين",
-          price: 450,
-          originalPrice: 550,
-          stock: 8,
-          categoryId: 3,
-          mainImage: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop",
-          rating: 5,
-          brand: "Chanel",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 6,
-          name: "Yves Saint",
-          description: "عطر عصري بتركيبة فريدة",
-          price: 320,
-          stock: 10,
-          categoryId: 3,
-          mainImage: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop",
-          rating: 4,
-          brand: "Yves Saint",
-          createdAt: new Date().toISOString()
-        },
-        // Luxury Perfumes
-        {
-          id: 7,
-          name: "Dior",
-          description: "عطر فاخر من دار ديور",
-          price: 520,
-          originalPrice: 650,
-          stock: 30,
-          categoryId: 4,
-          mainImage: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop",
-          rating: 5,
-          brand: "Dior",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 8,
-          name: "Tom Ford",
-          description: "عطر حصري بتركيبة معقدة",
-          price: 680,
-          originalPrice: 800,
-          stock: 15,
-          categoryId: 4,
-          mainImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop",
-          rating: 5,
-          brand: "Tom Ford",
-          createdAt: new Date().toISOString()
-        }
-      ];
+      console.log('✅ API Data loaded:', {
+        products: Array.isArray(products) ? products.length : 'Invalid',
+        categories: Array.isArray(categories) ? categories.length : 'Invalid'
+      });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Ensure we have arrays
+      const validProducts = Array.isArray(products) ? products : [];
+      const validCategories = Array.isArray(categories) ? categories : [];
 
-      // Group products by category and sort by creation date
-      const categoryProductsMap: { [key: number]: Product[] } = {};
-
-      mockProducts.forEach((product: Product) => {
-        if (product.categoryId) {
-          if (!categoryProductsMap[product.categoryId]) {
-            categoryProductsMap[product.categoryId] = [];
+      // If no real data, use fallback data
+      if (validProducts.length === 0 || validCategories.length === 0) {
+        console.log('⚠️ No real data found, using fallback data');
+        
+        const fallbackCategories = [
+          {
+            id: 1,
+            name: "عطور رجالية",
+            description: "عطور فاخرة للرجال بنفحات قوية وثابتة",
+            image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop"
+          },
+          {
+            id: 2,
+            name: "عطور نسائية",
+            description: "عطور أنثوية راقية بروائح زهرية وفاكهية",
+            image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop"
+          },
+          {
+            id: 3,
+            name: "عطور مشتركة",
+            description: "عطور للجنسين بتركيبات متوازنة",
+            image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop"
+          },
+          {
+            id: 4,
+            name: "عطور فاخرة",
+            description: "مجموعة حصرية من أرقى العطور العالمية",
+            image: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop"
           }
-          categoryProductsMap[product.categoryId].push(product);
-        }
-      });
+        ];
 
-      // Sort products within each category by creation date (newest first)
-      Object.keys(categoryProductsMap).forEach(categoryId => {
-        categoryProductsMap[parseInt(categoryId)].sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0).getTime();
-          const dateB = new Date(b.createdAt || 0).getTime();
-          return dateB - dateA;
+        const fallbackProducts = [
+          {
+            id: 1,
+            name: "Maison Francis",
+            description: "عطر رجالي فاخر بنفحات خشبية",
+            price: 320,
+            originalPrice: 420,
+            stock: 15,
+            categoryId: 1,
+            mainImage: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop",
+            rating: 5,
+            brand: "Maison Francis",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 2,
+            name: "Philosophy",
+            description: "عطر عصري بلمسة من الحمضيات",
+            price: 280,
+            stock: 12,
+            categoryId: 1,
+            mainImage: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop",
+            rating: 4,
+            brand: "Philosophy",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 3,
+            name: "Aerin",
+            description: "عطر نسائي بروائح زهرية ناعمة",
+            price: 350,
+            originalPrice: 450,
+            stock: 20,
+            categoryId: 2,
+            mainImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop",
+            rating: 5,
+            brand: "Aerin",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 4,
+            name: "Viktor & Rolf",
+            description: "عطر أنيق بلمسة من الفانيليا",
+            price: 380,
+            stock: 25,
+            categoryId: 2,
+            mainImage: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop",
+            rating: 4,
+            brand: "Viktor & Rolf",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 5,
+            name: "Chanel",
+            description: "عطر كلاسيكي للجنسين",
+            price: 450,
+            originalPrice: 550,
+            stock: 8,
+            categoryId: 3,
+            mainImage: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&h=400&fit=crop",
+            rating: 5,
+            brand: "Chanel",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 6,
+            name: "Yves Saint",
+            description: "عطر عصري بتركيبة فريدة",
+            price: 320,
+            stock: 10,
+            categoryId: 3,
+            mainImage: "https://images.unsplash.com/photo-1588405748880-12d1d2a59d75?w=400&h=400&fit=crop",
+            rating: 4,
+            brand: "Yves Saint",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 7,
+            name: "Dior",
+            description: "عطر فاخر من دار ديور",
+            price: 520,
+            originalPrice: 650,
+            stock: 30,
+            categoryId: 4,
+            mainImage: "https://images.unsplash.com/photo-1563170351-be82bc888aa4?w=400&h=400&fit=crop",
+            rating: 5,
+            brand: "Dior",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 8,
+            name: "Tom Ford",
+            description: "عطر حصري بتركيبة معقدة",
+            price: 680,
+            originalPrice: 800,
+            stock: 15,
+            categoryId: 4,
+            mainImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=400&h=400&fit=crop",
+            rating: 5,
+            brand: "Tom Ford",
+            createdAt: new Date().toISOString()
+          }
+        ];
+
+        // Use real data if available, otherwise fallback
+        const finalProducts = validProducts.length > 0 ? validProducts : fallbackProducts;
+        const finalCategories = validCategories.length > 0 ? validCategories : fallbackCategories;
+
+        // Group products by category
+        const categoryProductsMap: { [key: number]: Product[] } = {};
+        
+        finalCategories.forEach(category => {
+          categoryProductsMap[category.id] = [];
         });
-      });
 
-      // Create category products array with products
-      const categoryProductsArray: CategoryProducts[] = mockCategories
-        .filter((category: Category) => categoryProductsMap[category.id] && categoryProductsMap[category.id].length > 0)
-        .map((category: Category) => ({
+        finalProducts.forEach(product => {
+          if (product.categoryId && categoryProductsMap[product.categoryId]) {
+            categoryProductsMap[product.categoryId].push(product);
+          }
+        });
+
+        const categoryProductsList: CategoryProducts[] = finalCategories.map(category => ({
           category,
-          products: categoryProductsMap[category.id].slice(0, 8)
+          products: categoryProductsMap[category.id] || []
         }));
 
-      setCategoryProducts(categoryProductsArray);
-      
-      // Initialize quantities for all products
-      const initialQuantities: {[key: number]: number} = {};
-      categoryProductsArray.forEach(cp => {
-        cp.products.forEach(product => {
+        setCategoryProducts(categoryProductsList);
+        console.log('✅ Data loaded successfully:', {
+          categories: finalCategories.length,
+          products: finalProducts.length,
+          source: validProducts.length > 0 ? 'API' : 'Fallback'
+        });
+        
+        // Initialize quantities for all products
+        const initialQuantities: {[key: number]: number} = {};
+        finalProducts.forEach(product => {
           initialQuantities[product.id] = 1;
         });
-      });
-      setQuantities(initialQuantities);
-      
-      // Success message
-      toast.success('تم تحميل البيانات بنجاح! 🎉');
-      
+        setQuantities(initialQuantities);
+        
+        // Show success message only if we have real data
+        if (validProducts.length > 0) {
+          toast.success('تم تحميل البيانات من قاعدة البيانات بنجاح! 🎉');
+        }
+      } else {
+        // Process real API data
+        const categoryProductsMap: { [key: number]: Product[] } = {};
+        
+        validCategories.forEach(category => {
+          categoryProductsMap[category.id] = [];
+        });
+
+        validProducts.forEach(product => {
+          if (product.categoryId && categoryProductsMap[product.categoryId]) {
+            categoryProductsMap[product.categoryId].push(product);
+          }
+        });
+
+        const categoryProductsList: CategoryProducts[] = validCategories.map(category => ({
+          category,
+          products: categoryProductsMap[category.id] || []
+        }));
+
+        setCategoryProducts(categoryProductsList);
+        console.log('✅ Real API data loaded successfully:', {
+          categories: validCategories.length,
+          products: validProducts.length
+        });
+        
+        // Initialize quantities for all products
+        const initialQuantities: {[key: number]: number} = {};
+        validProducts.forEach(product => {
+          initialQuantities[product.id] = 1;
+        });
+        setQuantities(initialQuantities);
+        
+        // Success message for real data
+        toast.success('تم تحميل البيانات من قاعدة البيانات بنجاح! 🎉');
+      }
+
     } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('حدث خطأ أثناء جلب البيانات');
-      toast.error('فشل في جلب البيانات');
+      console.error('❌ Error fetching data:', error);
+      setError('فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.');
+      toast.error('فشل في تحميل البيانات');
     } finally {
       setLoading(false);
     }
@@ -713,10 +761,14 @@ const App: React.FC = () => {
                 <div className="relative card-premium hover-lift">
                   <div className="aspect-square bg-gradient-to-br from-[#FAF8F5] to-[#F5F1EB] relative overflow-hidden rounded-t-2xl">
                     <img
-                      src={getImageUrl(product.mainImage)}
+                      src={buildImageUrl(product.mainImage)}
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
+                      onError={(e) => {
+                        console.log('❌ Image failed to load:', product.mainImage);
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
+                      }}
                     />
                     
                     {/* Sale Badge */}
@@ -741,9 +793,12 @@ const App: React.FC = () => {
 
                     {/* Quick View Overlay */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                      <button className="bg-white/90 backdrop-blur-sm text-[#8B5A3C] px-4 py-2 rounded-full font-medium shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                        عرض سريع
-                      </button>
+                      <Link 
+                        to={`/product/${product.id}`}
+                        className="bg-white/90 backdrop-blur-sm text-[#8B5A3C] px-4 py-2 rounded-full font-medium shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:bg-white hover:text-[#6B4226]"
+                      >
+                        عرض التفاصيل
+                      </Link>
                     </div>
                   </div>
                   
@@ -761,8 +816,10 @@ const App: React.FC = () => {
                     </div>
                     
                     <div>
-                      <h3 className="font-semibold text-[#6B4226] mb-1 line-clamp-1">{product.brand || product.name}</h3>
-                      <p className="text-sm text-[#A67C52] line-clamp-2">{product.name}</p>
+                      <Link to={`/product/${product.id}`} className="block hover:text-[#8B5A3C] transition-colors">
+                        <h3 className="font-semibold text-[#6B4226] mb-1 line-clamp-1 hover:text-[#8B5A3C] transition-colors">{product.brand || product.name}</h3>
+                        <p className="text-sm text-[#A67C52] line-clamp-2">{product.name}</p>
+                      </Link>
                     </div>
                     
                     <div className="flex items-center justify-center gap-3">

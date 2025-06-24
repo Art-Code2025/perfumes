@@ -339,6 +339,11 @@ const Dashboard: React.FC = () => {
       resetNewProduct();
       toast.success('تم إضافة المنتج بنجاح');
       
+      // Dispatch event to update homepage
+      window.dispatchEvent(new CustomEvent('productCreated', { 
+        detail: { product: newProductResponse } 
+      }));
+      
     } catch (error) {
       console.error('❌ Error adding product:', error);
       toast.error('خطأ في إضافة المنتج: ' + (error instanceof Error ? error.message : 'خطأ غير معروف'));
@@ -387,6 +392,11 @@ const Dashboard: React.FC = () => {
       setSelectedFile(null);
       toast.success('تم تحديث المنتج بنجاح');
       
+      // Dispatch event to update homepage
+      window.dispatchEvent(new CustomEvent('productUpdated', { 
+        detail: { product: updatedProduct } 
+      }));
+      
     } catch (error) {
       console.error('❌ Error updating product:', error);
       toast.error('خطأ في تحديث المنتج: ' + (error instanceof Error ? error.message : 'خطأ غير معروف'));
@@ -403,6 +413,12 @@ const Dashboard: React.FC = () => {
       console.log('✅ Product deleted successfully');
       setProducts(products.filter(p => p.id !== id));
       toast.success('تم حذف المنتج بنجاح');
+      
+      // Dispatch event to update homepage
+      window.dispatchEvent(new CustomEvent('productDeleted', { 
+        detail: { productId: id } 
+      }));
+      
     } catch (error) {
       console.error('❌ Error deleting product:', error);
       toast.error('خطأ في حذف المنتج');

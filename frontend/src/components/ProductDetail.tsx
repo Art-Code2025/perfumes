@@ -74,7 +74,7 @@ const ProductDetail: React.FC = () => {
       }
 
       try {
-        const response = await productsAPI.getAll();
+        const response = await productsAPI.getAll({}, true);
         if (!response.success || !Array.isArray(response.data)) {
           throw new Error('فشل في تحميل قائمة المنتجات');
         }

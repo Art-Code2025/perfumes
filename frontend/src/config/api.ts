@@ -36,32 +36,18 @@ export const buildApiUrl = (endpoint: string): string => {
 };
 
 // دالة مساعدة لبناء URL الصور - محدثة للـ Cloudinary
-export const buildImageUrl = (imagePath: string): string => {
-  if (!imagePath) return '/placeholder-image.png';
-  if (imagePath.startsWith('http')) return imagePath;
-  if (imagePath.startsWith('data:image/')) return imagePath;
-  
-  // إذا كان من Cloudinary، استخدمه كما هو
-  if (imagePath.includes('cloudinary.com')) {
+// 💥 FIX: Simplify the function to be more robust.
+// It will now only trust absolute URLs (like those from Cloudinary)
+// and fall back to a placeholder for anything else (null, undefined, relative paths).
+export const buildImageUrl = (imagePath: string | null | undefined): string => {
+  const placeholder = '/placeholder-image.png';
+
+  if (imagePath && (imagePath.startsWith('http') || imagePath.startsWith('data:image/'))) {
     return imagePath;
   }
   
-  // إذا كان مسار محلي، أضف الـ base URL
-  const baseUrl = getApiBaseUrl();
-  
-  // إذا كان المسار يبدأ بـ /images/ فهو مسار نسبي من الباك إند
-  if (imagePath.startsWith('/images/')) {
-    return `${baseUrl}${imagePath}`;
-  }
-  
-  // إذا كان المسار يبدأ بـ images/ بدون slash
-  if (imagePath.startsWith('images/')) {
-    return `${baseUrl}/${imagePath}`;
-  }
-  
-  // إذا كان مسار عادي، أضف /images/ قبله
-  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-  return `${baseUrl}/images${cleanPath}`;
+  // For any other case (null, undefined, relative path, etc.), return the placeholder.
+  return placeholder;
 };
 
 // دالة مركزية لجميع API calls للـ Serverless

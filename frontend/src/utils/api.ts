@@ -8,7 +8,7 @@ console.log('🏗️ Environment:', import.meta.env.PROD ? 'Production' : 'Devel
 console.log('🌐 Hostname:', window.location.hostname);
 
 // Generic API request function
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
+const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic = false) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
   const defaultOptions: RequestInit = {
@@ -18,10 +18,12 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
     } as Record<string, string>,
   };
 
-  // Add auth token if available
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    (defaultOptions.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+  // Add auth token if available and not a public request
+  if (!isPublic) {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      (defaultOptions.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
   }
 
   const config = {
@@ -46,9 +48,9 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 // Products API
 export const productsAPI = {
-  getAll: (params = {}) => {
+  getAll: (params = {}, isPublic = false) => {
     const searchParams = new URLSearchParams(params);
-    return apiRequest(`/products?${searchParams}`);
+    return apiRequest(`/products?${searchParams}`, {}, isPublic);
   },
   
   getById: (id: string | number) => apiRequest(`/products/${id}`),

@@ -12,7 +12,7 @@ import { initCartStorageFix } from './utils/cartStorageFix.ts';
 import './utils/initData';
 
 // Lazy load components for better performance
-const ProductDetail = React.lazy(() => import('./components/ProductDetail'));
+const ProductDetail = React.lazy(() => import('./pages/ProductDetail'));
 const ProductsByCategory = React.lazy(() => import('./components/ProductsByCategory'));
 const ShoppingCart = React.lazy(() => import('./components/ShoppingCart'));
 const CartDiagnostics = React.lazy(() => import('./components/CartDiagnostics'));

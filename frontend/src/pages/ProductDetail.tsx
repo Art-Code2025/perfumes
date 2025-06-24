@@ -22,97 +22,140 @@ import {
   Share2,
   Check,
   Clock,
-  Zap
+  Zap,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { productsAPI } from '../utils/api';
+import { buildImageUrl } from '../config/api';
 
-// Sample product data (in real app, this would come from API)
-const sampleProduct = {
-  id: '1',
-  name: 'زيكو العود الملكي',
-  price: 299.99,
-  originalPrice: 399.99,
-  images: [
-    '/api/placeholder/600/800',
-    '/api/placeholder/600/800',
-    '/api/placeholder/600/800',
-    '/api/placeholder/600/800'
-  ],
-  category: 'رجالي',
-  rating: 4.8,
-  reviewCount: 124,
-  inStock: true,
-  isNew: true,
-  isLuxury: true,
-  brand: 'زيكو',
-  scentFamily: 'شرقي',
-  description: 'عطر فاخر يجمع بين أرقى أنواع العود والمسك الأبيض، مصمم خصيصاً للرجل الذي يقدر الفخامة والأناقة. يتميز بثباته الطويل وانتشاره القوي، مما يجعله الخيار الأمثل للمناسبات الرسمية والسهرات الخاصة.',
-  fragranceNotes: {
-    top: ['العود الكمبودي', 'الورد الدمشقي', 'البرغموت'],
-    middle: ['الياسمين الهندي', 'المسك الأبيض', 'العنبر الرمادي'],
-    base: ['خشب الصندل', 'العنبر الأسود', 'الباتشولي']
-  },
-  scentStrength: 'intense' as const,
-  sizes: [
-    { size: '50ml', price: 199.99, originalPrice: 249.99 },
-    { size: '100ml', price: 299.99, originalPrice: 399.99 },
-    { size: '200ml', price: 449.99, originalPrice: 599.99 }
-  ],
-  concentration: 'Parfum',
-  longevity: '8-12 ساعة',
-  sillage: 'قوي',
-  seasonRecommendation: ['شتاء', 'خريف'],
-  occasionRecommendation: ['مناسبات رسمية', 'سهرات', 'أعراس'],
-  ingredients: [
-    'عود كمبودي طبيعي 100%',
-    'مسك أبيض خالص',
-    'زيوت عطرية طبيعية',
-    'كحول عطري فاخر'
-  ],
-  careInstructions: [
-    'يحفظ في مكان بارد وجاف',
-    'يبعد عن أشعة الشمس المباشرة',
-    'يرج قبل الاستخدام',
-    'للاستخدام الخارجي فقط'
-  ]
-};
-
-const relatedProducts = [
-  {
-    id: '2',
-    name: 'زيكو روز الذهبي',
-    price: 249.99,
-    originalPrice: 329.99,
-    image: '/api/placeholder/300/400',
-    rating: 4.9,
-    isLuxury: true
-  },
-  {
-    id: '3',
-    name: 'زيكو عنبر الليل',
-    price: 349.99,
-    image: '/api/placeholder/300/400',
-    rating: 4.7,
-    isLuxury: true
-  },
-  {
-    id: '4',
-    name: 'زيكو مسك الأميرة',
-    price: 279.99,
-    image: '/api/placeholder/300/400',
-    rating: 4.8,
-    isLuxury: true
-  }
-];
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  categoryId: number | null;
+  productType?: string;
+  dynamicOptions?: any[];
+  mainImage: string;
+  detailedImages?: string[];
+  specifications?: { name: string; value: string }[];
+  createdAt?: string;
+  rating?: number;
+  brand?: string;
+}
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
-  const [product] = useState(sampleProduct);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(product.sizes[1]); // Default to 100ml
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+
+  // Fetch product data
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) {
+        setError('معرف المنتج غير صحيح');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log('🔍 Fetching product with ID:', id);
+        
+        // Get product by ID
+        const productData = await productsAPI.getById(parseInt(id));
+        
+        if (productData) {
+          console.log('✅ Product data loaded:', productData);
+          setProduct(productData);
+        } else {
+          console.log('❌ Product not found');
+          setError('المنتج غير موجود');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error fetching product:', error);
+        setError('حدث خطأ في تحميل المنتج');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  // Check wishlist status
+  useEffect(() => {
+    if (product) {
+      try {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        setIsWishlisted(wishlist.includes(product.id));
+      } catch (error) {
+        console.error('Error loading wishlist:', error);
+      }
+    }
+  }, [product]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center pt-20">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">جاري التحميل...</h2>
+          <p className="text-gray-600">يتم تحميل تفاصيل المنتج</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !product) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center pt-20">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">المنتج غير موجود</h2>
+          <p className="text-gray-600 mb-6">{error || 'لم يتم العثور على المنتج المطلوب'}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full font-medium hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              إعادة المحاولة
+            </button>
+            <Link
+              to="/"
+              className="flex items-center justify-center gap-2 bg-gray-600 text-white px-6 py-3 rounded-full font-medium hover:bg-gray-700 transition-colors"
+            >
+              <ArrowRight className="w-4 h-4" />
+              العودة للرئيسية
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Get product images
+  const productImages = [
+    product.mainImage,
+    ...(product.detailedImages || [])
+  ].filter(Boolean);
 
   const getScentStrengthDots = (strength: string) => {
     const strengthLevels: Record<string, number> = {
@@ -130,7 +173,7 @@ const ProductDetail: React.FC = () => {
           <div
             key={i}
             className={`w-3 h-3 rounded-full ${
-              i < level ? 'bg-zico-primary' : 'bg-beige-300'
+              i < level ? 'bg-blue-600' : 'bg-gray-300'
             }`}
           />
         ))}
@@ -141,13 +184,13 @@ const ProductDetail: React.FC = () => {
   const getScentFamilyIcon = (family?: string) => {
     const iconMap: { [key: string]: JSX.Element } = {
       'زهري': <Flower className="w-5 h-5 text-pink-500" />,
-      'شرقي': <Crown className="w-5 h-5 text-zico-gold" />,
+      'شرقي': <Crown className="w-5 h-5 text-amber-600" />,
       'حمضي': <Leaf className="w-5 h-5 text-green-500" />,
       'خشبي': <Wind className="w-5 h-5 text-amber-600" />,
       'منعش': <Droplets className="w-5 h-5 text-blue-500" />
     };
     
-    return family ? iconMap[family] || <Sparkles className="w-5 h-5 text-zico-primary" /> : null;
+    return family ? iconMap[family] || <Sparkles className="w-5 h-5 text-blue-600" /> : null;
   };
 
   const handleAddToCart = () => {
@@ -157,20 +200,21 @@ const ProductDetail: React.FC = () => {
       
       const cartItem = {
         id: product.id,
+        productId: product.id,
         name: product.name,
-        price: selectedSize.price,
-        image: product.images[0],
+        price: product.price,
+        image: product.mainImage,
         quantity: quantity,
-        size: selectedSize.size,
-        concentration: product.concentration
+        total: product.price * quantity
       };
       
       const existingItemIndex = cartItems.findIndex((item: any) => 
-        item.id === product.id && item.size === selectedSize.size
+        item.productId === product.id
       );
       
       if (existingItemIndex >= 0) {
         cartItems[existingItemIndex].quantity += quantity;
+        cartItems[existingItemIndex].total = cartItems[existingItemIndex].price * cartItems[existingItemIndex].quantity;
       } else {
         cartItems.push(cartItem);
       }
@@ -182,7 +226,7 @@ const ProductDetail: React.FC = () => {
         detail: { items: cartItems } 
       }));
       
-      toast.success(`تم إضافة ${product.name} (${selectedSize.size}) إلى السلة!`, {
+      toast.success(`تم إضافة ${product.name} إلى السلة!`, {
         position: "bottom-right",
         autoClose: 2000,
       });
@@ -193,14 +237,30 @@ const ProductDetail: React.FC = () => {
   };
 
   const handleAddToWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    toast.success(
-      isWishlisted ? 'تم حذف المنتج من المفضلة' : 'تم إضافة المنتج إلى المفضلة!',
-      {
-        position: "bottom-right",
-        autoClose: 2000,
+    try {
+      const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+      let newWishlist;
+      
+      if (isWishlisted) {
+        // Remove from wishlist
+        newWishlist = wishlist.filter((id: number) => id !== product.id);
+        toast.info(`تم إزالة ${product.name} من المفضلة`);
+      } else {
+        // Add to wishlist
+        newWishlist = [...wishlist, product.id];
+        toast.success(`تم إضافة ${product.name} إلى المفضلة!`);
       }
-    );
+      
+      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
+      setIsWishlisted(!isWishlisted);
+      
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: newWishlist }));
+      
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('حدث خطأ أثناء تحديث المفضلة');
+    }
   };
 
   const handleShare = () => {
@@ -216,49 +276,47 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  const discountPercentage = selectedSize.originalPrice 
-    ? Math.round(((selectedSize.originalPrice - selectedSize.price) / selectedSize.originalPrice) * 100)
+  const discountPercentage = product.originalPrice && product.originalPrice > product.price
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zico-cream to-beige-50 pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20" dir="rtl">
       
       {/* Breadcrumb */}
-      <div className="container-responsive py-6">
-        <nav className="flex items-center gap-2 text-sm text-beige-600">
-          <Link to="/" className="hover:text-zico-primary transition-colors">الرئيسية</Link>
+      <div className="container mx-auto px-6 py-6">
+        <nav className="flex items-center gap-2 text-sm text-gray-600">
+          <Link to="/" className="hover:text-blue-600 transition-colors">الرئيسية</Link>
           <ArrowRight className="w-4 h-4" />
-          <Link to="/products" className="hover:text-zico-primary transition-colors">المنتجات</Link>
+          <Link to="/products" className="hover:text-blue-600 transition-colors">المنتجات</Link>
           <ArrowRight className="w-4 h-4" />
           <span className="text-gray-900 font-medium">{product.name}</span>
         </nav>
       </div>
 
-      <div className="container-responsive pb-16">
+      <div className="container mx-auto px-6 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           
           {/* Product Images */}
           <div className="space-y-6">
             
             {/* Main Image */}
-            <div className="relative aspect-[4/5] bg-white rounded-3xl overflow-hidden shadow-zico-lg">
+            <div className="relative aspect-square bg-white rounded-3xl overflow-hidden shadow-lg">
               <img
-                src={product.images[selectedImage]}
+                src={buildImageUrl(productImages[selectedImage] || product.mainImage)}
                 alt={product.name}
-                className="w-full h-full object-contain p-8"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.log('❌ Image failed to load:', productImages[selectedImage]);
+                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
+                }}
               />
               
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.isNew && (
+                {product.stock > 0 && (
                   <span className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    جديد
-                  </span>
-                )}
-                {product.isLuxury && (
-                  <span className="luxury-badge flex items-center gap-1">
-                    <Crown className="w-4 h-4" />
-                    فاخر
+                    متوفر
                   </span>
                 )}
                 {discountPercentage > 0 && (
@@ -286,31 +344,36 @@ const ProductDetail: React.FC = () => {
                   onClick={handleShare}
                   className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all duration-300 group"
                 >
-                  <Share2 className="w-5 h-5 text-gray-400 hover:text-zico-primary transition-colors group-hover:scale-110" />
+                  <Share2 className="w-5 h-5 text-gray-400 hover:text-blue-600 transition-colors group-hover:scale-110" />
                 </button>
               </div>
             </div>
 
             {/* Thumbnail Images */}
-            <div className="flex gap-4 overflow-x-auto">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                    selectedImage === index 
-                      ? 'border-zico-primary shadow-lg' 
-                      : 'border-beige-200 hover:border-beige-400'
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-contain bg-white p-2"
-                  />
-                </button>
-              ))}
-            </div>
+            {productImages.length > 1 && (
+              <div className="flex gap-4 overflow-x-auto">
+                {productImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
+                      selectedImage === index 
+                        ? 'border-blue-600 shadow-lg' 
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    <img
+                      src={buildImageUrl(image)}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -319,13 +382,9 @@ const ProductDetail: React.FC = () => {
             {/* Header */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium text-beige-600 uppercase tracking-wide">
-                  {product.brand}
+                <span className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                  {product.brand || 'FLEUR'}
                 </span>
-                <div className="flex items-center gap-1">
-                  {getScentFamilyIcon(product.scentFamily)}
-                  <span className="text-sm text-beige-600">{product.scentFamily}</span>
-                </div>
               </div>
               
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
@@ -339,30 +398,27 @@ const ProductDetail: React.FC = () => {
                     <Star
                       key={i}
                       className={`w-5 h-5 ${
-                        i < Math.floor(product.rating) 
-                          ? 'text-zico-gold fill-zico-gold' 
+                        i < Math.floor(product.rating || 0) 
+                          ? 'text-yellow-500 fill-yellow-500' 
                           : 'text-gray-300'
                       }`}
                     />
                   ))}
                   <span className="text-lg font-bold text-gray-900 mr-2">
-                    {product.rating}
+                    {product.rating || 0}
                   </span>
                 </div>
-                <span className="text-beige-600">
-                  ({product.reviewCount} تقييم)
-                </span>
               </div>
             </div>
 
             {/* Price */}
-            <div className="bg-beige-50 rounded-2xl p-6">
+            <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-4xl font-bold text-orange-600">{(selectedSize.price || 0).toFixed(2)} ر.س</span>
-                  {selectedSize.originalPrice && selectedSize.originalPrice > selectedSize.price && (
+                  <span className="text-4xl font-bold text-blue-600">{product.price} ر.س</span>
+                  {product.originalPrice && product.originalPrice > product.price && (
                     <span className="text-2xl text-gray-500 line-through ml-3">
-                      {(selectedSize.originalPrice || 0).toFixed(2)} ر.س
+                      {product.originalPrice} ر.س
                     </span>
                   )}
                 </div>
@@ -375,285 +431,71 @@ const ProductDetail: React.FC = () => {
               
               <div className="flex items-center gap-2 text-green-600">
                 <Check className="w-5 h-5" />
-                <span className="font-medium">متوفر في المخزون</span>
-              </div>
-            </div>
-
-            {/* Size Selection */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">اختر الحجم:</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size.size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-center ${
-                      selectedSize.size === size.size
-                        ? 'border-zico-primary bg-zico-primary/10'
-                        : 'border-beige-300 hover:border-beige-400'
-                    }`}
-                  >
-                    <div className="font-bold text-gray-900">{size.size}</div>
-                    <div className="text-xl font-semibold text-gray-800">{(size.price || 0).toFixed(0)} ر.س</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Quantity */}
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-3">الكمية:</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center bg-beige-100 rounded-xl">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-3 hover:bg-beige-200 rounded-r-xl transition-colors"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="px-6 py-3 font-bold text-lg">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="p-3 hover:bg-beige-200 rounded-l-xl transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                <span className="text-beige-600">
-                  الإجمالي: <div className="text-3xl font-bold text-orange-600">
-                    {((selectedSize.price || 0) * quantity).toFixed(2)} ر.س
-                  </div>
+                <span className="font-medium">
+                  {product.stock > 0 ? `متوفر في المخزون (${product.stock} قطعة)` : 'غير متوفر'}
                 </span>
               </div>
             </div>
 
-            {/* Add to Cart */}
-            <div className="space-y-4">
-              <button
-                onClick={handleAddToCart}
-                className="w-full btn-zico py-4 text-lg flex items-center justify-center gap-3"
-              >
-                <ShoppingCart className="w-6 h-6" />
-                أضف إلى السلة
-              </button>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <button className="btn-zico-outline py-3 flex items-center justify-center gap-2">
-                  <Gift className="w-5 h-5" />
-                  اشتري كهدية
-                </button>
-                <button className="btn-zico-outline py-3 flex items-center justify-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  اشتري الآن
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Info */}
-            <div className="grid grid-cols-2 gap-6 bg-white rounded-2xl p-6 shadow-zico">
-              <div className="text-center">
-                <Clock className="w-8 h-8 text-zico-primary mx-auto mb-2" />
-                <div className="font-bold text-gray-900">الثبات</div>
-                <div className="text-sm text-beige-600">{product.longevity}</div>
-              </div>
-              <div className="text-center">
-                <Wind className="w-8 h-8 text-zico-primary mx-auto mb-2" />
-                <div className="font-bold text-gray-900">الإنتشار</div>
-                <div className="text-sm text-beige-600">{product.sillage}</div>
-              </div>
-            </div>
-
-            {/* Scent Strength */}
-            <div className="bg-white rounded-2xl p-6 shadow-zico">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-900">قوة العطر:</span>
-                {getScentStrengthDots(product.scentStrength)}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Product Details Tabs */}
-        <div className="bg-white rounded-3xl shadow-zico-lg overflow-hidden mb-16">
-          
-          {/* Tab Headers */}
-          <div className="flex border-b border-beige-200">
-            {[
-              { id: 'description', label: 'الوصف', icon: <Sparkles className="w-5 h-5" /> },
-              { id: 'notes', label: 'النوتات العطرية', icon: <Flower className="w-5 h-5" /> },
-              { id: 'ingredients', label: 'المكونات', icon: <Leaf className="w-5 h-5" /> },
-              { id: 'care', label: 'تعليمات العناية', icon: <Shield className="w-5 h-5" /> }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 px-6 py-4 font-medium transition-all duration-300 flex items-center justify-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'text-zico-primary border-b-2 border-zico-primary bg-zico-primary/5'
-                    : 'text-gray-600 hover:text-zico-primary hover:bg-beige-50'
-                }`}
-              >
-                {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Content */}
-          <div className="p-8">
-            {activeTab === 'description' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900">وصف المنتج</h3>
-                <p className="text-lg text-beige-700 leading-relaxed">
-                  {product.description}
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Crown className="w-5 h-5 text-zico-gold" />
-                      مناسب للمواسم
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.seasonRecommendation.map((season) => (
-                        <span key={season} className="fragrance-note">{season}</span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-zico-primary" />
-                      مناسب للمناسبات
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.occasionRecommendation.map((occasion) => (
-                        <span key={occasion} className="fragrance-note">{occasion}</span>
-                      ))}
-                    </div>
-                  </div>
+            {/* Quantity Selection */}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3">الكمية:</h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border border-gray-300 rounded-lg">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="p-2 hover:bg-gray-100 transition-colors"
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="px-4 py-2 font-medium">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    className="p-2 hover:bg-gray-100 transition-colors"
+                    disabled={quantity >= product.stock}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
                 </div>
+                <span className="text-sm text-gray-600">
+                  الحد الأقصى: {product.stock} قطعة
+                </span>
               </div>
-            )}
+            </div>
 
-            {activeTab === 'notes' && (
-              <div className="space-y-8">
-                <h3 className="text-2xl font-bold text-gray-900">النوتات العطرية</h3>
-                
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <div className="w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"></div>
-                      النوتات العلوية (Top Notes)
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.fragranceNotes.top.map((note) => (
-                        <span key={note} className="fragrance-note bg-yellow-100 text-yellow-700">{note}</span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <div className="w-4 h-4 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full"></div>
-                      النوتات الوسطى (Heart Notes)
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.fragranceNotes.middle.map((note) => (
-                        <span key={note} className="fragrance-note bg-pink-100 text-pink-700">{note}</span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                      <div className="w-4 h-4 bg-gradient-to-r from-amber-600 to-amber-800 rounded-full"></div>
-                      النوتات القاعدية (Base Notes)
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {product.fragranceNotes.base.map((note) => (
-                        <span key={note} className="fragrance-note bg-amber-100 text-amber-700">{note}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {product.stock > 0 ? 'إضافة إلى السلة' : 'غير متوفر'}
+            </button>
 
-            {activeTab === 'ingredients' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900">المكونات</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {product.ingredients.map((ingredient, index) => (
-                    <div key={index} className="flex items-center gap-3 p-4 bg-beige-50 rounded-xl">
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">{ingredient}</span>
+            {/* Product Description */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">وصف المنتج:</h3>
+              <p className="text-gray-600 leading-relaxed">
+                {product.description}
+              </p>
+            </div>
+
+            {/* Specifications */}
+            {product.specifications && product.specifications.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">المواصفات:</h3>
+                <div className="space-y-2">
+                  {product.specifications.map((spec, index) => (
+                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                      <span className="font-medium text-gray-700">{spec.name}:</span>
+                      <span className="text-gray-600">{spec.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {activeTab === 'care' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-gray-900">تعليمات العناية</h3>
-                <div className="space-y-4">
-                  {product.careInstructions.map((instruction, index) => (
-                    <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl">
-                      <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-700">{instruction}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Related Products */}
-        <div>
-          <h2 className="text-3xl font-bold luxury-heading mb-8 text-center">
-            منتجات ذات صلة
-          </h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedProducts.map((relatedProduct) => (
-              <Link
-                key={relatedProduct.id}
-                to={`/product/${relatedProduct.id}`}
-                className="perfume-card group"
-              >
-                <div className="perfume-bottle-container relative p-6">
-                  <img
-                    src={relatedProduct.image}
-                    alt={relatedProduct.name}
-                    className="w-full h-48 object-contain transition-all duration-500 group-hover:scale-105"
-                  />
-                  {relatedProduct.isLuxury && (
-                    <div className="absolute top-3 left-3">
-                      <span className="luxury-badge flex items-center gap-1">
-                        <Crown className="w-3 h-3" />
-                        فاخر
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 truncate">{relatedProduct.name}</h3>
-                  
-                  <div className="flex items-baseline justify-center text-orange-600">
-                    <span className="text-xl font-bold">{(relatedProduct.price || 0).toFixed(2)}</span>
-                    <span className="text-sm ml-1">ر.س</span>
-                  </div>
-                  {relatedProduct.originalPrice && (
-                    <div className="text-gray-500 line-through text-sm">
-                      {(relatedProduct.originalPrice || 0).toFixed(2)} ر.س
-                    </div>
-                  )}
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </div>

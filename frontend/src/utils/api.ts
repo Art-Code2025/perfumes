@@ -120,12 +120,12 @@ export const productsAPI = {
           throw new Error('المنتج غير موجود');
         }
         
-        console.log(`✅ Mock product found:`, mockProduct);
+        console.log(`✅ Found product in mock data:`, mockProduct);
         return mockProduct;
+      } else {
+        console.log(`❌ API unavailable and not using mock data`);
+        throw new Error('المنتج غير موجود');
       }
-      
-      console.log(`❌ Not in development mode, throwing error`);
-      throw error;
     }
   },
 
@@ -196,6 +196,36 @@ export const productsAPI = {
   search: (query: string, params = {}) => {
     const searchParams = new URLSearchParams({ q: query, ...params });
     return apiRequest(`/products/search?${searchParams}`);
+  },
+
+  // New method for searching by slug
+  getBySlug: async (slug: string) => {
+    console.log(`🔍 ProductsAPI.getBySlug called with slug: ${slug}`);
+    
+    try {
+      // Try API first - some APIs might support slug lookup
+      const result = await apiRequest(`/products/slug/${slug}`, { method: 'GET' });
+      console.log(`✅ Product found via API by slug:`, result);
+      return result;
+    } catch (error) {
+      console.log(`❌ API slug lookup failed for ${slug}:`, error);
+      
+      if (shouldUseMockData()) {
+        console.log(`🔄 Falling back to mock data for slug: ${slug}`);
+        const mockProduct = getMockProductById(slug);
+        
+        if (!mockProduct) {
+          console.log(`❌ Product with slug ${slug} not found in mock data`);
+          throw new Error('المنتج غير موجود');
+        }
+        
+        console.log(`✅ Found product by slug in mock data:`, mockProduct);
+        return mockProduct;
+      } else {
+        console.log(`❌ API unavailable and not using mock data`);
+        throw new Error('المنتج غير موجود');
+      }
+    }
   },
 };
 

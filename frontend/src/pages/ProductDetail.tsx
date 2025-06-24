@@ -58,11 +58,35 @@ const ProductDetail: React.FC = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
 
+  // Helper function to test if an image URL is valid
+  const testImageUrl = (url: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!url || url.trim() === '') {
+        resolve(false);
+        return;
+      }
+      
+      // For data URLs, assume they're valid
+      if (url.startsWith('data:image/')) {
+        resolve(true);
+        return;
+      }
+      
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+      
+      // Timeout after 5 seconds
+      setTimeout(() => resolve(false), 5000);
+    });
+  };
+
   // Fetch product data
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) {
-        console.error('❌ No product ID provided');
+        console.error('❌ No product ID/slug provided');
         setError('معرف المنتج غير صحيح');
         setLoading(false);
         return;
@@ -72,7 +96,7 @@ const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        console.log('🔍 ProductDetail: Fetching product with ID:', id);
+        console.log('🔍 ProductDetail: Fetching product with ID/slug:', id);
         console.log('🔍 Environment check:', {
           mode: import.meta.env.MODE,
           dev: import.meta.env.DEV,
@@ -81,14 +105,84 @@ const ProductDetail: React.FC = () => {
           url: window.location.href
         });
         
-        // Get product by ID
-        const productData = await productsAPI.getById(parseInt(id));
+        let productData = null;
+        
+        // Try to determine if this is a numeric ID or a slug
+        const isNumericId = /^\d+$/.test(id);
+        
+        if (isNumericId) {
+          console.log('🔢 Detected numeric ID, fetching by ID');
+          // Get product by ID
+          productData = await productsAPI.getById(parseInt(id));
+        } else {
+          console.log('🔤 Detected slug, searching by slug');
+          // Search by slug - try to get all products and find by slug
+          try {
+            const allProducts = await productsAPI.getAll({}, true);
+            console.log('📋 All products:', allProducts);
+            
+            // Try to find product by slug (assuming slug might be stored in a slug field or generated from name)
+            productData = allProducts.find((p: any) => {
+              // Check if product has a slug field
+              if (p.slug && p.slug === id) return true;
+              
+              // Generate slug from name and compare
+              const generatedSlug = p.name
+                ?.toLowerCase()
+                .replace(/[^\w\s-]/g, '') // Remove special characters
+                .replace(/\s+/g, '-') // Replace spaces with hyphens
+                .trim();
+              
+              return generatedSlug === id;
+            });
+            
+            if (!productData) {
+              console.log('❌ Product not found by slug, trying to match with any field');
+              // Last resort: try to find by any field that might match
+              productData = allProducts.find((p: any) => 
+                p.id?.toString() === id || 
+                p._id?.toString() === id ||
+                p.productId?.toString() === id
+              );
+            }
+          } catch (slugError) {
+            console.log('❌ Failed to search by slug:', slugError);
+            // If slug search fails, try treating it as ID anyway
+            if (id.length < 10) { // Short strings might be IDs
+              try {
+                productData = await productsAPI.getById(id as any);
+              } catch (idError) {
+                console.log('❌ Also failed as ID:', idError);
+              }
+            }
+          }
+        }
         
         if (productData) {
           console.log('✅ Product data loaded successfully:', productData);
           setProduct(productData);
+          
+          // Test images after product is loaded
+          if (productData.mainImage) {
+            const imageUrl = buildImageUrl(productData.mainImage);
+            console.log('🖼️ Testing main image:', imageUrl);
+            testImageUrl(imageUrl).then(isValid => {
+              console.log(`🖼️ Main image test result: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
+            });
+          }
+          
+          if (productData.detailedImages && productData.detailedImages.length > 0) {
+            productData.detailedImages.forEach((img: string, index: number) => {
+              const imageUrl = buildImageUrl(img);
+              console.log(`🖼️ Testing detailed image ${index}:`, imageUrl);
+              testImageUrl(imageUrl).then(isValid => {
+                console.log(`🖼️ Detailed image ${index} test result: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
+              });
+            });
+          }
         } else {
           console.log('❌ Product data is null/undefined');
+          console.log('🔍 Search details:', { id, isNumericId, url: window.location.href });
           setError('المنتج غير موجود');
         }
         
@@ -159,14 +253,18 @@ const ProductDetail: React.FC = () => {
           {/* Debug information */}
           <div className="bg-gray-100 rounded-lg p-4 mb-6 text-left text-sm">
             <div className="font-bold mb-2">معلومات التشخيص:</div>
-            <div>Product ID: {id || 'undefined'}</div>
+            <div>Product ID/Slug: {id || 'undefined'}</div>
             <div>URL: {window.location.href}</div>
             <div>Hostname: {window.location.hostname}</div>
             <div>Port: {window.location.port}</div>
             <div>Mode: {import.meta.env.MODE}</div>
             <div>Dev: {String(import.meta.env.DEV)}</div>
+            <div>Is Numeric ID: {id ? /^\d+$/.test(id) ? 'Yes' : 'No' : 'N/A'}</div>
             <div className="mt-2 text-xs text-gray-500">
               افتح Developer Tools (F12) واذهب إلى Console لمزيد من التفاصيل
+            </div>
+            <div className="mt-2 text-xs text-blue-600">
+              💡 إذا كان هذا slug، تأكد من أن المنتج موجود في قاعدة البيانات
             </div>
           </div>
           
@@ -209,6 +307,14 @@ const ProductDetail: React.FC = () => {
     product.mainImage,
     ...(product.detailedImages || [])
   ].filter(Boolean);
+
+  console.log('🖼️ Product images:', {
+    mainImage: product.mainImage,
+    detailedImages: product.detailedImages,
+    filteredImages: productImages,
+    selectedImage: selectedImage,
+    currentImageUrl: productImages[selectedImage]
+  });
 
   const getScentStrengthDots = (strength: string) => {
     const strengthLevels: Record<string, number> = {
@@ -359,9 +465,21 @@ const ProductDetail: React.FC = () => {
                 src={buildImageUrl(productImages[selectedImage] || product.mainImage)}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onLoad={() => {
+                  console.log('✅ Image loaded successfully:', productImages[selectedImage] || product.mainImage);
+                }}
                 onError={(e) => {
-                  console.log('❌ Image failed to load:', productImages[selectedImage]);
-                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
+                  const failedUrl = productImages[selectedImage] || product.mainImage;
+                  console.log('❌ Image failed to load:', {
+                    failedUrl,
+                    builtUrl: buildImageUrl(failedUrl),
+                    selectedImage,
+                    productImages
+                  });
+                  
+                  // Try fallback to a better placeholder
+                  const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMTYwIiByPSI0MCIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xNTAgMjIwTDE4MCAyMDBMMjAwIDIyMEwyNDAgMjgwSDE1MFYyMjBaIiBmaWxsPSIjOUNBM0FGIi8+PHRleHQgeD0iMjAwIiB5PSIzMjAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD48L3N2Zz4K';
+                  e.currentTarget.src = placeholder;
                 }}
               />
               
@@ -419,8 +537,16 @@ const ProductDetail: React.FC = () => {
                       src={buildImageUrl(image)}
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onLoad={() => {
+                        console.log(`✅ Thumbnail ${index} loaded:`, image);
+                      }}
                       onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
+                        console.log(`❌ Thumbnail ${index} failed:`, {
+                          image,
+                          builtUrl: buildImageUrl(image)
+                        });
+                        const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjQwIiBjeT0iMzIiIHI9IjgiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTMwIDQ0TDM2IDQwTDQwIDQ0TDQ4IDU2SDMwVjQ0WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+                        e.currentTarget.src = placeholder;
                       }}
                     />
                   </button>

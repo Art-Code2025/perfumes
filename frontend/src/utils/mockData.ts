@@ -282,22 +282,42 @@ export const getMockCategories = (): MockCategory[] => {
 };
 
 export const getMockProductById = (id: string | number): MockProduct | null => {
-  console.log(`🔍 getMockProductById called with ID: ${id} (type: ${typeof id})`);
+  console.log(`🔍 getMockProductById called with ID/slug: ${id} (type: ${typeof id})`);
   
   const products = getMockProducts();
   console.log(`📋 Available products:`, products.map(p => ({ id: p.id, name: p.name, type: typeof p.id })));
   
-  const product = products.find(p => {
+  // First try exact ID match
+  let product = products.find(p => {
     const match = p.id.toString() === id.toString();
     console.log(`🔍 Comparing product ${p.id} (${typeof p.id}) with ${id} (${typeof id}): ${match}`);
     return match;
   });
+  
+  // If not found and it's not a numeric ID, try slug matching
+  if (!product && !/^\d+$/.test(id.toString())) {
+    console.log(`🔤 No exact match found, trying slug matching for: ${id}`);
+    
+    product = products.find(p => {
+      // Generate slug from product name
+      const generatedSlug = p.name
+        ?.toLowerCase()
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .trim();
+      
+      const match = generatedSlug === id.toString();
+      console.log(`🔍 Comparing slug "${generatedSlug}" with "${id}": ${match}`);
+      return match;
+    });
+  }
   
   if (product) {
     console.log(`✅ Found product:`, product);
   } else {
     console.log(`❌ Product not found. Searched for: ${id}`);
     console.log(`📋 Available IDs: [${products.map(p => p.id).join(', ')}]`);
+    console.log(`📋 Available slugs: [${products.map(p => p.name?.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').trim()).join(', ')}]`);
   }
   
   return product || null;

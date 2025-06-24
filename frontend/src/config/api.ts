@@ -38,7 +38,7 @@ export const buildApiUrl = (endpoint: string): string => {
 // دالة مساعدة لبناء URL الصور - محسنة للـ Cloudinary وقواعد البيانات الحقيقية
 export const buildImageUrl = (imagePath: string | null | undefined): string => {
   // Use a better placeholder SVG
-  const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+';
+  const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMTYwIiByPSI0MCIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xNTAgMjIwTDE4MCAyMDBMMjAwIDIyMEwyNDAgMjgwSDE1MFYyMjBaIiBmaWxsPSIjOUNBM0FGIi8+PHRleHQgeD0iMjAwIiB5PSIzMjAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD48L3N2Zz4K';
 
   console.log('🖼️ buildImageUrl called with:', imagePath);
 
@@ -50,7 +50,13 @@ export const buildImageUrl = (imagePath: string | null | undefined): string => {
 
   const cleanPath = imagePath.trim();
 
-  // Handle Cloudinary URLs (highest priority)
+  // Handle data URLs (base64 images) - highest priority
+  if (cleanPath.startsWith('data:image/')) {
+    console.log('🖼️ Using data URL (base64)');
+    return cleanPath;
+  }
+
+  // Handle Cloudinary URLs
   if (cleanPath.includes('cloudinary.com') || cleanPath.includes('res.cloudinary.com')) {
     console.log('🖼️ Using Cloudinary URL:', cleanPath);
     return cleanPath;
@@ -59,12 +65,6 @@ export const buildImageUrl = (imagePath: string | null | undefined): string => {
   // Handle other absolute URLs (HTTP/HTTPS)
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     console.log('🖼️ Using absolute URL:', cleanPath);
-    return cleanPath;
-  }
-
-  // Handle data URLs (base64 images)
-  if (cleanPath.startsWith('data:image/')) {
-    console.log('🖼️ Using data URL (base64)');
     return cleanPath;
   }
 

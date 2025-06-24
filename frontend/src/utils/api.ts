@@ -10,43 +10,18 @@ console.log('🌐 Hostname:', window.location.hostname);
 const shouldUseMockData = () => {
   // Only use mock data in local development
   const isLocalDevelopment = import.meta.env.MODE === 'development' && 
-                             (window.location.hostname === 'localhost' ||
-                              window.location.port === '5173' ||
-                              window.location.port === '5174' ||
-                              window.location.port === '5175' ||
-                              window.location.port === '5176' ||
-                              window.location.port === '5177' ||
-                              window.location.port === '5178' ||
-                              window.location.port === '5179' ||
-                              window.location.port === '5180' ||
-                              window.location.port === '5181' ||
-                              window.location.port === '5182' ||
-                              window.location.port === '5183' ||
-                              window.location.port === '3000' ||
-                              window.location.port === '3001');
-  
-  console.log('🔍 shouldUseMockData check:', {
-    mode: import.meta.env.MODE,
-    dev: import.meta.env.DEV,
-    hostname: window.location.hostname,
-    port: window.location.port,
-    isLocalDevelopment
-  });
+                             window.location.hostname === 'localhost';
   
   if (isLocalDevelopment) {
-    console.log('🔄 Using mock data (local development mode)');
     return true;
   }
   
-  console.log('🌐 Using real API (production mode)');
   return false;
 };
 
-// Generic API request function with fallback to mock data ONLY in development
+// Generic API request function - simplified for better performance
 const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic: boolean = false): Promise<any> => {
   const url = `${getApiBaseUrl()}${endpoint}`;
-  
-  console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
   
   try {
     const headers: Record<string, string> = {
@@ -76,10 +51,9 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic:
     }
 
     const data = await response.json();
-    console.log(`✅ API Success: ${endpoint}`, data);
     return data;
   } catch (error) {
-    console.error(`❌ API Error (${endpoint}):`, error);
+    console.error(`API Error (${endpoint}):`, error);
     throw error;
   }
 };
@@ -87,11 +61,8 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic:
 // Products API
 export const productsAPI = {
   getAll: async (params: any = {}, isPublic: boolean = false) => {
-    console.log(`🔍 ProductsAPI.getAll called with params:`, params);
-    
     // If we should use mock data (local development only), use it directly
     if (shouldUseMockData()) {
-      console.log('🔄 Using mock products data (local development)');
       return getMockProducts();
     }
     
@@ -100,39 +71,29 @@ export const productsAPI = {
       const queryString = new URLSearchParams(params).toString();
       const endpoint = `/products${queryString ? `?${queryString}` : ''}`;
       const result = await apiRequest(endpoint, { method: 'GET' }, isPublic);
-      console.log(`✅ Products found via API:`, result);
       return result;
     } catch (error) {
-      console.log(`❌ API failed for products:`, error);
       throw new Error('فشل في تحميل المنتجات - تأكد من اتصالك بالإنترنت');
     }
   },
 
   getById: async (id: string | number) => {
-    console.log(`🔍 ProductsAPI.getById called with ID: ${id}`);
-    
     // If we should use mock data (local development only), use it directly
     if (shouldUseMockData()) {
-      console.log(`🔄 Using mock data for product ID: ${id} (local development)`);
       const mockProduct = getMockProductById(id);
       
       if (!mockProduct) {
-        console.log(`❌ Product ${id} not found in mock data`);
-        console.log('📋 Available mock products:', getMockProducts().map(p => ({ id: p.id, name: p.name })));
         throw new Error('المنتج غير موجود');
       }
       
-      console.log(`✅ Found product in mock data:`, mockProduct);
       return mockProduct;
     }
     
     // In production, only use real API
     try {
       const result = await apiRequest(`/products/${id}`, { method: 'GET' });
-      console.log(`✅ Product found via API:`, result);
       return result;
     } catch (error) {
-      console.log(`❌ API failed for product ${id}:`, error);
       throw new Error('المنتج غير موجود');
     }
   },

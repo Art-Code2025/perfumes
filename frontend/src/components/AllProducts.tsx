@@ -254,8 +254,17 @@ const AllProducts: React.FC = () => {
             {filteredProducts.map((product) => (
               <ProductCard 
                 key={product.id} 
-                product={product} 
-                viewMode={viewMode}
+                product={{
+                  id: product.id.toString(),
+                  name: product.name,
+                  price: product.price,
+                  image: product.mainImage,
+                  category: '',
+                  description: product.description,
+                  inStock: product.stock > 0,
+                  isNew: false,
+                  isLuxury: false,
+                }}
               />
             ))}
           </div>

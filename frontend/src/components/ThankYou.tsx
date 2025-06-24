@@ -8,7 +8,7 @@ import {
   Phone, 
   MapPin, 
   CreditCard,
-  ArrowRight,
+  ArrowRight, 
   Download,
   Share2,
   Star,
@@ -99,7 +99,7 @@ const ThankYou: React.FC = () => {
             <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
               شكراً لك على ثقتك بنا. سنقوم بمعالجة طلبك في أقرب وقت ممكن وإرسال تفاصيل الشحن قريباً.
             </p>
-            
+              
             {/* Order Number Highlight */}
             <div className="mt-8 inline-flex items-center gap-3 bg-gradient-to-r from-gray-900 to-black text-white px-8 py-4 rounded-2xl shadow-2xl animate-gradient hover:scale-105 transition-transform duration-300">
               <Package className="w-6 h-6" />
@@ -119,11 +119,11 @@ const ThankYou: React.FC = () => {
                   <div className="bg-white/20 rounded-2xl px-6 py-4">
                     <p className="text-sm text-gray-300 mb-1">تاريخ الطلب</p>
                     <p className="text-lg font-bold">{new Date().toLocaleDateString('ar-SA')}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
+                            </div>
+                          </div>
+                            </div>
+                          </div>
+                          
             {/* Order Items */}
             {orderData?.items && orderData.items.length > 0 && (
               <div className="p-8 border-b border-gray-100">
@@ -145,9 +145,9 @@ const ThankYou: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-gray-900">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
@@ -177,10 +177,10 @@ const ThankYou: React.FC = () => {
                           <Phone className="w-4 h-4 text-gray-500" />
                           <span>{orderData.userData.phone}</span>
                         </div>
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3">
                           <MapPin className="w-4 h-4 text-gray-500" />
                           <span>{orderData.userData.city}</span>
-                        </div>
+                      </div>
                       </>
                     )}
                   </div>

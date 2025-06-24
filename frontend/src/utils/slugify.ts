@@ -14,26 +14,23 @@ export const slugify = (text: string): string => {
     .replace(/^-+|-+$/g, '');
 };
 
-// إنشاء رابط احترافي للمنتج
-export const createProductSlug = (id: string | number, name: string): string => {
-  const slug = slugify(name);
-  return slug ? `${slug}-${id}` : `product-${id}`;
+// إنشاء رابط احترافي للمنتج (معتمد على الاسم فقط)
+export const createProductSlug = (name: string): string => {
+  return slugify(name) || 'product';
 };
 
-// إنشاء رابط احترافي للفئة
-export const createCategorySlug = (id: string | number, name: string): string => {
-  const slug = slugify(name);
-  return slug ? `${slug}-${id}` : `category-${id}`;
+// إنشاء رابط احترافي للفئة (معتمد على الاسم فقط)
+export const createCategorySlug = (name: string): string => {
+  return slugify(name) || 'category';
 };
 
-// استخراج ID من slug
+// استخراج ID من slug (لم يعد مطلوبًا بنفس الطريقة، لكن سنبقيه للطوارئ)
 export const extractIdFromSlug = (slug: string): string => {
   const match = slug.match(/-([a-zA-Z0-9]+)$/);
-  return match ? match[1] : '0';
+  return match ? match[1] : slug; // Return the whole slug if no ID found
 };
 
-// التحقق من صحة slug
+// التحقق من صحة slug (الآن أي نص صالح)
 export const isValidSlug = (slug: string): boolean => {
-  // يجب أن ينتهي بـ dash متبوعاً بـ ID (أرقام أو أحرف)
-  return /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-z0-9\-]+-[a-zA-Z0-9]+$/.test(slug);
-}; 
+  return typeof slug === 'string' && slug.length > 0;
+};

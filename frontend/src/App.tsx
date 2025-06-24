@@ -155,7 +155,7 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log('🔄 Fetching real data from API...');
 
       // Fetch real data from API
@@ -321,9 +321,9 @@ const App: React.FC = () => {
 
         finalProducts.forEach(product => {
           if (product.categoryId && categoryProductsMap[product.categoryId]) {
-            categoryProductsMap[product.categoryId].push(product);
-          }
-        });
+          categoryProductsMap[product.categoryId].push(product);
+        }
+      });
 
         const categoryProductsList: CategoryProducts[] = finalCategories.map(category => ({
           category,
@@ -372,18 +372,18 @@ const App: React.FC = () => {
           categories: validCategories.length,
           products: validProducts.length
         });
-        
-        // Initialize quantities for all products
-        const initialQuantities: {[key: number]: number} = {};
+      
+      // Initialize quantities for all products
+      const initialQuantities: {[key: number]: number} = {};
         validProducts.forEach(product => {
           initialQuantities[product.id] = 1;
-        });
-        setQuantities(initialQuantities);
+      });
+      setQuantities(initialQuantities);
         
         // Success message for real data
         toast.success('تم تحميل البيانات من قاعدة البيانات بنجاح! 🎉');
       }
-
+      
     } catch (error) {
       console.error('❌ Error fetching data:', error);
       setError('فشل في تحميل البيانات. يرجى المحاولة مرة أخرى.');
@@ -698,8 +698,8 @@ const App: React.FC = () => {
           <div className="absolute top-20 left-20 w-40 h-40 bg-gradient-to-br from-[#C4A484]/20 to-[#D4B896]/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-32 right-16 w-48 h-48 bg-gradient-to-br from-[#E5D5C8]/15 to-[#C4A484]/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-gradient-to-br from-[#D4B896]/20 to-[#E5D5C8]/20 rounded-full blur-2xl animate-pulse delay-2000"></div>
-        </div>
-
+                          </div>
+                          
         <div className="relative z-10 container mx-auto px-6 lg:px-12">
           <div className="text-center mb-16">
             {/* Badge */}
@@ -707,7 +707,7 @@ const App: React.FC = () => {
               <div className="w-2 h-2 bg-[#8B5A3C] rounded-full animate-pulse"></div>
               <span className="text-sm font-medium text-[#6B4226]">متجرنا المميز</span>
               <div className="w-2 h-2 bg-[#A67C52] rounded-full animate-pulse delay-500"></div>
-            </div>
+                              </div>
 
             {/* Main Title */}
             <div className="space-y-4 mb-8">
@@ -718,7 +718,7 @@ const App: React.FC = () => {
                 <div className="w-24 h-1 bg-gradient-to-r from-[#C4A484] to-[#D4B896] rounded-full"></div>
               </div>
             </div>
-
+            
             <p className="text-[#8B5A3C] text-lg max-w-2xl mx-auto leading-relaxed">
               اكتشف مجموعتنا الحصرية من أفخر العطور العالمية المختارة بعناية لتناسب جميع الأذواق والمناسبات
             </p>
@@ -750,8 +750,8 @@ const App: React.FC = () => {
           {/* Products Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
             {filteredProducts.slice(0, 8).map((product, index) => (
-              <div 
-                key={product.id} 
+                  <div
+                    key={product.id}
                 className="group relative animate-fade-in-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
@@ -760,12 +760,12 @@ const App: React.FC = () => {
                 
                 <div className="relative card-premium hover-lift">
                   <div className="aspect-square bg-gradient-to-br from-[#FAF8F5] to-[#F5F1EB] relative overflow-hidden rounded-t-2xl">
-                    <img
-                      src={buildImageUrl(product.mainImage)}
-                      alt={product.name}
+                          <img
+                            src={buildImageUrl(product.mainImage)}
+                            alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
-                      onError={(e) => {
+                            onError={(e) => {
                         console.log('❌ Image failed to load:', product.mainImage);
                         e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMzAiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE1MCAyMDBMMTgwIDE3MEwyMDAgMTkwTDI0MCAyNTBIMTUwVjIwMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHRleHQgeD0iMjAwIiB5PSIzMDAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD4KPC9zdmc+'; 
                       }}
@@ -775,21 +775,21 @@ const App: React.FC = () => {
                     {product.originalPrice && product.originalPrice > product.price && (
                       <div className="absolute top-4 left-4 bg-gradient-to-r from-[#8B5A3C] to-[#A67C52] text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
                         تخفيض
-                      </div>
+                          </div>
                     )}
-                    
-                    {/* Wishlist Button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleWishlistToggle(product.id, product.name);
-                      }}
+                          
+                          {/* Wishlist Button */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleWishlistToggle(product.id, product.name);
+                              }}
                       className={`absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 ${
                         isInWishlist(product.id) ? 'text-[#8B5A3C] bg-[#C4A484]/20' : 'text-[#A67C52] hover:text-[#8B5A3C]'
                       }`}
                     >
                       <Heart className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-[#8B5A3C]' : ''}`} />
-                    </button>
+                            </button>
 
                     {/* Quick View Overlay */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
@@ -799,8 +799,8 @@ const App: React.FC = () => {
                       >
                         عرض التفاصيل
                       </Link>
-                    </div>
-                  </div>
+                                </div>
+                                </div>
                   
                   <div className="p-6 text-center space-y-4">
                     {/* Rating */}
@@ -813,34 +813,34 @@ const App: React.FC = () => {
                           }`}
                         />
                       ))}
-                    </div>
-                    
+                          </div>
+                          
                     <div>
                       <Link to={`/product/${product.id}`} className="block hover:text-[#8B5A3C] transition-colors">
                         <h3 className="font-semibold text-[#6B4226] mb-1 line-clamp-1 hover:text-[#8B5A3C] transition-colors">{product.brand || product.name}</h3>
                         <p className="text-sm text-[#A67C52] line-clamp-2">{product.name}</p>
-                      </Link>
+                                </Link>
                     </div>
                     
-                    <div className="flex items-center justify-center gap-3">
+                                  <div className="flex items-center justify-center gap-3">
                       <span className="text-[#8B5A3C] font-bold text-lg">${product.price}</span>
                       {product.originalPrice && (
                         <span className="text-[#C4A484] line-through text-sm">${product.originalPrice}</span>
                       )}
-                    </div>
-                    
-                    <button
+                                  </div>
+                                  
+                                  <button
                       onClick={() => handleAddToCart(product.id, product.name)}
                       className="w-full bg-gradient-to-r from-[#8B5A3C] to-[#A67C52] hover:from-[#6B4226] hover:to-[#8B5A3C] text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-[#8B5A3C]/25 transition-all duration-300 transform hover:-translate-y-1"
                     >
                       إضافة للسلة
-                    </button>
+                                  </button>
+                            </div>
+                        </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
+                ))}
+            </div>
+            
           {/* View More Button */}
           <div className="text-center mt-16">
             <button className="group relative px-10 py-4 bg-gradient-to-r from-[#6B4226] to-[#8B5A3C] text-white rounded-full font-semibold shadow-2xl hover:shadow-[#8B5A3C]/25 transition-all duration-300 overflow-hidden">
@@ -860,7 +860,7 @@ const App: React.FC = () => {
         <div className="absolute inset-0">
           <div className="absolute top-20 right-20 w-40 h-40 bg-gradient-to-br from-[#A67C52]/10 to-[#C4A484]/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-32 left-16 w-48 h-48 bg-gradient-to-br from-[#C4A484]/10 to-[#D4B896]/10 rounded-full blur-3xl"></div>
-        </div>
+  </div>
 
         {/* Top Wave */}
         <div className="absolute top-0 left-0 right-0">
@@ -878,7 +878,7 @@ const App: React.FC = () => {
                 <div className="space-y-4">
                   <h3 className="text-4xl font-extrabold bg-gradient-to-r from-[#C4A484] via-[#D4B896] to-[#C4A484] bg-clip-text text-transparent select-none">
                     FLEUR
-                  </h3>
+              </h3>
                   <p className="text-[#E5D5C8] leading-relaxed max-w-md">
                     متجر عطور فاخر يقدم أحدث التشكيلات النسائية والرجالية من أرقى البراندات العالمية. 
                     نحن نؤمن بأن العطر ليس مجرد رائحة، بل هو تعبير عن الشخصية والأناقة.
@@ -905,10 +905,10 @@ const App: React.FC = () => {
                       </a>
                     ))}
                   </div>
-                </div>
-              </div>
+</div>
+            </div>
 
-              {/* Quick Links */}
+            {/* Quick Links */}
               <div className="space-y-6">
                 <h4 className="text-xl font-bold text-white relative">
                   روابط سريعة
@@ -933,9 +933,9 @@ const App: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-              </div>
+            </div>
 
-              {/* Contact Info */}
+            {/* Contact Info */}
               <div className="space-y-6">
                 <h4 className="text-xl font-bold text-white relative">
                   تواصل معنا
@@ -945,20 +945,20 @@ const App: React.FC = () => {
                   <li className="flex items-center gap-3 text-[#E5D5C8]">
                     <div className="w-10 h-10 bg-gradient-to-r from-[#C4A484] to-[#D4B896] rounded-lg flex items-center justify-center shadow-lg">
                       <span className="text-lg">📞</span>
-                    </div>
+                </div>
                     <div>
                       <div className="text-sm text-[#C4A484]">اتصل بنا</div>
                       <div className="text-white font-medium">+966551064118</div>
-                    </div>
+                </div>
                   </li>
                   <li className="flex items-center gap-3 text-[#E5D5C8]">
                     <div className="w-10 h-10 bg-gradient-to-r from-[#A67C52] to-[#C4A484] rounded-lg flex items-center justify-center shadow-lg">
                       <span className="text-lg">✉️</span>
-                    </div>
+                </div>
                     <div>
                       <div className="text-sm text-[#C4A484]">البريد الإلكتروني</div>
                       <div className="text-white font-medium">info@fleur.store</div>
-                    </div>
+              </div>
                   </li>
                   <li className="flex items-center gap-3 text-[#E5D5C8]">
                     <div className="w-10 h-10 bg-gradient-to-r from-[#8B5A3C] to-[#A67C52] rounded-lg flex items-center justify-center shadow-lg">
@@ -970,8 +970,8 @@ const App: React.FC = () => {
                     </div>
                   </li>
                 </ul>
-              </div>
             </div>
+          </div>
 
             {/* Newsletter Section */}
             <div className="bg-gradient-to-r from-[#8B5A3C]/50 to-[#A67C52]/50 backdrop-blur-sm rounded-2xl p-8 mb-12 border border-[#C4A484]/50">

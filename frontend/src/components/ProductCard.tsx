@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
+import { buildImageUrl } from '../config/api';
+import { createProductSlug } from '../utils/slugify';
 
 interface Product {
   id: string;
@@ -184,7 +186,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link to={`/product/${product.id}`} className="block">
+      <Link to={`/product/${createProductSlug(product.name)}`} className="block">
         
         {/* Product Image Container */}
         <div className="perfume-bottle-container relative p-6">
@@ -232,10 +234,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {/* Product Image */}
           <div className="relative z-5">
             <img
-              src={product.image}
+              src={buildImageUrl(product.image)}
               alt={product.name}
               className="w-full h-48 lg:h-56 object-contain transition-all duration-500 group-hover:scale-105"
               loading="lazy"
+              onError={(e) => {
+                console.log('❌ ProductCard image failed to load:', product.image);
+                // Use a better placeholder
+                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMTYwIiByPSI0MCIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xNTAgMjIwTDE4MCAyMDBMMjAwIDIyMEwyNDAgMjgwSDE1MFYyMjBaIiBmaWxsPSIjOUNBM0FGIi8+PHRleHQgeD0iMjAwIiB5PSIzMjAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD48L3N2Zz4K';
+              }}
             />
             
             {/* Perfume Shimmer Effect */}

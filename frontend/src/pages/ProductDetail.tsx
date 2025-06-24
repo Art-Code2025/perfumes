@@ -29,6 +29,7 @@ import {
 import { toast } from 'react-toastify';
 import { productsAPI } from '../utils/api';
 import { buildImageUrl } from '../config/api';
+import { createProductSlug } from '../utils/slugify';
 
 interface Product {
   id: number;
@@ -85,9 +86,8 @@ const ProductDetail: React.FC = () => {
   // Fetch product data
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!id) {
-        console.error('❌ No product ID/slug provided');
-        setError('معرف المنتج غير صحيح');
+      if (!id) { // 'id' from useParams() is actually the slug now
+        setError('رابط المنتج غير صحيح');
         setLoading(false);
         return;
       }
@@ -96,116 +96,19 @@ const ProductDetail: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        console.log('🔍 ProductDetail: Fetching product with ID/slug:', id);
-        console.log('🔍 Environment check:', {
-          mode: import.meta.env.MODE,
-          dev: import.meta.env.DEV,
-          hostname: window.location.hostname,
-          port: window.location.port,
-          url: window.location.href
-        });
+        const allProducts = await productsAPI.getAll({}, true);
         
-        let productData = null;
+        const foundProduct = allProducts.find((p: any) => createProductSlug(p.name) === id);
         
-        // Try to determine if this is a numeric ID or a slug
-        const isNumericId = /^\d+$/.test(id);
-        
-        if (isNumericId) {
-          console.log('🔢 Detected numeric ID, fetching by ID');
-          // Get product by ID
-          productData = await productsAPI.getById(parseInt(id));
+        if (foundProduct) {
+          setProduct(foundProduct);
         } else {
-          console.log('🔤 Detected slug, searching by slug');
-          // Search by slug - try to get all products and find by slug
-          try {
-            const allProducts = await productsAPI.getAll({}, true);
-            console.log('📋 All products:', allProducts);
-            
-            // Try to find product by slug (assuming slug might be stored in a slug field or generated from name)
-            productData = allProducts.find((p: any) => {
-              // Check if product has a slug field
-              if (p.slug && p.slug === id) return true;
-              
-              // Generate slug from name and compare
-              const generatedSlug = p.name
-                ?.toLowerCase()
-                .replace(/[^\w\s-]/g, '') // Remove special characters
-                .replace(/\s+/g, '-') // Replace spaces with hyphens
-                .trim();
-              
-              return generatedSlug === id;
-            });
-            
-            if (!productData) {
-              console.log('❌ Product not found by slug, trying to match with any field');
-              // Last resort: try to find by any field that might match
-              productData = allProducts.find((p: any) => 
-                p.id?.toString() === id || 
-                p._id?.toString() === id ||
-                p.productId?.toString() === id
-              );
-            }
-          } catch (slugError) {
-            console.log('❌ Failed to search by slug:', slugError);
-            // If slug search fails, try treating it as ID anyway
-            if (id.length < 10) { // Short strings might be IDs
-              try {
-                productData = await productsAPI.getById(id as any);
-              } catch (idError) {
-                console.log('❌ Also failed as ID:', idError);
-              }
-            }
-          }
-        }
-        
-        if (productData) {
-          console.log('✅ Product data loaded successfully:', productData);
-          setProduct(productData);
-          
-          // Test images after product is loaded
-          if (productData.mainImage) {
-            const imageUrl = buildImageUrl(productData.mainImage);
-            console.log('🖼️ Testing main image:', imageUrl);
-            testImageUrl(imageUrl).then(isValid => {
-              console.log(`🖼️ Main image test result: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
-            });
-          }
-          
-          if (productData.detailedImages && productData.detailedImages.length > 0) {
-            productData.detailedImages.forEach((img: string, index: number) => {
-              const imageUrl = buildImageUrl(img);
-              console.log(`🖼️ Testing detailed image ${index}:`, imageUrl);
-              testImageUrl(imageUrl).then(isValid => {
-                console.log(`🖼️ Detailed image ${index} test result: ${isValid ? '✅ Valid' : '❌ Invalid'}`);
-              });
-            });
-          }
-        } else {
-          console.log('❌ Product data is null/undefined');
-          console.log('🔍 Search details:', { id, isNumericId, url: window.location.href });
           setError('المنتج غير موجود');
         }
         
       } catch (error) {
-        console.error('❌ Error fetching product:', {
-          id,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          fullError: error
-        });
-        
-        // Try to provide more specific error messages
-        if (error instanceof Error) {
-          if (error.message.includes('المنتج غير موجود')) {
-            setError('المنتج غير موجود');
-          } else if (error.message.includes('Failed to fetch')) {
-            setError('خطأ في الاتصال - تأكد من اتصالك بالإنترنت');
-          } else {
-            setError(`حدث خطأ في تحميل المنتج: ${error.message}`);
-          }
-        } else {
-          setError('حدث خطأ غير متوقع في تحميل المنتج');
-        }
+        console.error('Error fetching product by slug:', error);
+        setError('حدث خطأ أثناء تحميل المنتج');
       } finally {
         setLoading(false);
       }
@@ -466,16 +369,10 @@ const ProductDetail: React.FC = () => {
                 alt={product.name}
                 className="w-full h-full object-cover"
                 onLoad={() => {
-                  console.log('✅ Image loaded successfully:', productImages[selectedImage] || product.mainImage);
+                  // Image loaded successfully
                 }}
                 onError={(e) => {
                   const failedUrl = productImages[selectedImage] || product.mainImage;
-                  console.log('❌ Image failed to load:', {
-                    failedUrl,
-                    builtUrl: buildImageUrl(failedUrl),
-                    selectedImage,
-                    productImages
-                  });
                   
                   // Try fallback to a better placeholder
                   const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+PGNpcmNsZSBjeD0iMjAwIiBjeT0iMTYwIiByPSI0MCIgZmlsbD0iIzlDQTNBRiIvPjxwYXRoIGQ9Ik0xNTAgMjIwTDE4MCAyMDBMMjAwIDIyMEwyNDAgMjgwSDE1MFYyMjBaIiBmaWxsPSIjOUNBM0FGIi8+PHRleHQgeD0iMjAwIiB5PSIzMjAiIGZpbGw9IiM2QjczODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCI+2YTYpyDYqtmI2KzYryDYtdmI2LHYqTwvdGV4dD48L3N2Zz4K';
@@ -538,13 +435,9 @@ const ProductDetail: React.FC = () => {
                       alt={`${product.name} ${index + 1}`}
                       className="w-full h-full object-cover"
                       onLoad={() => {
-                        console.log(`✅ Thumbnail ${index} loaded:`, image);
+                        // Thumbnail loaded successfully
                       }}
                       onError={(e) => {
-                        console.log(`❌ Thumbnail ${index} failed:`, {
-                          image,
-                          builtUrl: buildImageUrl(image)
-                        });
                         const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjQwIiBjeT0iMzIiIHI9IjgiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTMwIDQ0TDM2IDQwTDQwIDQ0TDQ4IDU2SDMwVjQ0WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
                         e.currentTarget.src = placeholder;
                       }}

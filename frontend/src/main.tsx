@@ -8,6 +8,8 @@ import App from './App.tsx';
 // Direct import for debugging
 import './index.css';
 import { initCartStorageFix } from './utils/cartStorageFix.ts';
+// Initialize mock data
+import './utils/initData';
 
 // Lazy load components for better performance
 const ProductDetail = React.lazy(() => import('./components/ProductDetail'));

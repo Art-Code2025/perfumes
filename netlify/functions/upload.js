@@ -46,38 +46,94 @@ export const handler = async (event, context) => {
   };
 
   try {
-    // Parse form data from the request
     const contentType = event.headers['content-type'] || '';
     
-    if (!contentType.includes('multipart/form-data')) {
-      console.error('❌ Invalid content type:', contentType);
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Invalid content type. Expected multipart/form-data'
-        })
-      };
+    // Handle base64 data (primary method)
+    if (contentType.includes('application/json')) {
+      const body = JSON.parse(event.body || '{}');
+      
+      if (body.base64Data) {
+        console.log('📤 Uploading base64 image to Cloudinary');
+        
+        try {
+          const uploadResult = await cloudinary.uploader.upload(body.base64Data, {
+            folder: 'mawasiem-products',
+            resource_type: 'auto',
+            transformation: [
+              { width: 800, height: 800, crop: 'limit', quality: 'auto:good' }
+            ]
+          });
+          
+          console.log('✅ Cloudinary upload successful:', uploadResult.secure_url);
+          
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              url: uploadResult.secure_url,
+              publicId: uploadResult.public_id
+            })
+          };
+        } catch (cloudinaryError) {
+          console.error('❌ Cloudinary upload failed:', cloudinaryError);
+          
+          // Return the base64 data as fallback
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              url: body.base64Data,
+              fallback: true,
+              message: 'Image stored as base64 (Cloudinary failed)'
+            })
+          };
+        }
+      }
     }
-
-    // For now, since parsing multipart data is complex in serverless,
-    // we'll expect the frontend to send base64 data instead
-    // This is a temporary solution until we implement proper multipart parsing
     
-    console.log('⚠️ Upload function: Multipart parsing not implemented yet');
-    console.log('💡 Frontend should use base64 encoding for images');
+    // Handle FormData (multipart/form-data) - simplified approach
+    if (contentType.includes('multipart/form-data')) {
+      console.log('📤 Processing multipart form data');
+      
+      try {
+        // For now, we'll expect the frontend to convert to base64
+        // This is a simpler approach for serverless functions
+        console.log('⚠️ Multipart data received, but expecting base64 format');
+        
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Please send images as base64 data in JSON format',
+            hint: 'Use { "base64Data": "data:image/jpeg;base64,..." } format'
+          })
+        };
+        
+      } catch (error) {
+        console.error('❌ Error processing multipart data:', error);
+        
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({
+            success: false,
+            error: 'Failed to process multipart data'
+          })
+        };
+      }
+    }
     
+    // If no valid content type, return error
     return {
-      statusCode: 200,
+      statusCode: 400,
       headers,
       body: JSON.stringify({
-        success: true,
-        message: 'Upload function ready - use base64 encoding in frontend',
-        data: {
-          url: 'data:image/png;base64,placeholder', // Placeholder response
-          note: 'Please implement base64 image handling in frontend'
-        }
+        success: false,
+        error: 'Invalid content type. Expected JSON with base64Data field',
+        example: { base64Data: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...' }
       })
     };
     

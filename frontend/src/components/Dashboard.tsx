@@ -155,7 +155,7 @@ const Dashboard: React.FC = () => {
       // The API returns a direct array, not a wrapped object
       if (Array.isArray(productsData)) {
         console.log('✅ Products loaded successfully:', productsData.length);
-        setProducts(productsData);
+      setProducts(productsData);
       } else {
         console.error("API did not return an array for products:", productsData);
         setProducts([]);
@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
       // The API returns a direct array, not a wrapped object
       if (Array.isArray(categoriesData)) {
         console.log('✅ Categories loaded successfully:', categoriesData.length);
-        setCategories(categoriesData);
+      setCategories(categoriesData);
       } else {
         console.error("API did not return an array for categories:", categoriesData);
         setCategories([]);
@@ -201,7 +201,7 @@ const Dashboard: React.FC = () => {
       // The API returns a direct array, not a wrapped object
       if (Array.isArray(ordersData)) {
         console.log('✅ Orders loaded successfully:', ordersData.length);
-        setOrders(ordersData);
+      setOrders(ordersData);
       } else {
         console.error("API did not return an array for orders:", ordersData);
         setOrders([]);
@@ -224,7 +224,7 @@ const Dashboard: React.FC = () => {
       // The API returns a direct array, not a wrapped object
       if (Array.isArray(couponsData)) {
         console.log('✅ Coupons loaded successfully:', couponsData.length);
-        setCoupons(couponsData);
+      setCoupons(couponsData);
       } else {
         console.error("API did not return an array for coupons:", couponsData);
         setCoupons([]);
@@ -335,9 +335,9 @@ const Dashboard: React.FC = () => {
       // API returns the product directly, not wrapped in success object
       console.log('✅ Product created successfully:', newProductResponse);
       setProducts([...products, newProductResponse]);
-      setShowAddModal(false);
-      resetNewProduct();
-      toast.success('تم إضافة المنتج بنجاح');
+        setShowAddModal(false);
+        resetNewProduct();
+        toast.success('تم إضافة المنتج بنجاح');
       
       // Dispatch event to update homepage
       window.dispatchEvent(new CustomEvent('productCreated', { 
@@ -386,11 +386,11 @@ const Dashboard: React.FC = () => {
       
       // API returns the updated product directly, not wrapped in success object
       console.log('✅ Product updated successfully:', updatedProduct);
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, mainImage: imageUrl } : p));
-      setShowEditModal(false);
-      setEditingProduct(null);
-      setSelectedFile(null);
-      toast.success('تم تحديث المنتج بنجاح');
+        setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, mainImage: imageUrl } : p));
+        setShowEditModal(false);
+        setEditingProduct(null);
+        setSelectedFile(null);
+        toast.success('تم تحديث المنتج بنجاح');
       
       // Dispatch event to update homepage
       window.dispatchEvent(new CustomEvent('productUpdated', { 
@@ -411,8 +411,8 @@ const Dashboard: React.FC = () => {
       
       // API returns success directly, no wrapper needed
       console.log('✅ Product deleted successfully');
-      setProducts(products.filter(p => p.id !== id));
-      toast.success('تم حذف المنتج بنجاح');
+        setProducts(products.filter(p => p.id !== id));
+        toast.success('تم حذف المنتج بنجاح');
       
       // Dispatch event to update homepage
       window.dispatchEvent(new CustomEvent('productDeleted', { 
@@ -451,11 +451,11 @@ const Dashboard: React.FC = () => {
       
       // API returns the category directly, no wrapper needed
       console.log('✅ Category created successfully:', newCategoryResponse);
-      toast.success('تم إضافة الفئة بنجاح');
-      setShowAddCategoryModal(false);
-      setNewCategory({ name: '', description: '' });
-      setSelectedCategoryFile(null);
-      fetchCategories();
+        toast.success('تم إضافة الفئة بنجاح');
+        setShowAddCategoryModal(false);
+        setNewCategory({ name: '', description: '' });
+        setSelectedCategoryFile(null);
+        fetchCategories();
     } catch (error) {
       console.error('❌ Error adding category:', error);
       toast.error('خطأ في إضافة الفئة');
@@ -470,8 +470,8 @@ const Dashboard: React.FC = () => {
       
       // API returns success directly, no wrapper needed
       console.log('✅ Category deleted successfully');
-      toast.success('تم حذف الفئة بنجاح');
-      fetchCategories();
+        toast.success('تم حذف الفئة بنجاح');
+        fetchCategories();
     } catch (error) {
       console.error('❌ Error deleting category:', error);
       toast.error('خطأ في حذف الفئة');
@@ -484,8 +484,8 @@ const Dashboard: React.FC = () => {
       
       // API returns the order directly, no wrapper needed
       console.log('✅ Order status updated successfully:', updatedOrder);
-      toast.success('تم تحديث حالة الطلب');
-      fetchOrders();
+        toast.success('تم تحديث حالة الطلب');
+        fetchOrders();
     } catch (error) {
       console.error('❌ Error updating order status:', error);
       toast.error('خطأ في تحديث حالة الطلب');
@@ -498,18 +498,18 @@ const Dashboard: React.FC = () => {
       
       // API returns the coupon directly, no wrapper needed
       console.log('✅ Coupon created successfully:', newCouponResponse);
-      toast.success('تم إضافة الكوبون بنجاح');
-      setShowAddCouponModal(false);
-      setNewCoupon({
-        code: '',
-        type: 'percentage',
-        value: 0,
-        minOrderValue: 0,
-        maxUses: 1,
-        endDate: '',
-        isActive: true
-      });
-      fetchCoupons();
+        toast.success('تم إضافة الكوبون بنجاح');
+        setShowAddCouponModal(false);
+        setNewCoupon({
+          code: '',
+          type: 'percentage',
+          value: 0,
+          minOrderValue: 0,
+          maxUses: 1,
+          endDate: '',
+          isActive: true
+        });
+        fetchCoupons();
     } catch (error) {
       console.error('❌ Error adding coupon:', error);
       toast.error('خطأ في إضافة الكوبون');
@@ -524,8 +524,8 @@ const Dashboard: React.FC = () => {
       
       // API returns success directly, no wrapper needed
       console.log('✅ Coupon deleted successfully');
-      toast.success('تم حذف الكوبون بنجاح');
-      fetchCoupons();
+        toast.success('تم حذف الكوبون بنجاح');
+        fetchCoupons();
     } catch (error) {
       console.error('❌ Error deleting coupon:', error);
       toast.error('خطأ في حذف الكوبون');

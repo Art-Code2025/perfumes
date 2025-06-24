@@ -12,16 +12,16 @@ export const API_CONFIG = {
 
 // الحصول على الـ base URL حسب البيئة
 export const getApiBaseUrl = (): string => {
-  // أولاً: تحقق من Environment Variable
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
-  
-  // ثانياً: تحقق من البيئة
-  const isDevelopment = import.meta.env.DEV || window.location.hostname === 'localhost';
+  // تحقق من البيئة
+  const isDevelopment = import.meta.env.MODE === 'development';
   const baseUrl = isDevelopment ? API_CONFIG.development.baseURL : API_CONFIG.production.baseURL;
   
-  console.log('🔗 API Base URL:', baseUrl, '(isDev:', isDevelopment, ')');
+  console.log('🔧 API Configuration:', {
+    isDevelopment,
+    baseURL: baseUrl,
+    hostname: window.location.hostname
+  });
+  
   return baseUrl;
 };
 
@@ -30,9 +30,7 @@ export const buildApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
   // إزالة الـ slash الأول من endpoint إذا كان موجود
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  const fullUrl = `${baseUrl}/${cleanEndpoint}`;
-  console.log('🌐 API Call URL:', fullUrl);
-  return fullUrl;
+  return `${baseUrl}/${cleanEndpoint}`;
 };
 
 // دالة مساعدة لبناء URL الصور - محسنة للأداء
@@ -51,22 +49,22 @@ export const buildImageUrl = (imagePath: string | null | undefined): string => {
   if (cleanPath.startsWith('data:image/')) {
     return cleanPath;
   }
-
+  
   // Handle Cloudinary URLs
   if (cleanPath.includes('cloudinary.com') || cleanPath.includes('res.cloudinary.com')) {
     return cleanPath;
   }
-
+  
   // Handle other absolute URLs (HTTP/HTTPS)
   if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
     return cleanPath;
   }
-
+  
   // Handle relative paths from public folder
   if (cleanPath.startsWith('/')) {
     return cleanPath;
   }
-
+  
   // Handle relative paths - assume they're from public folder
   return `/${cleanPath}`;
 };

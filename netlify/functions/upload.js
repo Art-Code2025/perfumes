@@ -77,7 +77,7 @@ export const handler = async (event, context) => {
           };
         } catch (cloudinaryError) {
           console.error('❌ Cloudinary upload failed:', cloudinaryError);
-          
+    
           // Return the base64 data as fallback
           return {
             statusCode: 200,

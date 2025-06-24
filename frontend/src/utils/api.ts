@@ -2,26 +2,26 @@ import { getApiBaseUrl } from '../config/api';
 import { getMockProducts, getMockCategories, getMockProductById, MockProduct, MockCategory } from './mockData';
 
 // Debug log for API base URL
-console.log('🔧 API Configuration loaded');
-console.log('🌐 Environment:', import.meta.env.MODE);
-console.log('🌐 Hostname:', window.location.hostname);
+const apiConfig = {
+  isDevelopment: import.meta.env.MODE === 'development',
+  baseURL: getApiBaseUrl(),
+  hostname: window.location.hostname
+};
+
+console.log('🔧 API Configuration:', apiConfig);
 
 // Check if we should use mock data (only in development when API is not available)
 const shouldUseMockData = () => {
-  // Only use mock data in local development
-  const isLocalDevelopment = import.meta.env.MODE === 'development' && 
-                             window.location.hostname === 'localhost';
-  
-  if (isLocalDevelopment) {
+  // Only use mock data in local development when API is not available
+  if (apiConfig.isDevelopment && apiConfig.hostname === 'localhost') {
     return true;
   }
-  
   return false;
 };
 
 // Generic API request function - simplified for better performance
 const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic: boolean = false): Promise<any> => {
-  const url = `${getApiBaseUrl()}${endpoint}`;
+  const url = `${apiConfig.baseURL}${endpoint}`;
   
   try {
     const headers: Record<string, string> = {
@@ -45,11 +45,11 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}, isPublic:
       ...options,
       headers,
     });
-
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
+    
     const data = await response.json();
     return data;
   } catch (error) {
@@ -76,7 +76,7 @@ export const productsAPI = {
       throw new Error('فشل في تحميل المنتجات - تأكد من اتصالك بالإنترنت');
     }
   },
-
+  
   getById: async (id: string | number) => {
     // If we should use mock data (local development only), use it directly
     if (shouldUseMockData()) {
@@ -97,12 +97,12 @@ export const productsAPI = {
       throw new Error('المنتج غير موجود');
     }
   },
-
+  
   create: async (productData: any) => {
     try {
       const result = await apiRequest('/products', {
-        method: 'POST',
-        body: JSON.stringify(productData),
+    method: 'POST',
+    body: JSON.stringify(productData),
       });
       return result;
     } catch (error) {
@@ -126,8 +126,8 @@ export const productsAPI = {
   update: async (id: string | number, productData: any) => {
     try {
       return await apiRequest(`/products/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(productData),
+    method: 'PUT',
+    body: JSON.stringify(productData),
       });
     } catch (error) {
       if (shouldUseMockData()) {
@@ -144,7 +144,7 @@ export const productsAPI = {
       throw error;
     }
   },
-
+  
   delete: async (id: string | number) => {
     try {
       return await apiRequest(`/products/${id}`, { method: 'DELETE' });
@@ -214,7 +214,7 @@ export const categoriesAPI = {
       throw new Error('فشل في تحميل التصنيفات - تأكد من اتصالك بالإنترنت');
     }
   },
-
+  
   getById: async (id: string | number) => {
     // If we should use mock data (local development only), use it directly
     if (shouldUseMockData()) {
@@ -234,12 +234,12 @@ export const categoriesAPI = {
       throw new Error('التصنيف غير موجود');
     }
   },
-
+  
   create: async (categoryData: any) => {
     try {
       return await apiRequest('/categories', {
-        method: 'POST',
-        body: JSON.stringify(categoryData),
+    method: 'POST',
+    body: JSON.stringify(categoryData),
       });
     } catch (error) {
       if (shouldUseMockData()) {
@@ -256,12 +256,12 @@ export const categoriesAPI = {
       throw error;
     }
   },
-
+  
   update: async (id: string | number, categoryData: any) => {
     try {
       return await apiRequest(`/categories/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(categoryData),
+    method: 'PUT',
+    body: JSON.stringify(categoryData),
       });
     } catch (error) {
       if (shouldUseMockData()) {
@@ -278,7 +278,7 @@ export const categoriesAPI = {
       throw error;
     }
   },
-
+  
   delete: async (id: string | number) => {
     try {
       return await apiRequest(`/categories/${id}`, { method: 'DELETE' });
@@ -308,14 +308,14 @@ export const ordersAPI = {
       throw error;
     }
   },
-
+  
   getById: (id: string | number) => apiRequest(`/orders/${id}`),
   
   create: async (orderData: any) => {
     try {
       return await apiRequest('/orders', {
-        method: 'POST',
-        body: JSON.stringify(orderData),
+    method: 'POST',
+    body: JSON.stringify(orderData),
       });
     } catch (error) {
       if (shouldUseMockData()) {

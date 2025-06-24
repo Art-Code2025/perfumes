@@ -109,9 +109,9 @@ const Wishlist: React.FC = () => {
         product.id,
         product.name,
         product.price,
-        1,
-        {},
-        {},
+        1, 
+        {}, 
+        {}, 
         {},
         product
       );

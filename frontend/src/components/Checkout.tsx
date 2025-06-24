@@ -576,9 +576,9 @@ const Checkout: React.FC = () => {
           <div className="flex items-center gap-2 text-gray-900 font-bold text-lg">
             <ShoppingCart className="w-6 h-6" />
             إتمام الطلب
-          </div>
+            </div>
           <div className="w-6 h-6"></div>
-        </div>
+          </div>
       </header>
 
       <div className="container mx-auto px-4 py-12">
@@ -769,106 +769,106 @@ const Checkout: React.FC = () => {
                     ))}
                   </div>
                 </div>
-
+                
                 {/* Step 1: Order Review */}
                 {currentStep === 1 && (
                   <div className="p-6 lg:p-8 xl:p-10 bg-gradient-to-br from-white to-gray-50 min-h-[500px]">
                     <div className="flex items-center gap-4 lg:gap-6 mb-8 lg:mb-10">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-black to-gray-800 rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl">
                         <ShoppingCart className="text-white" size={24} />
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-2">مراجعة طلبك</h2>
                         <p className="text-gray-600 text-base lg:text-lg xl:text-xl">{cartItems.length} منتج في السلة</p>
-                      </div>
                     </div>
+                  </div>
 
-                    {/* Cart Items */}
+                  {/* Cart Items */}
                     <div className="space-y-6 lg:space-y-8">
-                      {cartItems.map((item, index) => (
-                        <div 
-                          key={`${item.id}-${item.size || 'default'}`}
+                    {cartItems.map((item, index) => (
+                      <div 
+                        key={`${item.id}-${item.size || 'default'}`}
                           className="bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 border-2 border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                        >
+                      >
                           <div className="flex items-center gap-4 lg:gap-6 xl:gap-8">
-                            {/* Product Image */}
-                            {item.image && (
-                              <div className="relative">
+                          {/* Product Image */}
+                          {item.image && (
+                            <div className="relative">
                                 <div className="w-20 h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28 rounded-xl lg:rounded-2xl overflow-hidden border-2 border-gray-100">
-                                  <img 
-                                    src={item.image} 
-                                    alt={item.name} 
+                                <img 
+                                  src={item.image} 
+                                  alt={item.name} 
                                     className="w-full h-full object-cover" 
-                                  />
-                                </div>
-                                <div className="absolute -top-2 -right-2 lg:-top-3 lg:-right-3 bg-gradient-to-r from-black to-gray-800 text-white rounded-full w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center text-sm lg:text-base font-bold shadow-lg">
-                                  {item.quantity}
-                                </div>
+                                />
                               </div>
-                            )}
-                            
-                            {/* Product Details */}
-                            <div className="flex-1">
+                                <div className="absolute -top-2 -right-2 lg:-top-3 lg:-right-3 bg-gradient-to-r from-black to-gray-800 text-white rounded-full w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center text-sm lg:text-base font-bold shadow-lg">
+                                {item.quantity}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Product Details */}
+                          <div className="flex-1">
                               <h4 className="font-bold text-gray-900 text-lg lg:text-xl xl:text-2xl mb-2 lg:mb-3">
-                                {item.name}
-                              </h4>
-                              {item.size && (
+                              {item.name}
+                            </h4>
+                            {item.size && (
                                 <div className="inline-flex items-center gap-2 lg:gap-3 bg-gradient-to-r from-blue-50 to-purple-50 px-3 lg:px-4 py-2 rounded-lg lg:rounded-xl text-sm lg:text-base text-gray-700 mb-3 lg:mb-4 border border-blue-100">
                                   <Package size={16} className="lg:w-5 lg:h-5 text-blue-600" />
                                   الحجم: <span className="font-bold">{item.size}</span>
-                                </div>
-                              )}
-                              
-                              {/* Quantity Controls */}
+                              </div>
+                            )}
+                            
+                            {/* Quantity Controls */}
                               <div className="flex items-center gap-3 lg:gap-4">
                                 <div className="flex items-center gap-2 lg:gap-3 bg-gray-50 rounded-xl lg:rounded-2xl p-2 border border-gray-200">
-                                  <button
-                                    onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
-                                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white flex items-center justify-center hover:from-red-600 hover:to-red-700 transition-all duration-300 disabled:opacity-50 shadow-md"
-                                    disabled={item.quantity <= 1}
-                                  >
-                                    <Minus size={16} className="lg:w-5 lg:h-5" />
-                                  </button>
-                                  <span className="w-12 lg:w-16 text-center font-bold text-base lg:text-lg text-gray-900 bg-white px-3 py-1 rounded-lg border">{item.quantity}</span>
-                                  <button
-                                    onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
-                                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white flex items-center justify-center hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-md"
-                                  >
-                                    <Plus size={16} className="lg:w-5 lg:h-5" />
-                                  </button>
-                                </div>
-                                
                                 <button
-                                  onClick={() => removeItem(item.id, item.size)}
-                                  className="p-2 lg:p-3 text-red-500 hover:bg-red-50 rounded-xl lg:rounded-2xl transition-all duration-300 border border-red-200 hover:border-red-300"
-                                  title="حذف المنتج"
+                                  onClick={() => updateQuantity(item.id, item.size, item.quantity - 1)}
+                                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white flex items-center justify-center hover:from-red-600 hover:to-red-700 transition-all duration-300 disabled:opacity-50 shadow-md"
+                                  disabled={item.quantity <= 1}
                                 >
-                                  <Trash2 size={18} className="lg:w-5 lg:h-5" />
+                                    <Minus size={16} className="lg:w-5 lg:h-5" />
+                                </button>
+                                  <span className="w-12 lg:w-16 text-center font-bold text-base lg:text-lg text-gray-900 bg-white px-3 py-1 rounded-lg border">{item.quantity}</span>
+                                <button
+                                  onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white flex items-center justify-center hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-md"
+                                >
+                                    <Plus size={16} className="lg:w-5 lg:h-5" />
                                 </button>
                               </div>
+                              
+                              <button
+                                onClick={() => removeItem(item.id, item.size)}
+                                  className="p-2 lg:p-3 text-red-500 hover:bg-red-50 rounded-xl lg:rounded-2xl transition-all duration-300 border border-red-200 hover:border-red-300"
+                                title="حذف المنتج"
+                              >
+                                  <Trash2 size={18} className="lg:w-5 lg:h-5" />
+                              </button>
                             </div>
-                            
-                            {/* Price */}
-                            <div className="text-right">
+                          </div>
+                          
+                          {/* Price */}
+                          <div className="text-right">
                               <div className="space-y-1 lg:space-y-2">
-                                {item.originalPrice && item.originalPrice > item.price && (
+                              {item.originalPrice && item.originalPrice > item.price && (
                                   <p className="text-sm lg:text-base text-gray-400 line-through">
                                     <span className="text-gray-500 line-through">{((item.originalPrice || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
-                                  </p>
-                                )}
+                                </p>
+                              )}
                                 <p className="text-xl lg:text-2xl xl:text-3xl font-bold text-gray-900">
                                   <span className="font-bold text-gray-900 text-lg">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
-                                </p>
+                              </p>
                                 <p className="text-sm lg:text-base text-gray-500">
                                   {(item.price || 0).toFixed(2)} ر.س × {item.quantity || 1}
-                                </p>
-                              </div>
+                              </p>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
                 )}
 
                 {/* Step 2: Customer Information */}
@@ -877,39 +877,39 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center gap-4 lg:gap-6 mb-8 lg:mb-10">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-black to-gray-800 rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl">
                         <User className="text-white" size={24} />
-                      </div>
-                      <div>
+                    </div>
+                    <div>
                         <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-2">بيانات التوصيل</h2>
                         <p className="text-gray-600 text-base lg:text-lg xl:text-xl">أدخل بياناتك لإتمام التوصيل</p>
-                      </div>
                     </div>
-                    
+                  </div>
+                  
                     <div className="bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 border-2 border-gray-100 shadow-lg">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
                         <div className="space-y-2">
                           <label className="block text-sm lg:text-base font-bold text-gray-700">الاسم الكامل *</label>
-                          <input
-                            type="text"
-                            value={userData.name}
-                            onChange={(e) => setUserData({...userData, name: e.target.value})}
+                      <input
+                        type="text"
+                        value={userData.name}
+                        onChange={(e) => setUserData({...userData, name: e.target.value})}
                             className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
                               errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
-                            placeholder="أدخل اسمك الكامل"
-                          />
+                        placeholder="أدخل اسمك الكامل"
+                      />
                           {errors.name && (
                             <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
                               <X size={14} />
                               {errors.name}
                             </p>
                           )}
-                        </div>
+                    </div>
 
                         <div className="space-y-2">
                           <label className="block text-sm lg:text-base font-bold text-gray-700">رقم الهاتف *</label>
-                          <input
-                            type="tel"
-                            value={userData.phone}
+                      <input
+                        type="tel"
+                        value={userData.phone}
                             onChange={(e) => {
                               // تنسيق رقم الهاتف تلقائياً
                               let phone = e.target.value.replace(/\D/g, '');
@@ -926,7 +926,7 @@ const Checkout: React.FC = () => {
                             className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
                               errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
-                            placeholder="05xxxxxxxx"
+                        placeholder="05xxxxxxxx"
                             maxLength={10}
                           />
                           {errors.phone && (
@@ -935,82 +935,82 @@ const Checkout: React.FC = () => {
                               {errors.phone}
                             </p>
                           )}
-                        </div>
+                    </div>
 
                         <div className="space-y-2">
                           <label className="block text-sm lg:text-base font-bold text-gray-700">البريد الإلكتروني (اختياري)</label>
-                          <input
-                            type="email"
-                            value={userData.email}
-                            onChange={(e) => setUserData({...userData, email: e.target.value})}
+                      <input
+                        type="email"
+                        value={userData.email}
+                        onChange={(e) => setUserData({...userData, email: e.target.value})}
                             className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
                               errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
-                            placeholder="example@email.com"
-                          />
+                        placeholder="example@email.com"
+                      />
                           {errors.email && (
                             <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
                               <X size={14} />
                               {errors.email}
                             </p>
                           )}
-                        </div>
+                    </div>
 
                         <div className="space-y-2">
                           <label className="block text-sm lg:text-base font-bold text-gray-700">المدينة *</label>
-                          <select
-                            value={userData.city}
-                            onChange={(e) => setUserData({...userData, city: e.target.value})}
+                      <select
+                        value={userData.city}
+                        onChange={(e) => setUserData({...userData, city: e.target.value})}
                             className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all ${
                               errors.city ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
-                          >
-                            <option value="">اختر المدينة</option>
-                            <option value="الرياض">الرياض</option>
-                            <option value="جدة">جدة</option>
-                            <option value="مكة">مكة المكرمة</option>
-                            <option value="الدمام">الدمام</option>
-                            <option value="الخبر">الخبر</option>
-                            <option value="المدينة">المدينة المنورة</option>
+                      >
+                        <option value="">اختر المدينة</option>
+                        <option value="الرياض">الرياض</option>
+                        <option value="جدة">جدة</option>
+                        <option value="مكة">مكة المكرمة</option>
+                        <option value="الدمام">الدمام</option>
+                        <option value="الخبر">الخبر</option>
+                        <option value="المدينة">المدينة المنورة</option>
                             <option value="الطائف">الطائف</option>
                             <option value="أبها">أبها</option>
                             <option value="تبوك">تبوك</option>
                             <option value="القصيم">القصيم</option>
-                            <option value="أخرى">أخرى</option>
-                          </select>
+                        <option value="أخرى">أخرى</option>
+                      </select>
                           {errors.city && (
                             <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
                               <X size={14} />
                               {errors.city}
                             </p>
                           )}
-                        </div>
+                    </div>
 
                         <div className="md:col-span-2 space-y-2">
                           <label className="block text-sm lg:text-base font-bold text-gray-700">العنوان التفصيلي *</label>
-                          <textarea
-                            value={userData.address}
-                            onChange={(e) => setUserData({...userData, address: e.target.value})}
+                      <textarea
+                        value={userData.address}
+                        onChange={(e) => setUserData({...userData, address: e.target.value})}
                             rows={4}
                             className={`w-full px-3 lg:px-4 py-2 lg:py-3 text-sm lg:text-base border rounded-lg lg:rounded-xl focus:ring-2 focus:ring-black/20 focus:border-black transition-all resize-none ${
                               errors.address ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
-                            placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
-                          />
+                        placeholder="أدخل العنوان التفصيلي (الحي، الشارع، رقم المبنى)"
+                      />
                           {errors.address && (
                             <p className="text-red-500 text-xs lg:text-sm flex items-center gap-1">
                               <X size={14} />
                               {errors.address}
-                            </p>
-                          )}
+                                </p>
+                              )}
                           <p className="text-xs text-gray-500">
                             مثال: حي الملز، شارع الأمير محمد بن عبدالعزيز، مبنى رقم 123، الدور الثاني
                           </p>
-                        </div>
-                      </div>
+                            </div>
+                          </div>
                     </div>
-                  </div>
-                )}
+                            </div>
+                          )}
 
                 {/* Step 3: Payment Method */}
                 {currentStep === 3 && (
@@ -1018,12 +1018,12 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center gap-4 lg:gap-6 mb-8 lg:mb-10">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-black to-gray-800 rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl">
                         <CreditCard className="text-white" size={24} />
-                      </div>
+                        </div>
                       <div>
                         <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-2">طريقة الدفع</h2>
                         <p className="text-gray-600 text-base lg:text-lg xl:text-xl">اختر الطريقة المناسبة لك</p>
-                      </div>
                     </div>
+                  </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                       <div
@@ -1076,8 +1076,8 @@ const Checkout: React.FC = () => {
                             </div>
                           </div>
                         )}
-                      </div>
                     </div>
+                  </div>
 
                     {/* معلومات إضافية عن طريقة الدفع */}
                     <div className="mt-8 lg:mt-10 p-6 lg:p-8 bg-white rounded-2xl lg:rounded-3xl border-2 border-gray-100 shadow-lg">
@@ -1103,10 +1103,10 @@ const Checkout: React.FC = () => {
                               ضمان استرداد الأموال في حالة عدم الرضا
                             </li>
                           </ul>
-                        </div>
-                      </div>
                     </div>
                   </div>
+                </div>
+              </div>
                 )}
 
                 {/* Step 4: Order Confirmation */}
@@ -1115,12 +1115,12 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center gap-4 lg:gap-6 mb-8 lg:mb-10">
                       <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-black to-gray-800 rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-2xl">
                         <CheckCircle className="text-white" size={24} />
-                      </div>
+                  </div>
                       <div>
                         <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-2">تأكيد الطلب</h2>
                         <p className="text-gray-600 text-base lg:text-lg xl:text-xl">راجع بياناتك قبل إتمام الطلب</p>
+                        </div>
                       </div>
-                    </div>
 
                     {/* Order Summary */}
                     <div className="space-y-6 lg:space-y-8">
@@ -1129,7 +1129,7 @@ const Checkout: React.FC = () => {
                         <div className="flex items-center gap-4 mb-6">
                           <User className="text-blue-600" size={24} />
                           <h3 className="font-bold text-gray-900 text-lg lg:text-xl xl:text-2xl">بيانات التوصيل</h3>
-                        </div>
+                            </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 text-sm lg:text-base">
                           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                             <span className="font-bold text-gray-700">الاسم:</span>
@@ -1138,7 +1138,7 @@ const Checkout: React.FC = () => {
                           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                             <span className="font-bold text-gray-700">الهاتف:</span>
                             <span className="text-gray-900 font-medium" dir="ltr">{userData.phone}</span>
-                          </div>
+                        </div>
                           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                             <span className="font-bold text-gray-700">المدينة:</span>
                             <span className="text-gray-900 font-medium">{userData.city}</span>
@@ -1147,15 +1147,15 @@ const Checkout: React.FC = () => {
                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                               <span className="font-bold text-gray-700">البريد:</span>
                               <span className="text-gray-900 font-medium" dir="ltr">{userData.email}</span>
-                            </div>
-                          )}
+                      </div>
+                    )}
                           <div className="lg:col-span-2 flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                             <span className="font-bold text-gray-700 flex-shrink-0">العنوان:</span>
                             <span className="text-gray-900 font-medium">{userData.address}</span>
                           </div>
                         </div>
                       </div>
-
+                      
                       {/* Payment Method */}
                       <div className="bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 border-2 border-gray-100 shadow-lg">
                         <div className="flex items-center gap-4 mb-6">
@@ -1174,7 +1174,7 @@ const Checkout: React.FC = () => {
                           </div>
                           <span className="text-gray-900 font-bold text-base lg:text-lg">
                             {selectedPaymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
-                          </span>
+                        </span>
                         </div>
                       </div>
 
@@ -1193,15 +1193,15 @@ const Checkout: React.FC = () => {
                               <span className="flex-1 text-gray-900 font-medium">{item.name}</span>
                               <span className="text-gray-600 font-medium">×{item.quantity}</span>
                               <span className="font-bold text-gray-900 text-lg">{(item.price || 0).toFixed(2)} ر.س</span>
-                            </div>
+                      </div>
                           ))}
                           {cartItems.length > 3 && (
                             <div className="text-center text-gray-500 text-sm lg:text-base p-3 bg-gray-50 rounded-xl">
                               وعدد {cartItems.length - 3} منتجات أخرى...
-                            </div>
+                    </div>
                           )}
                         </div>
-                      </div>
+                        </div>
 
                       {/* Terms Agreement */}
                       <div className="bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 border-2 border-gray-100 shadow-lg">
@@ -1217,15 +1217,15 @@ const Checkout: React.FC = () => {
                             أوافق على <Link to="/privacy-policy" className="text-black font-bold hover:underline">الشروط والأحكام</Link> و
                             <Link to="/return-policy" className="text-black font-bold hover:underline"> سياسة الإرجاع</Link>
                           </label>
-                        </div>
+                    </div>
                         {errors.terms && (
                           <p className="text-red-500 text-sm lg:text-base mt-3 flex items-center gap-2">
                             <X size={16} />
                             {errors.terms}
                           </p>
                         )}
-                      </div>
-                    </div>
+                  </div>
+                </div>
                   </div>
                 )}
               </div>

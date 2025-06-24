@@ -72,10 +72,10 @@ const ProductDetail: React.FC = () => {
         setLoading(false);
         return;
       }
-
+      
       try {
         const allProducts: Product[] = await productsAPI.getAll({}, true);
-        
+      
         if (!Array.isArray(allProducts)) {
           console.error("API did not return an array for products:", allProducts);
           throw new Error('فشل في تحميل قائمة المنتجات، البيانات المستلمة غير صالحة.');
@@ -87,8 +87,8 @@ const ProductDetail: React.FC = () => {
           if (id) return p.id.toString() === id;
           if (slug) return createProductSlug(p.id, p.name) === slug;
           return false;
-        });
-
+          });
+          
         if (foundProduct) {
           console.log('✅ Product found:', foundProduct.name);
           setProduct(foundProduct);
@@ -96,16 +96,16 @@ const ProductDetail: React.FC = () => {
         } else {
           console.log('❌ Product not found with identifier:', identifier);
           throw new Error('المنتج غير موجود');
-        }
+      }
       } catch (err) {
         console.error('❌ Error in findAndSetProduct:', err);
         const errorMessage = err instanceof Error ? err.message : 'فشل في تحميل المنتج';
-        setError(errorMessage);
+      setError(errorMessage);
         toast.error(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
     findAndSetProduct();
   }, [id, slug]);
@@ -316,9 +316,9 @@ const ProductDetail: React.FC = () => {
                       <div key={index} className="flex justify-between py-2 border-b border-beige-200">
                         <span className="text-brown-600 font-medium">{spec.name}:</span>
                         <span className="text-brown-800">{spec.value}</span>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                </div>
                 </div>
               )}
 
@@ -472,11 +472,11 @@ const RelatedProducts: React.FC<{ currentProductId: string | number }> = ({ curr
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold text-brown-600">{(product.price || 0).toFixed(2)} ر.س</span>
                     {product.originalPrice && (
-                      <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs font-bold">
-                        -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-                      </span>
+                        <span className="bg-red-500 text-white px-1 py-0.5 rounded text-xs font-bold">
+                          -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                        </span>
                     )}
-                  </div>
+                      </div>
                 </div>
                 <button className="bg-gradient-to-r from-brown-500 to-brown-600 text-white px-3 py-2 rounded-lg hover:from-brown-600 hover:to-brown-700 transition-colors duration-200 text-sm">
                   عرض
